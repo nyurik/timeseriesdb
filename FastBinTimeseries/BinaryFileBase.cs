@@ -14,25 +14,25 @@ namespace NYurik.FastBinTimeseries
         protected const int MinPageSize = 8*1024; // 8 KB - smallest value on IA64 systems
         protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB
 
-        protected FileStream _fileStream;
-        private int _fileHeaderSize;
-        private int _pageSize;
+        protected FileStream m_fileStream;
+        private int m_fileHeaderSize;
+        private int m_pageSize;
 
         /// <summary>The size of a data page in bytes.</summary>
         public int PageSize
         {
-            get { return _pageSize; }
+            get { return m_pageSize; }
             protected set
             {
                 if (value == 0)
-                    _pageSize = DefaultPageSize;
+                    m_pageSize = DefaultPageSize;
                 else
                 {
                     if (value < MinPageSize || value%MinPageSize != 0)
                         throw new ArgumentOutOfRangeException(
                             String.Format("PageSize must be greater or equal then and divisible by {0}",
                                           MinPageSize));
-                    _pageSize = value;
+                    m_pageSize = value;
                 }
             }
         }
@@ -40,10 +40,10 @@ namespace NYurik.FastBinTimeseries
         /// <summary>Size of the file header in bytes</summary>
         public int FileHeaderSize
         {
-            get { return _fileHeaderSize; }
+            get { return m_fileHeaderSize; }
             protected set
             {
-                if (value == _fileHeaderSize)
+                if (value == m_fileHeaderSize)
                     return;
 
                 if (value > MaxHeaderSize || value < HeaderSizeByteCount)
@@ -51,7 +51,7 @@ namespace NYurik.FastBinTimeseries
                         String.Format("File header size {0} is not within allowed range {1}..{2}",
                                       value, HeaderSizeByteCount, MaxHeaderSize));
 
-                _fileHeaderSize = value;
+                m_fileHeaderSize = value;
             }
         }
 
@@ -112,7 +112,7 @@ namespace NYurik.FastBinTimeseries
             var inst = (BinaryFile) Activator.CreateInstance(classType, true);
 
             inst.FileHeaderSize = hdrSize;
-            inst._fileStream = stream;
+            inst.m_fileStream = stream;
 
             // Read values in the same order as WriteHeader()
             inst.PageSize = memReader.ReadInt32();

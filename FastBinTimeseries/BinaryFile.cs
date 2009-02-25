@@ -102,13 +102,13 @@ namespace NYurik.FastBinTimeseries
         /// Note to inheritors: derived constructor must call WriteHeader();
         /// </summary>
         /// <param name="fileName">file path</param>
-        /// <param name="customSerializerType">optional custom serializer type</param>
-        protected BinaryFile(string fileName, IBinSerializer<T> customSerializerType)
+        /// <param name="customSerializer">optional custom serializer type</param>
+        protected BinaryFile(string fileName, IBinSerializer<T> customSerializer)
         {
-            Serializer = customSerializerType ?? DynamicCodeFactory.Instance.CreateSerializer<T>();
+            Serializer = customSerializer ?? new BuiltInTypeSerializer<T>();
             PageSize = Serializer.PageSize;
             CanWrite = true;
-            _fileStream = new FileStream(fileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None/*, 4096, FileOptions.WriteThrough*/);
+            m_fileStream = new FileStream(fileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None/*, 4096, FileOptions.WriteThrough*/);
         }
 
         protected void WriteHeader()
@@ -145,9 +145,9 @@ namespace NYurik.FastBinTimeseries
             //Count = newItemCount;
             FileHeaderSize = newHeaderSize;
 
-            _fileStream.Seek(0, SeekOrigin.Begin);
-            _fileStream.Write(headerBuffer, 0, newHeaderSize);
-            _fileStream.Flush();
+            m_fileStream.Seek(0, SeekOrigin.Begin);
+            m_fileStream.Write(headerBuffer, 0, newHeaderSize);
+            m_fileStream.Flush();
         }
 
         protected virtual void ReadCustomHeader(BinaryReader stream)
@@ -209,13 +209,13 @@ namespace NYurik.FastBinTimeseries
         {
             if (disposing)
             {
-                var streamTmp = _fileStream;
-                _fileStream = null;
+                var streamTmp = m_fileStream;
+                m_fileStream = null;
                 if (streamTmp != null)
                     streamTmp.Close();
             }
             else
-                _fileStream = null;
+                m_fileStream = null;
         }
 
         protected void ProcessFileByPage(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
@@ -265,14 +265,14 @@ namespace NYurik.FastBinTimeseries
             {
                 if (useMemMapping)
                 {
-                    var fileSize = _fileStream.Length;
+                    var fileSize = m_fileStream.Length;
 
                     // Grow file if needed
                     if (isWriting && offsetToStopAt > fileSize)
                         fileSize = offsetToStopAt;
 
                     hMap = Win32Apis.CreateFileMapping(
-                        _fileStream, fileSize,
+                        m_fileStream, fileSize,
                         isWriting ? FileMapProtection.PageReadWrite : FileMapProtection.PageReadOnly);
                 }
 
@@ -314,22 +314,22 @@ namespace NYurik.FastBinTimeseries
                             else
                             {
                                 // Access file using FileStream object
-                                _fileStream.Seek(fileOffset, SeekOrigin.Begin);
-                                Serializer.ProcessFileStream(_fileStream, buffer, (int) bufItemOffset,
+                                m_fileStream.Seek(fileOffset, SeekOrigin.Begin);
+                                Serializer.ProcessFileStream(m_fileStream, buffer, (int) bufItemOffset,
                                                              (int) itemsToProcess, isWriting);
 
                                 var expectedStreamPos = fileOffset + itemsToProcess*ItemSize;
-                                if (expectedStreamPos != _fileStream.Position)
+                                if (expectedStreamPos != m_fileStream.Position)
                                     throw new InvalidOperationException(
                                         String.Format(
                                             "Possible loss of data or file corruption detected.\n" +
                                             "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
                                             "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
                                             isWriting ? "writing" : "reading",
-                                            itemsToProcess, fileOffset, expectedStreamPos, _fileStream.Position));
+                                            itemsToProcess, fileOffset, expectedStreamPos, m_fileStream.Position));
 
                                 if (hasPadding && (bufCount - (itemIdx + itemsToProcess - adjFirstItemIdx)) > 0)
-                                    _fileStream.Seek(PagePadding, SeekOrigin.Current);
+                                    m_fileStream.Seek(PagePadding, SeekOrigin.Current);
                             }
 
                             itemIdx += itemsToProcess;
@@ -352,9 +352,9 @@ namespace NYurik.FastBinTimeseries
             {
 
                 if (!useMemMapping)
-                    _fileStream.Flush();
+                    m_fileStream.Flush();
 
-                var newCount = CalculateItemCountFromFilePosition(_fileStream.Length);
+                var newCount = CalculateItemCountFromFilePosition(m_fileStream.Length);
                 if (Count < newCount)
                     Count = newCount;
             }
@@ -362,7 +362,7 @@ namespace NYurik.FastBinTimeseries
 
         protected void ThrowOnDisposed()
         {
-            if (_fileStream == null)
+            if (m_fileStream == null)
                 throw new ObjectDisposedException(GetType().FullName, "The file has been closed");
         }
 
@@ -379,7 +379,7 @@ namespace NYurik.FastBinTimeseries
 
         public override string ToString()
         {
-            return string.Format("File {0} with {1} items", _fileStream.Name, Count);
+            return string.Format("File {0} with {1} items", m_fileStream.Name, Count);
         }
 
         protected override sealed void Init(Type serializerType, BinaryReader memReader)
@@ -389,7 +389,7 @@ namespace NYurik.FastBinTimeseries
             ReadCustomHeader(memReader);
             Serializer.ReadCustomHeader(memReader);
 
-            Count = CalculateItemCountFromFilePosition(_fileStream.Length);
+            Count = CalculateItemCountFromFilePosition(m_fileStream.Length);
             ValidateHeaderSize(FileHeaderSize);
         }
     }

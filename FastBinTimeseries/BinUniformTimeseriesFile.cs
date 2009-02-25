@@ -107,24 +107,6 @@ namespace NYurik.FastBinTimeseries
             return (timestamp.Ticks - FirstFileTS.Ticks)/ItemTimeSpan.Ticks;
         }
 
-        private void OnDataWriting(DateTime firstItemIndex)
-        {
-            ValidateIndex(firstItemIndex);
-            if (!IsEmpty && firstItemIndex < FirstFileTS)
-                throw new ArgumentOutOfRangeException("firstItemIndex",
-                                                      "Must be >= FirstFileTS for non-empty data files");
-
-            if (IsEmpty)
-                FirstFileTS = firstItemIndex;
-
-            var firstItemLong = IndexToLong(firstItemIndex);
-            if (firstItemLong > Count + 1)
-                throw new ArgumentException(
-                    string.Format(
-                        "Cannot add new data starting at {0} to a file with existing data from {1} to {2}, as it would leave an empty gap.",
-                        firstItemIndex, FirstFileTS, FirstUnavailableTimestamp));
-        }
-
         public override string ToString()
         {
             return string.Format("{0}, firstTS={1}, slice={2}", base.ToString(), FirstFileTS, ItemTimeSpan);
@@ -238,7 +220,19 @@ namespace NYurik.FastBinTimeseries
             Utilities.ValidateArrayParams(buffer, offset, count);
             if (!CanWrite) throw new InvalidOperationException("The file was opened as readonly");
 
-            OnDataWriting(firstItemIndex);
+            ValidateIndex(firstItemIndex);
+            if (!IsEmpty && firstItemIndex < FirstFileTS)
+                throw new ArgumentOutOfRangeException("firstItemIndex",
+                                                      "Must be >= FirstFileTS for non-empty data files");
+            if (IsEmpty)
+                FirstFileTS = firstItemIndex;
+
+            var firstItemLong = IndexToLong(firstItemIndex);
+            if (firstItemLong > Count + 1)
+                throw new ArgumentException(
+                    string.Format(
+                        "Cannot add new data starting at {0} to a file with existing data from {1} to {2}, as it would leave an empty gap.",
+                        firstItemIndex, FirstFileTS, FirstUnavailableTimestamp));
 
             var itemLong = IndexToLong(firstItemIndex);
             if (itemLong < 0 || itemLong > Count)

@@ -20,7 +20,7 @@
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>AAAAAAAIAAAAIAAAAAAAAAAgABRIAAQAAQFiEAEAAAA=</HashCode>
+      <HashCode>AAAAAAAMAAAAIAAEAAAAAAAgABBIAAQAAQEiMAEAAAA=</HashCode>
       <FileName>BinaryFileBase.cs</FileName>
     </TypeIdentifier>
   </Class>
@@ -38,23 +38,6 @@
       <FileName>BinIndexedFile.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.FastBinTimeseries.BinIndexedTimeseriesFile&lt;T&gt;">
-    <Position X="13.75" Y="2.25" Width="2.75" />
-    <Compartments>
-      <Compartment Name="Private" Collapsed="true" />
-    </Compartments>
-    <InheritanceLine Type="NYurik.FastBinTimeseries.BinaryFile&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
-      <Path>
-        <Point X="7" Y="1.403" />
-        <Point X="15.188" Y="1.403" />
-        <Point X="15.188" Y="2.25" />
-      </Path>
-    </InheritanceLine>
-    <TypeIdentifier>
-      <HashCode>AQAAAAAAACAAAAEAAAAAAAAAAAAAAAAAAAAAIAAAAAA=</HashCode>
-      <FileName>BinIndexedTimeseriesFile.cs</FileName>
-    </TypeIdentifier>
-  </Class>
   <Class Name="NYurik.FastBinTimeseries.BinUniformTimeseriesFile&lt;T&gt;">
     <Position X="8" Y="2.25" Width="2.75" />
     <Compartments>
@@ -68,14 +51,14 @@
       </Path>
     </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AQCAAAAAEAgJAIAEAAAAIAAAAYAgAAAAAAIAABAAAAA=</HashCode>
+      <HashCode>AQCAAAAAEAgJAIAEAAAAAAAAAYAgAAAAAAIAABAAAAA=</HashCode>
       <FileName>BinUniformTimeseriesFile.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.FastBinTimeseries.BuiltInTypeSerializer&lt;T&gt;">
     <Position X="1.5" Y="6.25" Width="2" />
     <TypeIdentifier>
-      <HashCode>BQCAAAAAAAgAEAEAAAAAAAAAAAAAQIAIAAAIEAAAEAA=</HashCode>
+      <HashCode>BQCAAAQAAAgAEAEAAAAEAAAAAAAAQIAIAAAIEAAAEAA=</HashCode>
       <FileName>BuiltInTypeSerializer.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />

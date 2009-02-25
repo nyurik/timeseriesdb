@@ -1,18 +1,34 @@
 using System;
 using System.IO;
+using System.Reflection.Emit;
 
 namespace NYurik.FastBinTimeseries
 {
-    internal abstract class BuiltInTypeSerializer<T> : IBinSerializer<T>
+    internal delegate void UnsafeActionDelegate<TStorage, TItem>(
+        //BuiltInTypeSerializer<TItem> thisInst, 
+    TStorage storage, TItem[] buffer, int offset, int count, bool isWriting);
+
+    internal class BuiltInTypeSerializer<T> : IBinSerializer<T>
     {
         private static readonly unsafe bool is64bit = sizeof (void*) == sizeof (long);
         private readonly int _typeSize;
 
-        protected BuiltInTypeSerializer(int typeSize)
+        public BuiltInTypeSerializer()
         {
-            if (typeSize <= 0)
-                throw new ArgumentOutOfRangeException("typeSize", typeSize, "Struct size must be > 0");
-            _typeSize = typeSize;
+            var info = DynamicCodeFactory.Instance.CreateSerializer<T>();
+
+            if (info.ItemSize <= 0)
+                throw new InvalidOperationException("Struct size must be > 0");
+
+            _typeSize = info.ItemSize;
+            processFileStream = (UnsafeActionDelegate<FileStream, T>)
+                                info.FileStreamMethod.CreateDelegate(
+                                    typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (FileStream), typeof (T)),
+                                    this);
+            processMemoryMap = (UnsafeActionDelegate<IntPtr, T>)
+                               info.MemMapMethod.CreateDelegate(
+                                   typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (IntPtr), typeof (T)),
+                                   this);
         }
 
         #region IBinSerializer<T> Members
@@ -32,9 +48,18 @@ namespace NYurik.FastBinTimeseries
             get { return 0; }
         }
 
-        public abstract void ProcessFileStream(FileStream fileHandle, T[] buffer, int offset, int count, bool isWriting);
+        private readonly UnsafeActionDelegate<FileStream,T> processFileStream;
+        private readonly UnsafeActionDelegate<IntPtr, T> processMemoryMap;
 
-        public abstract void ProcessMemoryMap(IntPtr memMapPtr, T[] buffer, int offset, int count, bool isWriting);
+        public void ProcessFileStream(FileStream fileStream, T[] buffer, int offset, int count, bool isWriting)
+        {
+            processFileStream(fileStream, buffer, offset, count, isWriting);
+        }
+
+        public void ProcessMemoryMap(IntPtr memMapPtr, T[] buffer, int offset, int count, bool isWriting)
+        {
+            processMemoryMap(memMapPtr, buffer, offset, count, isWriting);
+        }
 
         public void ReadCustomHeader(BinaryReader reader)
         {
