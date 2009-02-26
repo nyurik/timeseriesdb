@@ -39,7 +39,7 @@ namespace NYurik.FastBinTimeseries
             : base(fileName, customSerializer)
         {
             ItemTimeSpan = itemTimeSpan;
-            WriteHeader(); // Initialize header
+            WriteHeader(); // Initialize header at the end of constructor
         }
 
         #endregion
@@ -65,7 +65,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary>Represents the timestamp of the first value beyond the end of the existing data.
-        /// (<see cref="BinaryFile{T,TInd}.Count"/> as a timestamp)</summary>
+        /// (<see cref="BinaryFile{T}.Count"/> as a timestamp)</summary>
         public DateTime FirstUnavailableTimestamp
         {
             get { return new DateTime(FirstFileTS.Ticks + ItemTimeSpan.Ticks*Count); }
@@ -89,16 +89,25 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        protected override void ReadCustomHeader(BinaryReader reader)
+        private static readonly Version CurrentVersion = new Version(1, 0);
+
+        protected override void ReadCustomHeader(BinaryReader stream, Version version)
         {
-            ItemTimeSpan = TimeSpan.FromTicks(reader.ReadInt64());
-            FirstFileTS = DateTime.FromBinary(reader.ReadInt64());
+            if (version == CurrentVersion)
+            {
+                ItemTimeSpan = TimeSpan.FromTicks(stream.ReadInt64());
+                FirstFileTS = DateTime.FromBinary(stream.ReadInt64());
+            }
+            else
+                Utilities.ThrowUnknownVersion(version, GetType());
         }
 
-        protected override void WriteCustomHeader(BinaryWriter writer)
+        protected override Version WriteCustomHeader(BinaryWriter stream)
         {
-            writer.Write(ItemTimeSpan.Ticks);
-            writer.Write(FirstFileTS.ToBinary());
+            stream.Write(ItemTimeSpan.Ticks);
+            stream.Write(FirstFileTS.ToBinary());
+
+            return CurrentVersion;
         }
 
         protected long IndexToLong(DateTime timestamp)

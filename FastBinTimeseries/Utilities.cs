@@ -5,6 +5,8 @@ namespace NYurik.FastBinTimeseries
 {
     internal static class Utilities
     {
+        private static readonly unsafe bool is64bit = sizeof (void*) == sizeof (long);
+
         /// <summary>
         /// Get an array of attributes of a given type attached to an Enum value.
         /// </summary>
@@ -48,14 +50,14 @@ namespace NYurik.FastBinTimeseries
         public static TAttr ExtractSingleAttribute<TAttr>(ICustomAttributeProvider customAttrProvider)
             where TAttr : Attribute
         {
-            var attributes = customAttrProvider.GetCustomAttributes(typeof(TAttr), true);
+            var attributes = customAttrProvider.GetCustomAttributes(typeof (TAttr), true);
             if (attributes.Length > 0)
             {
                 if (attributes.Length > 1)
                     throw new ArgumentException(
                         String.Format("Found {0} (>1) attributes {1} detected for {2}", attributes.Length,
-                                      typeof(TAttr).Name, customAttrProvider));
-                return (TAttr)attributes[0];
+                                      typeof (TAttr).Name, customAttrProvider));
+                return (TAttr) attributes[0];
             }
             return null;
         }
@@ -92,28 +94,6 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        #region Helper methods
-
-        [ThreadStatic] private static bool _isGetTypeRunningOnThisThread;
-
-        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            Assembly assembly = null;
-
-            // Only process events from the thread that started it, not any other thread
-            if (_isGetTypeRunningOnThisThread)
-            {
-                // Extract assembly name, and checking it's the same as args.Name to prevent an infinite loop
-                var an = new AssemblyName(args.Name);
-                if (an.Name != args.Name)
-                    assembly = ((AppDomain) sender).Load(an.Name);
-            }
-
-            return assembly;
-        }
-
-        #endregion
-
         public static void ValidateArrayParams(Array buffer, int offset, int count)
         {
             if (buffer == null)
@@ -136,5 +116,80 @@ namespace NYurik.FastBinTimeseries
                 return 0;
             return value - 1 + (multiple - (value - 1)%multiple);
         }
+
+        /// <summary>
+        /// Fast memory copying - copies in blocks of 32 bytes, using either int or long (on 64bit machines)
+        /// Calling the native RtlMemoryMove was slower
+        /// </summary>
+        public static unsafe void CopyMemory(byte* pDestination, byte* pSource, uint byteCount)
+        {
+            const int blockSize = 32;
+            if (byteCount >= blockSize)
+            {
+                if (is64bit)
+                {
+                    do
+                    {
+                        ((long*) pDestination)[0] = ((long*) pSource)[0];
+                        ((long*) pDestination)[1] = ((long*) pSource)[1];
+                        ((long*) pDestination)[2] = ((long*) pSource)[2];
+                        ((long*) pDestination)[3] = ((long*) pSource)[3];
+                        pDestination += blockSize;
+                        pSource += blockSize;
+                        byteCount -= blockSize;
+                    } while (byteCount >= blockSize);
+                }
+                else
+                {
+                    do
+                    {
+                        ((int*) pDestination)[0] = ((int*) pSource)[0];
+                        ((int*) pDestination)[1] = ((int*) pSource)[1];
+                        ((int*) pDestination)[2] = ((int*) pSource)[2];
+                        ((int*) pDestination)[3] = ((int*) pSource)[3];
+                        ((int*) pDestination)[4] = ((int*) pSource)[4];
+                        ((int*) pDestination)[5] = ((int*) pSource)[5];
+                        ((int*) pDestination)[6] = ((int*) pSource)[6];
+                        ((int*) pDestination)[7] = ((int*) pSource)[7];
+                        pDestination += blockSize;
+                        pSource += blockSize;
+                        byteCount -= blockSize;
+                    } while (byteCount >= blockSize);
+                }
+            }
+
+            while (byteCount > 0)
+            {
+                *(pDestination++) = *(pSource++);
+                byteCount--;
+            }
+        }
+
+        public static void ThrowUnknownVersion(Version version, Type type)
+        {
+            throw new ArgumentOutOfRangeException("version", version, "Unknown version for " + type.FullName);
+        }
+
+        #region Helper methods
+
+        [ThreadStatic] private static bool _isGetTypeRunningOnThisThread;
+
+        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            Assembly assembly = null;
+
+            // Only process events from the thread that started it, not any other thread
+            if (_isGetTypeRunningOnThisThread)
+            {
+                // Extract assembly name, and checking it's the same as args.Name to prevent an infinite loop
+                var an = new AssemblyName(args.Name);
+                if (an.Name != args.Name)
+                    assembly = ((AppDomain) sender).Load(an.Name);
+            }
+
+            return assembly;
+        }
+
+        #endregion
     }
 }

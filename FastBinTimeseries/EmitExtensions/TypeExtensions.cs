@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using NYurik.FastBinTimeseries;
 
 namespace NYurik.EmitExtensions
 {
@@ -201,6 +203,29 @@ namespace NYurik.EmitExtensions
                     "The type {0} must either be public, or be part of the assembly with an attribute " +
                     "[assembly:InternalsVisibleTo({1})]",
                     itemType.FullName, dynamicAssemblyNameConstant));
+        }
+
+        public static List<string> GenerateTypeSignature(this Type subItemType)
+        {
+            var result = new List<Type>();
+            GenerateTypeSignature(subItemType, result);
+            return result.ConvertAll(i => Marshal.SizeOf(i).ToString() + "_" + i.FullName);
+        }
+
+        private static void GenerateTypeSignature(Type subItemType, ICollection<Type> result)
+        {
+            result.Add(subItemType);
+
+            var fields = subItemType.GetFields(DynamicCodeFactory.FieldBindingFlags);
+            if (fields.Length == 1 && fields[0].FieldType == subItemType)
+                return;
+
+            foreach (var fi in fields)
+            {
+                if (fi.FieldType == subItemType)
+                    throw new InvalidOperationException("More than one field refers back to " + subItemType.FullName);
+                GenerateTypeSignature(fi.FieldType, result);
+            }
         }
     }
 }

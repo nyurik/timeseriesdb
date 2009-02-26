@@ -49,11 +49,11 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Optionaly initialize this serializer from a binary reader. Must match all actions by <see cref="WriteCustomHeader"/>
         /// </summary>
-        void ReadCustomHeader(BinaryReader reader);
+        void ReadCustomHeader(BinaryReader reader, Version version);
 
         /// <summary>
         /// Optionaly save this serializer's parameters to a binary writer. Must match all actions by <see cref="ReadCustomHeader"/>
         /// </summary>
-        void WriteCustomHeader(BinaryWriter writer);
+        Version WriteCustomHeader(BinaryWriter writer);
     }
 }

@@ -89,10 +89,14 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        /// <summary>Open a binary file from a filestream</summary>
+        /// <summary>
+        /// Open a binary file from a filestream, and start reading the file header.
+        /// This method together with the <see cref="Init"/>
+        /// must match the <see cref="BinaryFile{T}.WriteHeader"/> method.
+        /// </summary>
         public static BinaryFile Open(FileStream stream)
         {
-            if(stream == null)
+            if (stream == null)
                 throw new ArgumentNullException("stream");
 
             stream.Seek(0, SeekOrigin.Begin);
@@ -108,7 +112,7 @@ namespace NYurik.FastBinTimeseries
             var classTypeName = memReader.ReadString();
             var classType = Utilities.GetTypeFromAnyAssemblyVersion(classTypeName);
             if (classType == null)
-                throw new ArgumentException("Unable to find class type " + classTypeName);
+                throw new InvalidOperationException("Unable to find class type " + classTypeName);
             var inst = (BinaryFile) Activator.CreateInstance(classType, true);
 
             inst.FileHeaderSize = hdrSize;
@@ -121,14 +125,14 @@ namespace NYurik.FastBinTimeseries
             var serializerTypeName = memReader.ReadString();
             var serializerType = Utilities.GetTypeFromAnyAssemblyVersion(serializerTypeName);
             if (serializerType == null)
-                throw new ArgumentException("Unable to find serializer type " + serializerTypeName);
+                throw new InvalidOperationException("Unable to find serializer type " + serializerTypeName);
 
             inst.Init(serializerType, memReader);
 
             return inst;
         }
 
-        protected abstract void Init(Type serializerType, BinaryReader memReader);
+        protected internal abstract void Init(Type serializerType, BinaryReader memReader);
 
         private static byte[] ReadIntoNewBuffer(Stream stream, int bufferSize)
         {

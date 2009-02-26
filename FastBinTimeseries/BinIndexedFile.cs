@@ -64,5 +64,15 @@ namespace NYurik.FastBinTimeseries
         {
             ProcessFileByPage(firstItemIndex, buffer, offset, count, true);
         }
+
+
+        protected override void ReadCustomHeader(BinaryReader stream, Version version)
+        {
+        }
+
+        protected override Version WriteCustomHeader(BinaryWriter stream)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

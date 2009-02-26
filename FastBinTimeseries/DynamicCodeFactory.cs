@@ -11,6 +11,9 @@ namespace NYurik.FastBinTimeseries
 {
     public class DynamicCodeFactory
     {
+        internal const BindingFlags FieldBindingFlags =
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
         private static DynamicCodeFactory _instance;
         private readonly Dictionary<Type, BinSerializerInfo> _serializers = new Dictionary<Type, BinSerializerInfo>();
         private readonly Dictionary<Type, Delegate> _tsAccessorExpr = new Dictionary<Type, Delegate>();
@@ -69,7 +72,7 @@ namespace NYurik.FastBinTimeseries
                     "itemType", itemType.FullName,
                     "The type does not have a StructLayout attribute, or the attribute is set to Auto");
 
-            var ifType = typeof (BuiltInTypeSerializer<>).MakeGenericType(itemType);
+            var ifType = typeof (DefaultTypeSerializer<>).MakeGenericType(itemType);
 
             // Create the abstract method overrides
             return new BinSerializerInfo(
@@ -136,24 +139,22 @@ namespace NYurik.FastBinTimeseries
         /// Create a delegate that extracts a timestamp from the struct of type T.
         /// A datetime field must be first in the struct.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        internal Func<T, DateTime> CreateTSAccessor<T>()
+        internal Func<T, DateTime> CreateTSAccessor<T>(FieldInfo fieldInfo)
         {
             var itemType = typeof (T);
-            var fieldInfo = itemType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (fieldInfo.Length < 1)
-                throw new InvalidOperationException("No fields found in type " + itemType.FullName);
-            if (fieldInfo[0].FieldType != typeof (DateTime))
-                throw new InvalidOperationException(string.Format("The field[0] {0} in type {1} is not a DateTime",
-                                                                  fieldInfo[0].Name, itemType.FullName));
+            if (fieldInfo.DeclaringType != itemType)
+                throw new InvalidOperationException(String.Format("The field {0} does not belong to type {1}",
+                                                                  fieldInfo.Name, itemType.FullName));
+            if (fieldInfo.FieldType != typeof (DateTime))
+                throw new InvalidOperationException(String.Format("The field {0} in type {1} is not a DateTime",
+                                                                  fieldInfo.Name, itemType.FullName));
 
             Delegate tsAccessorType;
             if (!_tsAccessorExpr.TryGetValue(itemType, out tsAccessorType))
             {
                 var vParam = Expression.Parameter(itemType, "v");
                 var exprLambda = Expression.Lambda<Func<T, DateTime>>(
-                    Expression.Field(vParam, fieldInfo[0]), vParam);
+                    Expression.Field(vParam, fieldInfo), vParam);
                 _tsAccessorExpr[itemType] = tsAccessorType = exprLambda.Compile();
             }
 

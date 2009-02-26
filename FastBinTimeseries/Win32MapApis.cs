@@ -6,7 +6,7 @@ using System.Threading;
 using Microsoft.Win32.SafeHandles;
 
 //
-// All declarations were taken from http://www.pinvoke.net/index.aspx
+// All declarations were adapted from http://www.pinvoke.net/index.aspx
 //
 
 namespace NYurik.FastBinTimeseries
@@ -31,7 +31,8 @@ namespace NYurik.FastBinTimeseries
 
     internal class Win32Apis
     {
-        internal static SafeMapHandle CreateFileMapping(FileStream fileStream, long fileSize, FileMapProtection protection)
+        internal static SafeMapHandle CreateFileMapping(FileStream fileStream, long fileSize,
+                                                        FileMapProtection protection)
         {
             return
                 ThrowOnError(
@@ -53,7 +54,8 @@ namespace NYurik.FastBinTimeseries
             uint dwMaximumSizeLow,
             [MarshalAs(UnmanagedType.LPTStr)] string lpName);
 
-        internal static SafeMapViewHandle MapViewOfFile(SafeMapHandle hMap, long fileOffset, long mapViewSize, FileMapAccess desiredAccess)
+        internal static SafeMapViewHandle MapViewOfFile(SafeMapHandle hMap, long fileOffset, long mapViewSize,
+                                                        FileMapAccess desiredAccess)
         {
             if (hMap == null || hMap.IsInvalid)
                 throw new ArgumentNullException("hMap");
