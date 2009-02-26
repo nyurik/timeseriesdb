@@ -50,7 +50,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">The number of items to be read to the array.</param>
         public void ReadData(long firstItemIndex, T[] buffer, int offset, int count)
         {
-            ProcessFileByPage(firstItemIndex, buffer, offset, count, true);
+            ProcessFileByPage(firstItemIndex, buffer, offset, count, false);
         }
 
         /// <summary>
@@ -68,11 +68,15 @@ namespace NYurik.FastBinTimeseries
 
         protected override void ReadCustomHeader(BinaryReader stream, Version version)
         {
+            if(version != CurrentVersion)
+                Utilities.ThrowUnknownVersion(version, GetType());
         }
+
+        private static readonly Version CurrentVersion = new Version(1, 0);
 
         protected override Version WriteCustomHeader(BinaryWriter stream)
         {
-            throw new NotImplementedException();
+            return CurrentVersion;
         }
     }
 }

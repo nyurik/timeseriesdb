@@ -3,20 +3,28 @@ using System.IO;
 
 namespace NYurik.FastBinTimeseries
 {
-    public abstract class BinaryFile
+    public abstract class BinaryFile : IDisposable
     {
+        protected const int BytesInHeaderSize = 4; // sizeof(int)
         protected const int DefaultCustomTypeHeaderSize = 2*1024; // 2 KB
         protected const int DefaultPageSize = 64*1024; // 64 KB - todo: optimal?
-        protected const int HeaderSizeByteCount = 4; // sizeof(int)
         protected const int MaxHeaderSize = 64*1024;
         protected const int MaxItemsPerRequest = Int32.MaxValue;
         protected const int MaxMapViewSize = 16*1024*1024; // 8 MB - large page size to optimize TLB use
         protected const int MinPageSize = 8*1024; // 8 KB - smallest value on IA64 systems
         protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB
+        protected static readonly Version BaseCurrentVersion = new Version(1, 0);
 
         protected FileStream m_fileStream;
-        private int m_fileHeaderSize;
+        private int m_headerSize;
         private int m_pageSize;
+
+        protected BinaryFile()
+        {
+            BaseVersion = BaseCurrentVersion;
+        }
+
+        public Version BaseVersion { get; private set; }
 
         /// <summary>The size of a data page in bytes.</summary>
         public int PageSize
@@ -38,21 +46,54 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary>Size of the file header in bytes</summary>
-        public int FileHeaderSize
+        public int HeaderSize
         {
-            get { return m_fileHeaderSize; }
+            get { return m_headerSize; }
             protected set
             {
-                if (value == m_fileHeaderSize)
+                if (value == m_headerSize)
                     return;
 
-                if (value > MaxHeaderSize || value < HeaderSizeByteCount)
+                if (value > MaxHeaderSize || value < BytesInHeaderSize)
                     throw new IOException(
                         String.Format("File header size {0} is not within allowed range {1}..{2}",
-                                      value, HeaderSizeByteCount, MaxHeaderSize));
+                                      value, BytesInHeaderSize, MaxHeaderSize));
 
-                m_fileHeaderSize = value;
+                m_headerSize = value;
             }
+        }
+
+        #region IDisposable Members
+
+        void IDisposable.Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        #endregion
+
+        public void Close()
+        {
+            ((IDisposable) this).Dispose();
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                var streamTmp = m_fileStream;
+                m_fileStream = null;
+                if (streamTmp != null)
+                    streamTmp.Close();
+            }
+            else
+                m_fileStream = null;
+        }
+
+        ~BinaryFile()
+        {
+            Dispose(false);
         }
 
         /// <summary>
@@ -66,7 +107,8 @@ namespace NYurik.FastBinTimeseries
             try
             {
                 stream = new FileStream(
-                    fileName, FileMode.Open, canWrite ? FileAccess.ReadWrite : FileAccess.Read, FileShare.None);
+                    fileName, FileMode.Open, canWrite ? FileAccess.ReadWrite : FileAccess.Read,
+                    canWrite ? FileShare.Read : FileShare.ReadWrite);
                 return Open(stream);
             }
             catch
@@ -102,20 +144,28 @@ namespace NYurik.FastBinTimeseries
             stream.Seek(0, SeekOrigin.Begin);
 
             // Get header size
-            var hdrSize = BitConverter.ToInt32(ReadIntoNewBuffer(stream, HeaderSizeByteCount), 0);
+            var hdrSize = BitConverter.ToInt32(ReadIntoNewBuffer(stream, BytesInHeaderSize), 0);
 
             // Read the rest of the header and create a memory reader so that we won't accidently go too far on string reads
             var memReader = new BinaryReader(
-                new MemoryStream(ReadIntoNewBuffer(stream, hdrSize - HeaderSizeByteCount), false));
+                new MemoryStream(ReadIntoNewBuffer(stream, hdrSize - BytesInHeaderSize), false));
 
             // Instantiate BinaryFile-inherited class this file was created with
+            var baseVersion = Utilities.ReadVersion(memReader);
+
+            // Any older versions of the header should be processed here
+            if (baseVersion != BaseCurrentVersion)
+                Utilities.ThrowUnknownVersion(baseVersion, typeof (BinaryFile));
+
+
             var classTypeName = memReader.ReadString();
             var classType = Utilities.GetTypeFromAnyAssemblyVersion(classTypeName);
             if (classType == null)
                 throw new InvalidOperationException("Unable to find class type " + classTypeName);
             var inst = (BinaryFile) Activator.CreateInstance(classType, true);
 
-            inst.FileHeaderSize = hdrSize;
+            inst.HeaderSize = hdrSize;
+            inst.BaseVersion = baseVersion;
             inst.m_fileStream = stream;
 
             // Read values in the same order as WriteHeader()

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 
 namespace NYurik.FastBinTimeseries
@@ -191,5 +192,27 @@ namespace NYurik.FastBinTimeseries
         }
 
         #endregion
+
+        public static Version ReadVersion(BinaryReader reader)
+        {
+            var major = reader.ReadInt32();
+            var minor = reader.ReadInt32();
+            var build = reader.ReadInt32();
+            var revision = reader.ReadInt32();
+
+            return build < 0
+                       ? new Version(major, minor)
+                       : revision < 0
+                             ? new Version(major, minor, build)
+                             : new Version(major, minor, build, revision);
+        }
+
+        public static void WriteVersion(BinaryWriter writer, Version ver)
+        {
+            writer.Write(ver.Major);
+            writer.Write(ver.Minor);
+            writer.Write(ver.Build);
+            writer.Write(ver.Revision);
+        }
     }
 }
