@@ -22,10 +22,12 @@ namespace NYurik.FastBinTimeseries.Test
 
         private const string binFile = @"LargeTempDataFile2.bsd";
 
-        private static void PageBorderOperations<T>(Func<long, T> converter)
+        private static void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess)
         {
             using (var f = new BinIndexedFile<T>(binFile))
             {
+                f.EnableMemoryMappedFileAccess = enableMemoryMappedAccess;
+
                 var items1stPg = (int) RoundUpToMultiple(f.HeaderSizeAsItemCount, f.ItemsPerPage) -
                                  f.HeaderSizeAsItemCount;
 
@@ -47,6 +49,10 @@ namespace NYurik.FastBinTimeseries.Test
                 f.WriteData(0, dataPlusOne, 0, dataPlusOne.Length);
                 Assert.AreEqual(f.HeaderSize + (items1stPg + 1)*f.ItemSize + f.PagePadding, new FileInfo(binFile).Length);
                 ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
+
+                ReadAndAssert(GenerateData(converter, 1, items1stPg - 1), f, items1stPg - 1, 1);
+                ReadAndAssert(GenerateData(converter, 1, items1stPg), f, items1stPg, 1);
+                ReadAndAssert(GenerateData(converter, 2, items1stPg - 1), f, items1stPg - 1, 2);
             }
         }
 
@@ -90,13 +96,13 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
-        static long RoundUpToMultiple(long value, long multiple)
+        private static long RoundUpToMultiple(long value, long multiple)
         {
             if (value < 0)
                 throw new ArgumentOutOfRangeException("value", value, "Value must be >= 0");
             if (value == 0)
                 return 0;
-            return value - 1 + (multiple - (value - 1) % multiple);
+            return value - 1 + (multiple - (value - 1)%multiple);
         }
 
         private static T[] Concatenate<T>(params T[][] arrays)
@@ -198,9 +204,15 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         [Test]
-        public void ByteFilePageBorderOps()
+        public void ByteFilePageBorderOpsMMF()
         {
-            PageBorderOperations<byte>(CreateByte);
+            PageBorderOperations<byte>(CreateByte, true);
+        }
+
+        [Test]
+        public void ByteFilePageBorderOpsStream()
+        {
+            PageBorderOperations<byte>(CreateByte, false);
         }
 
         [Test]
@@ -260,10 +272,17 @@ namespace NYurik.FastBinTimeseries.Test
         {
             FileIncrementalAddition<Struct3Byte>(CreateStruct3);
         }
+
         [Test]
-        public void Struct3PageBorderOps()
+        public void Struct3PageBorderOpsMMF()
         {
-            PageBorderOperations<Struct3Byte>(CreateStruct3);
+            PageBorderOperations<Struct3Byte>(CreateStruct3, true);
+        }
+
+        [Test]
+        public void Struct3PageBorderOpsStream()
+        {
+            PageBorderOperations<Struct3Byte>(CreateStruct3, false);
         }
     }
 }

@@ -3,7 +3,7 @@ using System.IO;
 
 namespace NYurik.FastBinTimeseries
 {
-    public abstract class BinaryFile<T> : BinaryFile, IDisposable
+    public abstract class BinaryFile<T> : BinaryFile
     {
         #region Fields and Properties
 
@@ -84,6 +84,8 @@ namespace NYurik.FastBinTimeseries
 
         #region Instance Creating and Header Handling
 
+        private bool m_enableMemoryMappedFileAccess;
+
         /// <summary>
         /// Must override this constructor to allow Activator non-public instantiation
         /// </summary>
@@ -100,9 +102,24 @@ namespace NYurik.FastBinTimeseries
         protected BinaryFile(string fileName, IBinSerializer<T> customSerializer)
         {
             Serializer = customSerializer ?? new DefaultTypeSerializer<T>();
+            m_enableMemoryMappedFileAccess = Serializer.SupportsMemoryMappedFiles;
             PageSize = Serializer.PageSize;
             CanWrite = true;
             m_fileStream = new FileStream(fileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
+        }
+
+        public bool EnableMemoryMappedFileAccess
+        {
+            get { return m_enableMemoryMappedFileAccess; }
+            set
+            {
+                if (m_enableMemoryMappedFileAccess != value)
+                {
+                    if (!Serializer.SupportsMemoryMappedFiles && value)
+                        throw new NotSupportedException("Memory mapped files are not supported by the serializer");
+                    m_enableMemoryMappedFileAccess = value;
+                }
+            }
         }
 
         /// <summary>
@@ -113,6 +130,7 @@ namespace NYurik.FastBinTimeseries
         protected internal override sealed void Init(Type serializerType, BinaryReader memReader)
         {
             Serializer = (IBinSerializer<T>) Activator.CreateInstance(serializerType);
+            m_enableMemoryMappedFileAccess = Serializer.SupportsMemoryMappedFiles;
 
             // Make sure the item size has not changed
             var itemSize = memReader.ReadInt32();
@@ -250,16 +268,22 @@ namespace NYurik.FastBinTimeseries
         private long ItemCountToFileLength(long count)
         {
             var offsetToStopAt = ItemIdxToOffset(count);
-            if (offsetToStopAt % PageSize == 0 && PagePadding != 0)
+            if (offsetToStopAt%PageSize == 0 && PagePadding != 0)
                 offsetToStopAt -= PagePadding;
             return offsetToStopAt;
         }
 
         private long ItemIdxToOffset(long itemIdx)
         {
+            //  Number of whole pages before item * pageSize   +   item index on its page * itemSize
             var adjIndex = itemIdx + HeaderSizeAsItemCount;
             return adjIndex/ItemsPerPage*PageSize +
                    adjIndex%ItemsPerPage*ItemSize;
+        }
+
+        private long ItemIdxToPage(long itemIdx)
+        {
+            return (itemIdx + HeaderSizeAsItemCount)/ItemsPerPage;
         }
 
         /// <summary> Validate file size matches with the header data </summary>
@@ -269,11 +293,6 @@ namespace NYurik.FastBinTimeseries
                 throw new InvalidOperationException(
                     String.Format("File header size {0} must be less than or equal to the page size {1}",
                                   newHeaderSize, PageSize));
-        }
-
-        private long ItemIdxToPage(long itemIdx)
-        {
-            return (itemIdx + HeaderSizeAsItemCount)/ItemsPerPage;
         }
 
         #endregion
@@ -341,7 +360,7 @@ namespace NYurik.FastBinTimeseries
                         if (useMemMapping)
                         {
                             // Round down to nearest page
-                            mapViewFileOffset = (ItemIdxToOffset(itemIdx) / PageSize) * PageSize;
+                            mapViewFileOffset = (ItemIdxToOffset(itemIdx)/PageSize)*PageSize;
 
                             // Cannot exceed file length (at least for files opened as read-only)
                             var mapViewSize = Math.Min(offsetToStopAt - mapViewFileOffset, MaxMapViewSize);
@@ -354,27 +373,29 @@ namespace NYurik.FastBinTimeseries
 
                         for (long run = 0; run < runsPerGroup; run++)
                         {
-                            //  Number of whole pages before item * pageSize   +   item index on its page * itemSize
                             var fileOffset = ItemIdxToOffset(itemIdx);
-                            var bufItemOffset = bufOffset + (itemIdx - firstItemIdx);
-                            var itemsToProcess = Math.Min(bufCount - (itemIdx - firstItemIdx),
-                                                          itemsPerRun - (itemIdx%itemsPerRun));
+                            var totalItemsDone = itemIdx - firstItemIdx;
+                            var bufItemOffset = bufOffset + totalItemsDone;
+
+                            var itemsToProcessThisRun = Math.Min(
+                                bufCount - totalItemsDone,
+                                itemsPerRun - ((itemIdx + HeaderSizeAsItemCount)%itemsPerRun));
 
                             if (useMemMapping)
                             {
                                 // Access file using memory-mapped pages
                                 Serializer.ProcessMemoryMap(
                                     (IntPtr) (ptrMapViewBaseAddr.Address + fileOffset - mapViewFileOffset),
-                                    buffer, (int) bufItemOffset, (int) itemsToProcess, isWriting);
+                                    buffer, (int) bufItemOffset, (int) itemsToProcessThisRun, isWriting);
                             }
                             else
                             {
                                 // Access file using FileStream object
                                 m_fileStream.Seek(fileOffset, SeekOrigin.Begin);
                                 Serializer.ProcessFileStream(m_fileStream, buffer, (int) bufItemOffset,
-                                                             (int) itemsToProcess, isWriting);
+                                                             (int) itemsToProcessThisRun, isWriting);
 
-                                var expectedStreamPos = fileOffset + itemsToProcess*ItemSize;
+                                var expectedStreamPos = fileOffset + itemsToProcessThisRun*ItemSize;
                                 if (expectedStreamPos != m_fileStream.Position)
                                     throw new InvalidOperationException(
                                         String.Format(
@@ -382,13 +403,13 @@ namespace NYurik.FastBinTimeseries
                                             "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
                                             "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
                                             isWriting ? "writing" : "reading",
-                                            itemsToProcess, fileOffset, expectedStreamPos, m_fileStream.Position));
+                                            itemsToProcessThisRun, fileOffset, expectedStreamPos, m_fileStream.Position));
 
-                                if (hasPadding && (bufCount - (itemIdx + itemsToProcess - firstItemIdx)) > 0)
+                                if (hasPadding && (bufCount - (totalItemsDone + itemsToProcessThisRun)) > 0)
                                     m_fileStream.Seek(PagePadding, SeekOrigin.Current);
                             }
 
-                            itemIdx += itemsToProcess;
+                            itemIdx += itemsToProcessThisRun;
                         }
                     }
                     finally
