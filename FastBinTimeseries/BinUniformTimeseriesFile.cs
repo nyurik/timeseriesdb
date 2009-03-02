@@ -168,14 +168,18 @@ namespace NYurik.FastBinTimeseries
             var lastIndexExcl = IndexToLong(toExclusive);
 
             var itemsCountLng = lastIndexExcl - firstIndexIncl;
-            ValidateMaxRequestSize(itemsCountLng);
+            if (itemsCountLng > int.MaxValue)
+                throw new ArgumentException(
+                    String.Format(
+                        "Attempted to get {0} items at once, which is over the maximum of {1}.",
+                        itemsCountLng, Int32.MaxValue));
 
             // Switiching to int array refs. No 64bit array support yet
             var count = (int) itemsCountLng;
             if (buffer == null)
                 buffer = new T[count];
 
-            ProcessFileByPage(firstIndexIncl, buffer, offset, count, false);
+            PerformFileAccess(firstIndexIncl, buffer, offset, count, false);
         }
 
         /// <summary>
@@ -187,7 +191,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">The number of items to be read to the array.</param>
         public void ReadData(DateTime fromInclusive, T[] buffer, int offset, int count)
         {
-            ProcessFileByPage(IndexToLong(fromInclusive), buffer, offset, count, false);
+            PerformFileAccess(IndexToLong(fromInclusive), buffer, offset, count, false);
         }
 
         /// <summary>
@@ -201,7 +205,7 @@ namespace NYurik.FastBinTimeseries
             ThrowOnDisposed();
 
             var buffer = new T[count];
-            ProcessFileByPage(IndexToLong(fromInclusive), buffer, 0, count, false);
+            PerformFileAccess(IndexToLong(fromInclusive), buffer, 0, count, false);
             return buffer;
         }
 
@@ -251,7 +255,7 @@ namespace NYurik.FastBinTimeseries
             if (buffer.Length == 0)
                 return; // validate parameters but don't change anything
 
-            ProcessFileByPage(itemLong, buffer, offset, count, true);
+            PerformFileAccess(itemLong, buffer, offset, count, true);
         }
     }
 }

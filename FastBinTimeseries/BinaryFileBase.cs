@@ -9,7 +9,6 @@ namespace NYurik.FastBinTimeseries
         protected const int DefaultCustomTypeHeaderSize = 2*1024; // 2 KB
         protected const int DefaultPageSize = 64*1024; // 64 KB - todo: optimal?
         protected const int MaxHeaderSize = 64*1024;
-        protected const int MaxItemsPerRequest = Int32.MaxValue;
         protected const int MaxMapViewSize = 16*1024*1024; // 8 MB - large page size to optimize TLB use
         protected const int MinPageSize = 8*1024; // 8 KB - smallest value on IA64 systems
         protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB

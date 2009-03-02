@@ -50,7 +50,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">The number of items to be read to the array.</param>
         public void ReadData(long firstItemIndex, T[] buffer, int offset, int count)
         {
-            ProcessFileByPage(firstItemIndex, buffer, offset, count, false);
+            PerformFileAccess(firstItemIndex, buffer, offset, count, false);
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">The number of items to be written from array. No action is performed when the count is 0.</param>
         public void WriteData(long firstItemIndex, T[] buffer, int offset, int count)
         {
-            ProcessFileByPage(firstItemIndex, buffer, offset, count, true);
+            PerformFileAccess(firstItemIndex, buffer, offset, count, true);
         }
 
 
