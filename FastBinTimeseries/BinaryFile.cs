@@ -25,7 +25,6 @@ namespace NYurik.FastBinTimeseries
         protected BinaryFile(string fileName, IBinSerializer<T> customSerializer)
         {
             Serializer = customSerializer ?? new DefaultTypeSerializer<T>();
-            PageSize = Serializer.PageSize;
             InitFromSerializer();
             CanWrite = true;
             m_fileStream = new FileStream(fileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
@@ -37,10 +36,6 @@ namespace NYurik.FastBinTimeseries
             if (size <= 0)
                 throw new ArgumentOutOfRangeException("typeSize" + "", size,
                                                       "Element size given by the serializer must be > 0");
-            if (size > PageSize)
-                throw new ArgumentOutOfRangeException("typeSize" + "", size,
-                                                      "Element size given by the serializer must be less than the page size " +
-                                                      PageSize);
             ItemSize = size;
             _enableMemoryMappedFileAccess = Serializer.SupportsMemoryMappedFiles;
         }
@@ -68,20 +63,8 @@ namespace NYurik.FastBinTimeseries
             get { return HeaderSize/ItemSize; }
         }
 
-        /// <summary>The size of the padding in bytes at the end of each page</summary>
-        public int PagePadding
-        {
-            get { return PageSize%ItemSize; }
-        }
-
         /// <summary>The size of each item of data in bytes</summary>
         public int ItemSize { get; private set; }
-
-        /// <summary>Number of items that would fit in a page</summary>
-        public int ItemsPerPage
-        {
-            get { return PageSize/ItemSize; }
-        }
 
         /// <summary>Was file open for writing</summary>
         public bool CanWrite { get; private set; }
@@ -130,7 +113,6 @@ namespace NYurik.FastBinTimeseries
             Serializer.ReadCustomHeader(memReader, SerializerVersion);
 
             Count = CalculateItemCountFromFilePosition(m_fileStream.Length);
-            ValidateHeaderSize(HeaderSize);
         }
 
         /// <summary>
@@ -143,7 +125,6 @@ namespace NYurik.FastBinTimeseries
         /// int32   HeaderSize
         /// Version BinFile main version
         /// string  BinaryFile...<...> type name
-        /// int32   PageSize
         /// string  Serializer type name
         /// int32   ItemSize
         /// Version BinFile custom header version
@@ -169,7 +150,6 @@ namespace NYurik.FastBinTimeseries
             memWriter.Write(newHeaderSize);
             Utilities.WriteVersion(memWriter, BaseVersion);
             memWriter.Write(GetType().AssemblyQualifiedName);
-            memWriter.Write(PageSize);
             memWriter.Write(Serializer.GetType().AssemblyQualifiedName);
 
             // Make sure the item size will not change
@@ -181,7 +161,6 @@ namespace NYurik.FastBinTimeseries
 
             // Header size must be dividable by the item size
             newHeaderSize = (int) Utilities.RoundUpToMultiple(memWriter.BaseStream.Position, ItemSize);
-            ValidateHeaderSize(newHeaderSize);
 
             // Override the header size value at the first position of the header
             memWriter.Seek(0, SeekOrigin.Begin);
@@ -229,109 +208,89 @@ namespace NYurik.FastBinTimeseries
         /// <summary>Calculates the number of items that would make up the given file size</summary>
         private long CalculateItemCountFromFilePosition(long position)
         {
-            var items = position/PageSize*ItemsPerPage; // Full pages
-            items += (position%PageSize)/ItemSize; // Items on the last page
+            var items = position / ItemSize;
             items -= HeaderSizeAsItemCount;
 
-            if (position != ItemCountToFileLength(items))
+            if (position != ItemIdxToOffset(items))
                 throw new IOException(
                     String.Format(
                         "Calculated file size should be {0}, but the size on disk is {1} ({2})",
-                        ItemCountToFileLength(items), position, ToString()));
+                        ItemIdxToOffset(items), position, ToString()));
 
             return items;
         }
 
-        /// <summary>
-        /// Calculate the size of file that would fit given number of items.
-        /// </summary>
-        private long ItemCountToFileLength(long count)
-        {
-            var offsetToStopAt = ItemIdxToOffset(count);
-            if (offsetToStopAt%PageSize == 0 && PagePadding != 0)
-                offsetToStopAt -= PagePadding;
-            return offsetToStopAt;
-        }
-
         private long ItemIdxToOffset(long itemIdx)
         {
-            //  Number of whole pages before item * pageSize   +   item index on its page * itemSize
             var adjIndex = itemIdx + HeaderSizeAsItemCount;
-            return adjIndex/ItemsPerPage*PageSize +
-                   adjIndex%ItemsPerPage*ItemSize;
+            return adjIndex*ItemSize;
         }
 
-        private long ItemIdxToPage(long itemIdx)
+        /// Access file using FileStream object
+        private void ProcessFileNoMMF(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
         {
-            return (itemIdx + HeaderSizeAsItemCount)/ItemsPerPage;
-        }
+            var fileOffset = ItemIdxToOffset(firstItemIdx);
 
-        /// <summary> Validate file size matches with the header data </summary>
-        private void ValidateHeaderSize(int newHeaderSize)
-        {
-            if (newHeaderSize > PageSize)
+            m_fileStream.Seek(fileOffset, SeekOrigin.Begin);
+            Serializer.ProcessFileStream(m_fileStream, buffer, bufOffset, bufCount, isWriting);
+
+            var expectedStreamPos = fileOffset + bufCount*ItemSize;
+            if (expectedStreamPos != m_fileStream.Position)
                 throw new InvalidOperationException(
-                    String.Format("File header size {0} must be less than or equal to the page size {1}",
-                                  newHeaderSize, PageSize));
+                    String.Format(
+                        "Possible loss of data or file corruption detected.\n" +
+                        "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
+                        "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
+                        isWriting ? "writing" : "reading",
+                        bufCount, fileOffset, expectedStreamPos, m_fileStream.Position));
         }
 
-        private void ProcessFileByPage(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting,
-                                       bool useMemMapping)
+        private void ProcessFileMMF(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
         {
-            var offsetToStopAt = ItemCountToFileLength(firstItemIdx + bufCount);
-
-            var hasPadding = PagePadding != 0;
-
-            var numPagesToProcess = (ItemIdxToPage(firstItemIdx + bufCount) - ItemIdxToPage(firstItemIdx) + 1);
-            var maxPagesPerMapView = MaxMapViewSize / PageSize; 
-            var pagesPerRun = hasPadding ? 1 : (useMemMapping ? maxPagesPerMapView : numPagesToProcess);
-            var itemsPerRun = pagesPerRun*ItemsPerPage;
-            var runsPerGroup = hasPadding ? (useMemMapping ? maxPagesPerMapView : numPagesToProcess) : 1;
-            var groupCount = Decimal.Ceiling((decimal) numPagesToProcess/runsPerGroup/pagesPerRun);
-            var itemIdx = firstItemIdx;
-
             SafeMapHandle hMap = null;
-
             try
             {
-                if (useMemMapping)
-                {
-                    var fileSize = m_fileStream.Length;
+                var offsetToStopAt = ItemIdxToOffset(firstItemIdx + bufCount);
+                var itemIdx = firstItemIdx;
 
-                    // Grow file if needed
-                    if (isWriting && offsetToStopAt > fileSize)
-                        fileSize = offsetToStopAt;
+                // Grow file if needed
+                var fileSize = m_fileStream.Length;
+                if (isWriting && offsetToStopAt > fileSize)
+                    fileSize = offsetToStopAt;
+                hMap = Win32Apis.CreateFileMapping(
+                    m_fileStream, fileSize,
+                    isWriting ? FileMapProtection.PageReadWrite : FileMapProtection.PageReadOnly);
 
-                    hMap = Win32Apis.CreateFileMapping(
-                        m_fileStream, fileSize,
-                        isWriting ? FileMapProtection.PageReadWrite : FileMapProtection.PageReadOnly);
-                }
-
-                for (long group = 0; group < groupCount; group++)
+                while(itemIdx < firstItemIdx + bufCount)
                 {
                     SafeMapViewHandle ptrMapViewBaseAddr = null;
                     try
                     {
-                        long mapViewFileOffset = 0;
-                        if (useMemMapping)
+                        var itemIdxOffset = ItemIdxToOffset(itemIdx);
+                        var mapViewFileOffset = Utilities.RoundDownToMultiple(itemIdxOffset, MinPageSize);
+
+                        var mapViewSize = offsetToStopAt - mapViewFileOffset;
+                        var itemsToProcessThisRun = firstItemIdx + bufCount - itemIdx;
+                        if (mapViewSize > MinLargePageSize)
                         {
-                            // Round down to nearest page
-                            mapViewFileOffset = (ItemIdxToOffset(itemIdx)/PageSize)*PageSize;
-
-                            // Cannot exceed file length (at least for files opened as read-only)
-                            var mapViewSize = Math.Min(offsetToStopAt - mapViewFileOffset, MaxMapViewSize);
-
-                            // The size of the new map view.
-                            ptrMapViewBaseAddr = Win32Apis.MapViewOfFile(
-                                hMap, mapViewFileOffset, mapViewSize,
-                                isWriting ? FileMapAccess.Write : FileMapAccess.Read);
+                            mapViewSize = MinLargePageSize;
+                            itemsToProcessThisRun = (mapViewFileOffset + mapViewSize)/ItemSize - itemIdx - HeaderSizeAsItemCount;
                         }
 
-                        for (long run = 0; run < runsPerGroup; run++)
-                        {
-                            ProcessPageRun(firstItemIdx, buffer, bufOffset, bufCount, isWriting, useMemMapping,
-                                           ref itemIdx, ptrMapViewBaseAddr, mapViewFileOffset, itemsPerRun);
-                        }
+                        // The size of the new map view.
+                        ptrMapViewBaseAddr = Win32Apis.MapViewOfFile(
+                            hMap, mapViewFileOffset, mapViewSize,
+                            isWriting ? FileMapAccess.Write : FileMapAccess.Read);
+
+                        var totalItemsDone = itemIdx - firstItemIdx;
+                        var bufItemOffset = bufOffset + totalItemsDone;
+
+                        // Access file using memory-mapped pages
+                        Serializer.ProcessMemoryMap(
+                            (IntPtr) (ptrMapViewBaseAddr.Address + itemIdxOffset - mapViewFileOffset),
+                            buffer, (int) bufItemOffset, (int) itemsToProcessThisRun, isWriting);
+
+                        itemIdx += itemsToProcessThisRun;
                     }
                     finally
                     {
@@ -345,49 +304,6 @@ namespace NYurik.FastBinTimeseries
                 if (hMap != null)
                     hMap.Dispose();
             }
-        }
-
-        private void ProcessPageRun(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting,
-                                    bool useMemMapping, ref long itemIdx, SafeMapViewHandle ptrMapViewBaseAddr,
-                                    long mapViewFileOffset, long itemsPerRun)
-        {
-            var fileOffset = ItemIdxToOffset(itemIdx);
-            var totalItemsDone = itemIdx - firstItemIdx;
-            var bufItemOffset = bufOffset + totalItemsDone;
-
-            var itemsToProcessThisRun = Math.Min(
-                bufCount - totalItemsDone,
-                itemsPerRun - ((itemIdx + HeaderSizeAsItemCount)%itemsPerRun));
-
-            if (useMemMapping)
-            {
-                // Access file using memory-mapped pages
-                Serializer.ProcessMemoryMap(
-                    (IntPtr) (ptrMapViewBaseAddr.Address + fileOffset - mapViewFileOffset),
-                    buffer, (int) bufItemOffset, (int) itemsToProcessThisRun, isWriting);
-            }
-            else
-            {
-                // Access file using FileStream object
-                m_fileStream.Seek(fileOffset, SeekOrigin.Begin);
-                Serializer.ProcessFileStream(m_fileStream, buffer, (int) bufItemOffset,
-                                             (int) itemsToProcessThisRun, isWriting);
-
-                var expectedStreamPos = fileOffset + itemsToProcessThisRun*ItemSize;
-                if (expectedStreamPos != m_fileStream.Position)
-                    throw new InvalidOperationException(
-                        String.Format(
-                            "Possible loss of data or file corruption detected.\n" +
-                            "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
-                            "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
-                            isWriting ? "writing" : "reading",
-                            itemsToProcessThisRun, fileOffset, expectedStreamPos, m_fileStream.Position));
-
-                if (PagePadding != 0 && (bufCount - (totalItemsDone + itemsToProcessThisRun)) > 0)
-                    m_fileStream.Seek(PagePadding, SeekOrigin.Current);
-            }
-
-            itemIdx += itemsToProcessThisRun;
         }
 
         protected void PerformFileAccess(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
@@ -413,10 +329,13 @@ namespace NYurik.FastBinTimeseries
                 WriteHeader();
             }
 
-            var useMemMapping = Serializer.SupportsMemoryMappedFiles
+            var useMemMapping = EnableMemoryMappedFileAccess
                                 && ItemIdxToOffset(bufCount) > MinReqSizeToUseMapView;
 
-            ProcessFileByPage(firstItemIdx, buffer, bufOffset, bufCount, isWriting, useMemMapping);
+            if (useMemMapping)
+                ProcessFileMMF(firstItemIdx, buffer, bufOffset, bufCount, isWriting);
+            else
+                ProcessFileNoMMF(firstItemIdx, buffer, bufOffset, bufCount, isWriting);
 
             if (isWriting)
             {

@@ -29,10 +29,65 @@ namespace NYurik.FastBinTimeseries
         AllAccess = 0x1f,
     }
 
-    internal class Win32Apis
+    internal static class Win32Apis
     {
+        public static SYSTEM_INFO SystemInfo
+        {
+            get
+            {
+                if (!_sysInfo.HasValue)
+                    lock (typeof(Win32Apis))
+                        if (!_sysInfo.HasValue)
+                        {
+                            SYSTEM_INFO info;
+                            GetNativeSystemInfo(out info);
+                            _sysInfo = info;
+                        }
+                return _sysInfo.Value;
+            }
+        }
+
+        private static SYSTEM_INFO? _sysInfo;
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct SYSTEM_INFO
+        {
+            public PROCESSOR_INFO_UNION ProcessorInfo;
+            public uint dwPageSize;
+            public IntPtr lpMinimumApplicationAddress;
+            public IntPtr lpMaximumApplicationAddress;
+            public IntPtr dwActiveProcessorMask;
+            public uint dwNumberOfProcessors;
+            public uint dwProcessorType;
+            public uint dwAllocationGranularity;
+            public ushort dwProcessorLevel;
+            public ushort dwProcessorRevision;
+
+            public enum ProcArch : ushort
+            {
+                PROCESSOR_ARCHITECTURE_INTEL = 0, //32-bit
+                PROCESSOR_ARCHITECTURE_IA64 = 6, //Itanium 64-bit
+                PROCESSOR_ARCHITECTURE_AMD64 = 9, //Extended 64-bit
+                PROCESSOR_ARCHITECTURE_UNKNOWN = 0xFFFF //Unknown
+            }
+
+            [StructLayout(LayoutKind.Explicit)]
+            internal struct PROCESSOR_INFO_UNION
+            {
+                [FieldOffset(0)]
+                public uint dwOemId;
+                [FieldOffset(0)]
+                public ProcArch wProcessorArchitecture;
+                [FieldOffset(2)]
+                public ushort wReserved;
+            }
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern void GetNativeSystemInfo([MarshalAs(UnmanagedType.Struct)] out SYSTEM_INFO lpSystemInfo);
+
         internal static SafeMapHandle CreateFileMapping(FileStream fileStream, long fileSize,
-                                                        FileMapProtection protection)
+                                                            FileMapProtection protection)
         {
             return
                 ThrowOnError(
@@ -40,8 +95,8 @@ namespace NYurik.FastBinTimeseries
                         fileStream.SafeFileHandle,
                         IntPtr.Zero,
                         protection,
-                        (uint) ((fileSize >> 32) & 0xFFFFFFFF),
-                        (uint) (fileSize & 0xFFFFFFFF),
+                        (uint)((fileSize >> 32) & 0xFFFFFFFF),
+                        (uint)(fileSize & 0xFFFFFFFF),
                         null));
         }
 
@@ -69,9 +124,9 @@ namespace NYurik.FastBinTimeseries
                     MapViewOfFile(
                         hMap,
                         desiredAccess,
-                        (uint) ((fileOffset >> 32) & 0xFFFFFFFF),
-                        (uint) (fileOffset & 0xFFFFFFFF),
-                        (IntPtr) mapViewSize));
+                        (uint)((fileOffset >> 32) & 0xFFFFFFFF),
+                        (uint)(fileOffset & 0xFFFFFFFF),
+                        (IntPtr)mapViewSize));
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -99,7 +154,7 @@ namespace NYurik.FastBinTimeseries
             uint bytesProcessed;
             ThrowOnError(
                 ReadFile(
-                    fileHandle.SafeFileHandle, byteBufPtr, (uint) byteCount, out bytesProcessed, null)
+                    fileHandle.SafeFileHandle, byteBufPtr, (uint)byteCount, out bytesProcessed, null)
                 );
             return bytesProcessed;
         }
@@ -118,7 +173,7 @@ namespace NYurik.FastBinTimeseries
             uint bytesProcessed;
             ThrowOnError(
                 WriteFile(
-                    fileHandle.SafeFileHandle, byteBufPtr, (uint) byteCount, out bytesProcessed, null));
+                    fileHandle.SafeFileHandle, byteBufPtr, (uint)byteCount, out bytesProcessed, null));
             return bytesProcessed;
         }
 
@@ -142,6 +197,8 @@ namespace NYurik.FastBinTimeseries
             if (!result)
                 throw new Win32Exception(Marshal.GetLastWin32Error());
         }
+
+        public static readonly unsafe bool Is64bit = sizeof(void*) == sizeof(long);
     }
 
     internal class SafeMapViewHandle : SafeHandleZeroOrMinusOneIsInvalid

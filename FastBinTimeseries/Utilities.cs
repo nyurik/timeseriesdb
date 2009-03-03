@@ -6,8 +6,6 @@ namespace NYurik.FastBinTimeseries
 {
     internal static class Utilities
     {
-        private static readonly unsafe bool is64bit = sizeof (void*) == sizeof (long);
-
         /// <summary>
         /// Get an array of attributes of a given type attached to an Enum value.
         /// </summary>
@@ -109,6 +107,13 @@ namespace NYurik.FastBinTimeseries
                                   buffer.Length, offset, count));
         }
 
+        public static long RoundDownToMultiple(long value, long multiple)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException("value", value, "Value must be >= 0");
+            return value - value%multiple;
+        }
+
         public static long RoundUpToMultiple(long value, long multiple)
         {
             if (value < 0)
@@ -127,7 +132,7 @@ namespace NYurik.FastBinTimeseries
             const int blockSize = 32;
             if (byteCount >= blockSize)
             {
-                if (is64bit)
+                if (Win32Apis.Is64bit)
                 {
                     do
                     {

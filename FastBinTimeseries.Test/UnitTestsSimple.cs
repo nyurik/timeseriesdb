@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using NUnit.Framework;
 
 namespace NYurik.FastBinTimeseries.Test
@@ -22,17 +23,38 @@ namespace NYurik.FastBinTimeseries.Test
 
         private const string binFile = @"LargeTempDataFile2.bsd";
 
-        private static void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess)
+        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess) where T : IEquatable<T>
         {
+            for (var i = 1; i < 5; i++)
+                PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
+
+            PageBorderOperations(converter, enableMemoryMappedAccess,
+                                 BinaryFile.MinLargePageSize - BinaryFile.MinPageSize);
+            PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinLargePageSize);
+            PageBorderOperations(converter, enableMemoryMappedAccess,
+                                 BinaryFile.MinLargePageSize + BinaryFile.MinPageSize);
+
+            PageBorderOperations(converter, enableMemoryMappedAccess,
+                                 2*BinaryFile.MinLargePageSize - BinaryFile.MinPageSize);
+            PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MinLargePageSize);
+            PageBorderOperations(converter, enableMemoryMappedAccess,
+                                 2*BinaryFile.MinLargePageSize + BinaryFile.MinPageSize);
+        }
+
+        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess, int pageSize) where T : IEquatable<T>
+        {
+            Cleanup();
+
             using (var f = new BinIndexedFile<T>(binFile))
             {
                 f.EnableMemoryMappedFileAccess = enableMemoryMappedAccess;
 
-                var items1stPg = (int) RoundUpToMultiple(f.HeaderSizeAsItemCount, f.ItemsPerPage) -
+                var itemsPerPage = pageSize / Marshal.SizeOf(typeof(T));
+                var items1stPg = (int) RoundUpToMultiple(f.HeaderSizeAsItemCount, itemsPerPage) -
                                  f.HeaderSizeAsItemCount;
 
                 if (items1stPg == 0)
-                    items1stPg = f.ItemsPerPage;
+                    items1stPg = itemsPerPage;
 
                 var dataMinusOne = GenerateData(converter, items1stPg - 1, 0);
                 var dataZero = GenerateData(converter, items1stPg, 0);
@@ -47,7 +69,7 @@ namespace NYurik.FastBinTimeseries.Test
                 ReadAndAssert(dataZero, f, 0, dataZero.Length);
 
                 f.WriteData(0, dataPlusOne, 0, dataPlusOne.Length);
-                Assert.AreEqual(f.HeaderSize + (items1stPg + 1)*f.ItemSize + f.PagePadding, new FileInfo(binFile).Length);
+                Assert.AreEqual(f.HeaderSize + (items1stPg + 1)*f.ItemSize, new FileInfo(binFile).Length);
                 ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
 
                 ReadAndAssert(GenerateData(converter, 1, items1stPg - 1), f, items1stPg - 1, 1);
@@ -56,7 +78,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
-        private static void FileIncrementalAddition<T>(Func<long, T> converter)
+        private static void FileIncrementalAddition<T>(Func<long, T> converter) where T : IEquatable<T>
         {
             var data0 = GenerateData(converter, 1, 10);
             var data1 = GenerateData(converter, 2, 20);
@@ -127,10 +149,23 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         private static void ReadAndAssert<T>(T[] expected, BinIndexedFile<T> f, int firstItemIndex, long count)
+            where T:IEquatable<T>
         {
             var buffer = new T[count];
             f.ReadData(firstItemIndex, buffer, 0, buffer.Length);
-            CollectionAssert.AreEqual(expected, buffer);
+            AreEqual(expected, buffer);
+        }
+
+        private static void AreEqual<T>(T[] expected, T[] values) where T:IEquatable<T>
+        {
+            Assert.AreEqual(expected.Length, values.Length, "Array lengths");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                if (!expected[i].Equals(values[i]))
+                    throw new Exception(
+                        string.Format("Items in position {0} is {1}, but expected {2}",
+                                      i, values[i], expected[i]));
+            }
         }
 
         private static Struct3Byte CreateStruct3(long i)
@@ -148,7 +183,7 @@ namespace NYurik.FastBinTimeseries.Test
         [Test]
         public void ByteEmptyFile()
         {
-            int hdrSize, pageSize;
+            int hdrSize;
             Version fileVersion, baseVersion, serializerVersion;
 
             using (var f = new BinIndexedFile<byte>(binFile))
@@ -164,14 +199,10 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(0, f.Count);
 
                 hdrSize = f.HeaderSize;
-                pageSize = f.PageSize;
 
-                Assert.AreEqual(0, pageSize%(4*1024));
                 Assert.AreEqual(1, f.ItemSize);
                 Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
                 Assert.IsTrue(f.IsEmpty);
-                Assert.AreEqual(pageSize/1, f.ItemsPerPage);
-                Assert.AreEqual(0, f.PagePadding);
             }
 
             using (var file = BinaryFile.Open(binFile, false))
@@ -187,13 +218,10 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(0, f.Count);
 
                 Assert.AreEqual(hdrSize, f.HeaderSize);
-                Assert.AreEqual(pageSize, f.PageSize);
 
                 Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
                 Assert.IsTrue(f.IsEmpty);
                 Assert.AreEqual(1, f.ItemSize);
-                Assert.AreEqual(pageSize/1, f.ItemsPerPage);
-                Assert.AreEqual(0, f.PagePadding);
             }
         }
 
@@ -218,7 +246,7 @@ namespace NYurik.FastBinTimeseries.Test
         [Test]
         public void Struct3EmptyFile()
         {
-            int hdrSize, pageSize;
+            int hdrSize;
             Version fileVersion, baseVersion, serializerVersion;
 
             using (var f = new BinIndexedFile<Struct3Byte>(binFile))
@@ -234,14 +262,10 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(0, f.Count);
 
                 hdrSize = f.HeaderSize;
-                pageSize = f.PageSize;
 
-                Assert.AreEqual(0, pageSize%(4*1024));
                 Assert.AreEqual(3, f.ItemSize);
                 Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
                 Assert.IsTrue(f.IsEmpty);
-                Assert.AreEqual(pageSize/3, f.ItemsPerPage);
-                Assert.AreEqual(1, f.PagePadding);
             }
 
             using (var file = BinaryFile.Open(binFile, false))
@@ -257,13 +281,10 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(0, f.Count);
 
                 Assert.AreEqual(hdrSize, f.HeaderSize);
-                Assert.AreEqual(pageSize, f.PageSize);
 
                 Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
                 Assert.IsTrue(f.IsEmpty);
                 Assert.AreEqual(3, f.ItemSize);
-                Assert.AreEqual(pageSize/3, f.ItemsPerPage);
-                Assert.AreEqual(1, f.PagePadding);
             }
         }
 

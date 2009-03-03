@@ -5,18 +5,13 @@ namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile : IDisposable
     {
-        protected const int BytesInHeaderSize = 4; // sizeof(int)
-        protected const int DefaultCustomTypeHeaderSize = 2*1024; // 2 KB
-        protected const int DefaultPageSize = 64*1024; // 64 KB - todo: optimal?
+        protected static readonly int BytesInHeaderSize = sizeof (int);
         protected const int MaxHeaderSize = 64*1024;
-        protected const int MaxMapViewSize = 16*1024*1024; // 8 MB - large page size to optimize TLB use
-        protected const int MinPageSize = 8*1024; // 8 KB - smallest value on IA64 systems
         protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB
         protected static readonly Version BaseCurrentVersion = new Version(1, 0);
 
         protected FileStream m_fileStream;
         private int m_headerSize;
-        private int m_pageSize;
 
         protected BinaryFile()
         {
@@ -24,25 +19,6 @@ namespace NYurik.FastBinTimeseries
         }
 
         public Version BaseVersion { get; private set; }
-
-        /// <summary>The size of a data page in bytes.</summary>
-        public int PageSize
-        {
-            get { return m_pageSize; }
-            protected set
-            {
-                if (value == 0)
-                    m_pageSize = DefaultPageSize;
-                else
-                {
-                    if (value < MinPageSize || value%MinPageSize != 0)
-                        throw new ArgumentOutOfRangeException(
-                            String.Format("PageSize must be greater or equal then and divisible by {0}",
-                                          MinPageSize));
-                    m_pageSize = value;
-                }
-            }
-        }
 
         /// <summary>Size of the file header in bytes</summary>
         public int HeaderSize
@@ -168,8 +144,6 @@ namespace NYurik.FastBinTimeseries
             inst.m_fileStream = stream;
 
             // Read values in the same order as WriteHeader()
-            inst.PageSize = memReader.ReadInt32();
-
             // Serializer
             var serializerTypeName = memReader.ReadString();
             var serializerType = Utilities.GetTypeFromAnyAssemblyVersion(serializerTypeName);
@@ -192,6 +166,36 @@ namespace NYurik.FastBinTimeseries
                     String.Format("Unable to read a block of size {0}: only {1} bytes were available", bufferSize,
                                   bytesRead));
             return headerBuffer;
+        }
+
+        /// <summary>
+        /// All memory mapping operations must align to this value (not the dwPageSize)
+        /// </summary>
+        public static int MinPageSize
+        {
+            get { return (int)Win32Apis.SystemInfo.dwAllocationGranularity;}
+        }
+
+        /// <summary>
+        /// Maximum number of bytes to read at once
+        /// </summary>
+        public static int MinLargePageSize
+        {
+            get
+            {
+                switch (Win32Apis.SystemInfo.ProcessorInfo.wProcessorArchitecture)
+                {
+                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_INTEL:
+                        return 4*1024*1024;
+
+                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_AMD64:
+                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_IA64:
+                        return 16*1024*1024;
+
+                    default:
+                        return 4*1024*1024;
+                }
+            }
         }
     }
 }

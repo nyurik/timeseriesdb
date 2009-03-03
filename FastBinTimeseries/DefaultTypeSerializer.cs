@@ -43,11 +43,6 @@ namespace NYurik.FastBinTimeseries
             get { return true; }
         }
 
-        public int PageSize
-        {
-            get { return 0; }
-        }
-
         public void ProcessFileStream(FileStream fileStream, T[] buffer, int offset, int count, bool isWriting)
         {
             processFileStream(fileStream, buffer, offset, count, isWriting);

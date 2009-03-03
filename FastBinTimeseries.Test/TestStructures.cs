@@ -1,9 +1,33 @@
+using System;
 using System.Runtime.InteropServices;
 
 namespace NYurik.FastBinTimeseries.Test
 {
-    internal struct Struct3Byte
+    internal struct Struct3Byte : IEquatable<Struct3Byte>
     {
+        public bool Equals(Struct3Byte other)
+        {
+            return other.a == a && other.b == b && other.c == c;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (obj.GetType() != typeof (Struct3Byte)) return false;
+            return Equals((Struct3Byte) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int result = a.GetHashCode();
+                result = (result*397) ^ b.GetHashCode();
+                result = (result*397) ^ c.GetHashCode();
+                return result;
+            }
+        }
+
         public byte a, b, c;
 
         public Struct3Byte(byte a, byte b, byte c)

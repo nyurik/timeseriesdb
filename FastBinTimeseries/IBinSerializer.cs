@@ -11,12 +11,6 @@ namespace NYurik.FastBinTimeseries
         int TypeSize { get; }
 
         /// <summary>
-        /// Size of the file page in bytes. Must be divisible by <see cref="BinaryFile.MinPageSize"/>.
-        /// 0 = use default
-        /// </summary>
-        int PageSize { get; }
-
-        /// <summary>
         /// Will be set to true when this provider supports reading and writing from fast memory mapped files
         /// </summary>
         bool SupportsMemoryMappedFiles { get; }
