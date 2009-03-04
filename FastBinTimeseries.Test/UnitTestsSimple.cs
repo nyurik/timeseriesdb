@@ -32,11 +32,13 @@ namespace NYurik.FastBinTimeseries.Test
         {
             var buffer = new T[count];
             f.ReadData(firstItemIndex, buffer, 0, buffer.Length);
-            UnitTestsUtils.AreEqual(expected, buffer);
+            TestUtils.AreEqual(expected, buffer);
         }
 
-        private static void EmptyFile<T>(int expectedItemSize)
+        private void EmptyFile<T>(int expectedItemSize)
         {
+            Cleanup();
+
             int hdrSize;
             Version fileVersion, baseVersion, serializerVersion;
 
@@ -80,11 +82,13 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
-        private static void FileIncrementalAddition<T>(Func<long, T> converter) where T : IEquatable<T>
+        private void FileIncrementalAddition<T>(Func<long, T> converter) where T : IEquatable<T>
         {
-            var data0 = UnitTestsUtils.GenerateData(converter, 1, 10);
-            var data1 = UnitTestsUtils.GenerateData(converter, 2, 20);
-            var data2 = UnitTestsUtils.GenerateData(converter, 3, 30);
+            Cleanup();
+
+            var data0 = TestUtils.GenerateData(converter, 1, 10);
+            var data1 = TestUtils.GenerateData(converter, 2, 20);
+            var data2 = TestUtils.GenerateData(converter, 3, 30);
 
             using (var f = new BinIndexedFile<T>(binFile))
             {
@@ -117,7 +121,7 @@ namespace NYurik.FastBinTimeseries.Test
                 // Write buff3 instead of buff1
                 WriteData(f, data1.Length, data2);
                 Assert.AreEqual(data1.Length + data2.Length, f.Count);
-                ReadAndAssert(UnitTestsUtils.Concatenate(data1, data2), f, 0, f.Count);
+                ReadAndAssert(TestUtils.Concatenate(data1, data2), f, 0, f.Count);
             }
         }
 
@@ -151,15 +155,15 @@ namespace NYurik.FastBinTimeseries.Test
                 f.EnableMemoryMappedFileAccess = enableMemoryMappedAccess;
 
                 var itemsPerPage = pageSize/Marshal.SizeOf(typeof (T));
-                var items1stPg = (int) UnitTestsUtils.RoundUpToMultiple(f.HeaderSizeAsItemCount, itemsPerPage) -
+                var items1stPg = (int) TestUtils.RoundUpToMultiple(f.HeaderSizeAsItemCount, itemsPerPage) -
                                  f.HeaderSizeAsItemCount;
 
                 if (items1stPg == 0)
                     items1stPg = itemsPerPage;
 
-                var dataMinusOne = UnitTestsUtils.GenerateData(converter, items1stPg - 1, 0);
-                var dataZero = UnitTestsUtils.GenerateData(converter, items1stPg, 0);
-                var dataPlusOne = UnitTestsUtils.GenerateData(converter, items1stPg + 1, 0);
+                var dataMinusOne = TestUtils.GenerateData(converter, items1stPg - 1, 0);
+                var dataZero = TestUtils.GenerateData(converter, items1stPg, 0);
+                var dataPlusOne = TestUtils.GenerateData(converter, items1stPg + 1, 0);
 
                 f.WriteData(0, dataMinusOne, 0, dataMinusOne.Length);
                 Assert.AreEqual(f.HeaderSize + (items1stPg - 1)*f.ItemSize, new FileInfo(binFile).Length);
@@ -173,106 +177,93 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(f.HeaderSize + (items1stPg + 1)*f.ItemSize, new FileInfo(binFile).Length);
                 ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
 
-                ReadAndAssert(UnitTestsUtils.GenerateData(converter, 1, items1stPg - 1), f, items1stPg - 1, 1);
-                ReadAndAssert(UnitTestsUtils.GenerateData(converter, 1, items1stPg), f, items1stPg, 1);
-                ReadAndAssert(UnitTestsUtils.GenerateData(converter, 2, items1stPg - 1), f, items1stPg - 1, 2);
+                ReadAndAssert(TestUtils.GenerateData(converter, 1, items1stPg - 1), f, items1stPg - 1, 1);
+                ReadAndAssert(TestUtils.GenerateData(converter, 1, items1stPg), f, items1stPg, 1);
+                ReadAndAssert(TestUtils.GenerateData(converter, 2, items1stPg - 1), f, items1stPg - 1, 2);
             }
         }
 
         [Test]
-        public void EmptyFileByte()
+        public unsafe void PrintStructSizes()
+        {
+            PrintSize<byte>(sizeof(byte));
+            PrintSize<_3Byte_noAttr>(sizeof(_3Byte_noAttr));
+            PrintSize<_3Byte_2Shrt_ExplPk1>(sizeof(_3Byte_2Shrt_ExplPk1));
+            PrintSize<_IntBool_SeqPk1>(sizeof(_IntBool_SeqPk1));
+            PrintSize<_DatetimeByte_SeqPk1>(sizeof(_DatetimeByte_SeqPk1));
+            PrintSize<_DatetimeBool_SeqPk1>(sizeof(_DatetimeBool_SeqPk1));
+            PrintSize<_LongBool_SeqPk1>(sizeof(_LongBool_SeqPk1));
+            PrintSize<_LongByte_SeqPk1>(sizeof(_LongByte_SeqPk1));
+            PrintSize<_BoolLongBool_SeqPk1>(sizeof(_BoolLongBool_SeqPk1));
+            PrintSize<_ByteLongByte_SeqPk1>(sizeof(_ByteLongByte_SeqPk1));
+        }
+
+        private static void PrintSize<T>(int size)
+        {
+            var marshalSizeOf = Marshal.SizeOf(typeof(T));
+            Console.WriteLine("Marshal.SizeOf({0}) = {1}", typeof(T).Name, marshalSizeOf);
+            Console.WriteLine("sizeof({0})         = {1}{2}\n", typeof (T).Name, size,
+                              marshalSizeOf != size ? " ****" : "");
+        }
+
+        [Test]
+        public void EmptyFile()
         {
             EmptyFile<byte>(1);
+            EmptyFile<_3Byte_noAttr>(3);
+            EmptyFile<_3Byte_2Shrt_ExplPk1>(3);
+            EmptyFile<_IntBool_SeqPk1>(5);
+            EmptyFile<_DatetimeByte_SeqPk1>(12);
+            EmptyFile<_DatetimeBool_SeqPk1>(12);
+            EmptyFile<_LongBool_SeqPk1>(9);
+            EmptyFile<_LongByte_SeqPk1>(9);
+            EmptyFile<_BoolLongBool_SeqPk1>(10);
+            EmptyFile<_ByteLongByte_SeqPk1>(10);
         }
 
         [Test]
-        public void EmptyFileStruct3()
+        public void IncrementalAddition()
         {
-            EmptyFile<Struct3Byte>(3);
+            FileIncrementalAddition<byte>(TestUtils.NewByte);
+            FileIncrementalAddition<_3Byte_noAttr>(_3Byte_noAttr.New);
+            FileIncrementalAddition<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New);
+            FileIncrementalAddition<_IntBool_SeqPk1>(_IntBool_SeqPk1.New);
+            FileIncrementalAddition<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New);
+            FileIncrementalAddition<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New);
+            FileIncrementalAddition<_LongBool_SeqPk1>(_LongBool_SeqPk1.New);
+            FileIncrementalAddition<_LongByte_SeqPk1>(_LongByte_SeqPk1.New);
+            FileIncrementalAddition<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New);
+            FileIncrementalAddition<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New);
         }
 
         [Test]
-        public void EmptyFileStruct3Union()
+        public void PageCheckMMF()
         {
-            EmptyFile<Struct3ByteUnion>(3);
+            PageBorderOperations<byte>(TestUtils.NewByte, true);
+            PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, true);
+            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New, true);
+            PageBorderOperations<_IntBool_SeqPk1>(_IntBool_SeqPk1.New, true);
+            PageBorderOperations<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, true);
+            PageBorderOperations<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New, true);
+            PageBorderOperations<_LongBool_SeqPk1>(_LongBool_SeqPk1.New, true);
+            PageBorderOperations<_LongByte_SeqPk1>(_LongByte_SeqPk1.New, true);
+            PageBorderOperations<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New, true);
+            PageBorderOperations<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New, true);
         }
 
         [Test]
-        public void EmptyFileStructTimeValue()
+        public void PageCheckStream()
         {
-            EmptyFile<StructTimeValue>(12);
-        }
-
-        [Test]
-        public void IncrementalAdditionByte()
-        {
-            FileIncrementalAddition<byte>(UnitTestsUtils.CreateByte);
-        }
-
-        [Test]
-        public void IncrementalAdditionStruct3()
-        {
-            FileIncrementalAddition<Struct3Byte>(UnitTestsUtils.CreateStruct3);
-        }
-
-        [Test]
-        public void IncrementalAdditionStruct3Union()
-        {
-            FileIncrementalAddition<Struct3ByteUnion>(UnitTestsUtils.CreateStruct3Union);
-        }
-
-        [Test]
-        public void IncrementalAdditionStructTimeValue()
-        {
-            FileIncrementalAddition<StructTimeValue>(UnitTestsUtils.CreateStructTimeValue);
-        }
-
-        [Test]
-        public void PageCheckMMFByte()
-        {
-            PageBorderOperations<byte>(UnitTestsUtils.CreateByte, true);
-        }
-
-        [Test]
-        public void PageCheckMMFStruct3Page()
-        {
-            PageBorderOperations<Struct3Byte>(UnitTestsUtils.CreateStruct3, true);
-        }
-
-        [Test]
-        public void PageCheckMMFStruct3Union()
-        {
-            PageBorderOperations<Struct3ByteUnion>(UnitTestsUtils.CreateStruct3Union, true);
-        }
-
-        [Test]
-        public void PageCheckMMFStructTimeValue()
-        {
-            PageBorderOperations<StructTimeValue>(UnitTestsUtils.CreateStructTimeValue, true);
-        }
-
-        [Test]
-        public void PageCheckStreamByte()
-        {
-            PageBorderOperations<byte>(UnitTestsUtils.CreateByte, false);
-        }
-
-        [Test]
-        public void PageCheckStreamStruct3Page()
-        {
-            PageBorderOperations<Struct3Byte>(UnitTestsUtils.CreateStruct3, false);
-        }
-
-        [Test]
-        public void PageCheckStreamStruct3Union()
-        {
-            PageBorderOperations<Struct3ByteUnion>(UnitTestsUtils.CreateStruct3Union, false);
-        }
-
-        [Test]
-        public void PageCheckStreamStructTimeValue()
-        {
-            PageBorderOperations<StructTimeValue>(UnitTestsUtils.CreateStructTimeValue, false);
+            PageBorderOperations<byte>(TestUtils.NewByte, false);
+            PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, false);
+            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New, false);
+            PageBorderOperations<_IntBool_SeqPk1>(_IntBool_SeqPk1.New, false);
+            PageBorderOperations<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, false);
+            PageBorderOperations<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New, false);
+            PageBorderOperations<_LongBool_SeqPk1>(_LongBool_SeqPk1.New, false);
+            PageBorderOperations<_LongByte_SeqPk1>(_LongByte_SeqPk1.New, false);
+            PageBorderOperations<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New, false);
+            PageBorderOperations<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New, false);
         }
     }
 }

@@ -134,7 +134,7 @@ namespace NYurik.FastBinTimeseries
             if (itemSize != ItemSize)
                 throw new InvalidOperationException(
                     string.Format(
-                        "The file of type {0} was created with itemsize={1}, but now the expected size is {2}",
+                        "The file of type {0} was created with itemSize={1}, but now the itemSize={2}",
                         GetType().FullName, itemSize, ItemSize));
 
             FileVersion = Utilities.ReadVersion(memReader);

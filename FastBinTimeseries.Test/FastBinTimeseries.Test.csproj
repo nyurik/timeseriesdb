@@ -49,7 +49,7 @@
     <Compile Include="TestStructures.cs" />
     <Compile Include="UnitTestsSimple.cs" />
     <Compile Include="UnitTestsTimeseries.cs" />
-    <Compile Include="UnitTestsUtils.cs" />
+    <Compile Include="TestUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FastBinTimeseries\FastBinTimeseries.csproj">

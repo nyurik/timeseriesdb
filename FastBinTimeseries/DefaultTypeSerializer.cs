@@ -17,7 +17,7 @@ namespace NYurik.FastBinTimeseries
         {
             var info = DynamicCodeFactory.Instance.CreateSerializer<T>();
 
-            _typeSize = (int) info.SizeOfMethod.Invoke(null, null);
+            _typeSize = info.TypeSize;
 
             if (_typeSize <= 0)
                 throw new InvalidOperationException("Struct size must be > 0");

@@ -71,11 +71,11 @@ namespace NYurik.FastBinTimeseries
 
             // Create the abstract method overrides
             return new BinSerializerInfo(
+                (int) CreateSizeOfMethodIL(itemType, ifType.Module).Invoke(null, null),
                 CreateSerializerMethodIL(
                     itemType, ifType, "DynProcessFileStream", "ProcessFileStreamPtr", typeof (FileStream)),
                 CreateSerializerMethodIL(
-                    itemType, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr)),
-                CreateSizeOfMethodIL(itemType, ifType.Module)
+                    itemType, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr))
                 );
         }
 
@@ -176,14 +176,13 @@ namespace NYurik.FastBinTimeseries
         {
             public readonly DynamicMethod FileStreamMethod;
             public readonly DynamicMethod MemMapMethod;
-            public readonly DynamicMethod SizeOfMethod;
+            public readonly int TypeSize;
 
-            public BinSerializerInfo(DynamicMethod fileStreamMethod, DynamicMethod memMapMethod,
-                                     DynamicMethod sizeOfMethod)
+            public BinSerializerInfo(int typeSize, DynamicMethod fileStreamMethod, DynamicMethod memMapMethod)
             {
+                TypeSize = typeSize;
                 FileStreamMethod = fileStreamMethod;
                 MemMapMethod = memMapMethod;
-                SizeOfMethod = sizeOfMethod;
             }
         }
 
