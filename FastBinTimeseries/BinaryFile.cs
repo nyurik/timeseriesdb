@@ -5,6 +5,9 @@ namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile<T> : BinaryFile
     {
+        protected const bool Read = false;
+        protected const bool Write = true;
+        private readonly string m_fileName;
         private long _count;
 
         private bool _enableMemoryMappedFileAccess;
@@ -17,8 +20,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary>
-        /// Create a new binary file. Will fail if file already exists.
-        /// Note to inheritors: derived constructor must call WriteHeader();
+        /// Create a new binary file. Must call <seealso cref="InitializeNewFile"/> to finish file creation.
         /// </summary>
         /// <param name="fileName">file path</param>
         /// <param name="customSerializer">optional custom serializer type</param>
@@ -27,17 +29,7 @@ namespace NYurik.FastBinTimeseries
             Serializer = customSerializer ?? new DefaultTypeSerializer<T>();
             InitFromSerializer();
             CanWrite = true;
-            m_fileStream = new FileStream(fileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
-        }
-
-        private void InitFromSerializer()
-        {
-            var size = Serializer.TypeSize;
-            if (size <= 0)
-                throw new ArgumentOutOfRangeException("typeSize" + "", size,
-                                                      "Element size given by the serializer must be > 0");
-            ItemSize = size;
-            _enableMemoryMappedFileAccess = Serializer.SupportsMemoryMappedFiles;
+            m_fileName = fileName;
         }
 
         public Version SerializerVersion { get; private set; }
@@ -88,6 +80,45 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+        public void InitializeNewFile()
+        {
+            ThrowOnDisposed();
+            if (m_fileStream != null)
+                throw new InvalidOperationException(
+                    "InitializeNewFile() can only be called for new files before performing any other operations");
+
+            m_fileStream = new FileStream(m_fileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
+            try
+            {
+                WriteHeader();
+            }
+            catch (Exception ex)
+            {
+                // on error, delete the newly created file and pass on the exception
+                try
+                {
+                    m_fileStream.Close();
+                    File.Delete(m_fileName);
+                }
+                catch (Exception ex2)
+                {
+                    throw new CombinedException("Failed to clean up after failed header writing", ex, ex2);
+                }
+
+                throw;
+            }
+        }
+
+        private void InitFromSerializer()
+        {
+            var size = Serializer.TypeSize;
+            if (size <= 0)
+                throw new ArgumentOutOfRangeException("typeSize" + "", size,
+                                                      "Element size given by the serializer must be > 0");
+            ItemSize = size;
+            _enableMemoryMappedFileAccess = Serializer.SupportsMemoryMappedFiles;
+        }
+
         /// <summary>
         /// Continue reading the file header - now in the type-specific object.
         /// This method together with the <see cref="BinaryFile.Open(FileStream)"/>> 
@@ -112,7 +143,7 @@ namespace NYurik.FastBinTimeseries
             SerializerVersion = Utilities.ReadVersion(memReader);
             Serializer.ReadCustomHeader(memReader, SerializerVersion);
 
-            Count = CalculateItemCountFromFilePosition(m_fileStream.Length);
+            Count = CalculateItemCountFromFilePosition(FileStream.Length);
         }
 
         /// <summary>
@@ -169,9 +200,9 @@ namespace NYurik.FastBinTimeseries
             //Count = newItemCount;
             HeaderSize = newHeaderSize;
 
-            m_fileStream.Seek(0, SeekOrigin.Begin);
-            m_fileStream.Write(headerBuffer, 0, newHeaderSize);
-            m_fileStream.Flush();
+            FileStream.Seek(0, SeekOrigin.Begin);
+            FileStream.Write(headerBuffer, 0, newHeaderSize);
+            FileStream.Flush();
         }
 
         /// <summary>
@@ -208,7 +239,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>Calculates the number of items that would make up the given file size</summary>
         private long CalculateItemCountFromFilePosition(long position)
         {
-            var items = position / ItemSize;
+            var items = position/ItemSize;
             items -= HeaderSizeAsItemCount;
 
             if (position != ItemIdxToOffset(items))
@@ -231,18 +262,18 @@ namespace NYurik.FastBinTimeseries
         {
             var fileOffset = ItemIdxToOffset(firstItemIdx);
 
-            m_fileStream.Seek(fileOffset, SeekOrigin.Begin);
-            Serializer.ProcessFileStream(m_fileStream, buffer, bufOffset, bufCount, isWriting);
+            FileStream.Seek(fileOffset, SeekOrigin.Begin);
+            Serializer.ProcessFileStream(FileStream, buffer, bufOffset, bufCount, isWriting);
 
             var expectedStreamPos = fileOffset + bufCount*ItemSize;
-            if (expectedStreamPos != m_fileStream.Position)
+            if (expectedStreamPos != FileStream.Position)
                 throw new InvalidOperationException(
                     String.Format(
                         "Possible loss of data or file corruption detected.\n" +
                         "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
                         "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
                         isWriting ? "writing" : "reading",
-                        bufCount, fileOffset, expectedStreamPos, m_fileStream.Position));
+                        bufCount, fileOffset, expectedStreamPos, FileStream.Position));
         }
 
         private void ProcessFileMMF(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
@@ -254,14 +285,14 @@ namespace NYurik.FastBinTimeseries
                 var itemIdx = firstItemIdx;
 
                 // Grow file if needed
-                var fileSize = m_fileStream.Length;
+                var fileSize = FileStream.Length;
                 if (isWriting && offsetToStopAt > fileSize)
                     fileSize = offsetToStopAt;
                 hMap = Win32Apis.CreateFileMapping(
-                    m_fileStream, fileSize,
+                    FileStream, fileSize,
                     isWriting ? FileMapProtection.PageReadWrite : FileMapProtection.PageReadOnly);
 
-                while(itemIdx < firstItemIdx + bufCount)
+                while (itemIdx < firstItemIdx + bufCount)
                 {
                     SafeMapViewHandle ptrMapViewBaseAddr = null;
                     try
@@ -274,7 +305,8 @@ namespace NYurik.FastBinTimeseries
                         if (mapViewSize > MinLargePageSize)
                         {
                             mapViewSize = MinLargePageSize;
-                            itemsToProcessThisRun = (mapViewFileOffset + mapViewSize)/ItemSize - itemIdx - HeaderSizeAsItemCount;
+                            itemsToProcessThisRun = (mapViewFileOffset + mapViewSize)/ItemSize - itemIdx -
+                                                    HeaderSizeAsItemCount;
                         }
 
                         // The size of the new map view.
@@ -308,7 +340,7 @@ namespace NYurik.FastBinTimeseries
 
         protected void PerformFileAccess(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
         {
-            ThrowOnDisposed();
+            ThrowOnInvalidState();
             Utilities.ValidateArrayParams(buffer, bufOffset, bufCount);
 
             // Optimize out empty requests - any first index would work when count==0
@@ -340,23 +372,17 @@ namespace NYurik.FastBinTimeseries
             if (isWriting)
             {
                 if (!useMemMapping)
-                    m_fileStream.Flush();
+                    FileStream.Flush();
 
-                var newCount = CalculateItemCountFromFilePosition(m_fileStream.Length);
+                var newCount = CalculateItemCountFromFilePosition(FileStream.Length);
                 if (Count < newCount)
                     Count = newCount;
             }
         }
 
-        protected void ThrowOnDisposed()
-        {
-            if (m_fileStream == null)
-                throw new ObjectDisposedException(GetType().FullName, "The file has been closed");
-        }
-
         public override string ToString()
         {
-            return string.Format("File {0} with {1} items", m_fileStream.Name, Count);
+            return string.Format("File {0} with {1} items", FileStream.Name, Count);
         }
     }
 }

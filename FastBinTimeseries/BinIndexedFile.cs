@@ -36,10 +36,11 @@ namespace NYurik.FastBinTimeseries
         public BinIndexedFile(string fileName, IBinSerializer<T> customSerializer)
             : base(fileName, customSerializer)
         {
-            WriteHeader(); // Initialize header
         }
 
         #endregion
+
+        private static readonly Version CurrentVersion = new Version(1, 0);
 
         /// <summary>
         /// Read <paramref name="count"/> items starting at <paramref name="firstItemIndex"/>.
@@ -50,7 +51,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">The number of items to be read to the array.</param>
         public void ReadData(long firstItemIndex, T[] buffer, int offset, int count)
         {
-            PerformFileAccess(firstItemIndex, buffer, offset, count, false);
+            PerformFileAccess(firstItemIndex, buffer, offset, count, Read);
         }
 
         /// <summary>
@@ -62,17 +63,15 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">The number of items to be written from array. No action is performed when the count is 0.</param>
         public void WriteData(long firstItemIndex, T[] buffer, int offset, int count)
         {
-            PerformFileAccess(firstItemIndex, buffer, offset, count, true);
+            PerformFileAccess(firstItemIndex, buffer, offset, count, Write);
         }
 
 
         protected override void ReadCustomHeader(BinaryReader stream, Version version)
         {
-            if(version != CurrentVersion)
+            if (version != CurrentVersion)
                 Utilities.ThrowUnknownVersion(version, GetType());
         }
-
-        private static readonly Version CurrentVersion = new Version(1, 0);
 
         protected override Version WriteCustomHeader(BinaryWriter stream)
         {

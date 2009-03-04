@@ -5,12 +5,13 @@ namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile : IDisposable
     {
-        protected static readonly int BytesInHeaderSize = sizeof (int);
         protected const int MaxHeaderSize = 64*1024;
         protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB
         protected static readonly Version BaseCurrentVersion = new Version(1, 0);
+        protected static readonly int BytesInHeaderSize = sizeof (int);
 
-        protected FileStream m_fileStream;
+        protected internal FileStream m_fileStream;
+        protected internal bool m_isDisposed;
         private int m_headerSize;
 
         protected BinaryFile()
@@ -38,6 +39,45 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+        /// <summary>
+        /// All memory mapping operations must align to this value (not the dwPageSize)
+        /// </summary>
+        public static int MinPageSize
+        {
+            get { return (int) Win32Apis.SystemInfo.dwAllocationGranularity; }
+        }
+
+        /// <summary>
+        /// Maximum number of bytes to read at once
+        /// </summary>
+        public static int MinLargePageSize
+        {
+            get
+            {
+                switch (Win32Apis.SystemInfo.ProcessorInfo.wProcessorArchitecture)
+                {
+                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_INTEL:
+                        return 4*1024*1024;
+
+                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_AMD64:
+                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_IA64:
+                        return 16*1024*1024;
+
+                    default:
+                        return 4*1024*1024;
+                }
+            }
+        }
+
+        protected FileStream FileStream
+        {
+            get
+            {
+                ThrowOnInvalidState();
+                return m_fileStream;
+            }
+        }
+
         #region IDisposable Members
 
         void IDisposable.Dispose()
@@ -48,6 +88,20 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
+        protected void ThrowOnInvalidState()
+        {
+            ThrowOnDisposed();
+            if (m_fileStream == null)
+                throw new InvalidOperationException(
+                    "You must call InitializeNewFile() before performing any operations on the new file");
+        }
+
+        protected void ThrowOnDisposed()
+        {
+            if (m_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName, "The file has been closed");
+        }
+
         public void Close()
         {
             ((IDisposable) this).Dispose();
@@ -55,15 +109,20 @@ namespace NYurik.FastBinTimeseries
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            if (!m_isDisposed)
             {
-                var streamTmp = m_fileStream;
-                m_fileStream = null;
-                if (streamTmp != null)
-                    streamTmp.Close();
+                if (disposing)
+                {
+                    var streamTmp = m_fileStream;
+                    m_fileStream = null;
+                    if (streamTmp != null)
+                        streamTmp.Close();
+                }
+                else
+                    m_fileStream = null;
+
+                m_isDisposed = true;
             }
-            else
-                m_fileStream = null;
         }
 
         ~BinaryFile()
@@ -166,36 +225,6 @@ namespace NYurik.FastBinTimeseries
                     String.Format("Unable to read a block of size {0}: only {1} bytes were available", bufferSize,
                                   bytesRead));
             return headerBuffer;
-        }
-
-        /// <summary>
-        /// All memory mapping operations must align to this value (not the dwPageSize)
-        /// </summary>
-        public static int MinPageSize
-        {
-            get { return (int)Win32Apis.SystemInfo.dwAllocationGranularity;}
-        }
-
-        /// <summary>
-        /// Maximum number of bytes to read at once
-        /// </summary>
-        public static int MinLargePageSize
-        {
-            get
-            {
-                switch (Win32Apis.SystemInfo.ProcessorInfo.wProcessorArchitecture)
-                {
-                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_INTEL:
-                        return 4*1024*1024;
-
-                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_AMD64:
-                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_IA64:
-                        return 16*1024*1024;
-
-                    default:
-                        return 4*1024*1024;
-                }
-            }
         }
     }
 }

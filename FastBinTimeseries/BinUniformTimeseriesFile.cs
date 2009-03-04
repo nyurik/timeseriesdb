@@ -39,7 +39,6 @@ namespace NYurik.FastBinTimeseries
             : base(fileName, customSerializer)
         {
             ItemTimeSpan = itemTimeSpan;
-            WriteHeader(); // Initialize header at the end of constructor
         }
 
         #endregion
@@ -160,26 +159,21 @@ namespace NYurik.FastBinTimeseries
 
         private void ReadData(DateTime fromInclusive, DateTime toExclusive, ref T[] buffer, int offset)
         {
-            ThrowOnDisposed();
             if (fromInclusive.CompareTo(toExclusive) > 0)
                 throw new ArgumentOutOfRangeException("fromInclusive", "'from' must be <= 'to'");
 
             var firstIndexIncl = IndexToLong(fromInclusive);
             var lastIndexExcl = IndexToLong(toExclusive);
 
-            var itemsCountLng = lastIndexExcl - firstIndexIncl;
-            if (itemsCountLng > int.MaxValue)
-                throw new ArgumentException(
-                    String.Format(
-                        "Attempted to get {0} items at once, which is over the maximum of {1}.",
-                        itemsCountLng, Int32.MaxValue));
-
             // Switiching to int array refs. No 64bit array support yet
-            var count = (int) itemsCountLng;
+            var count = Utilities.ToInt32Checked(lastIndexExcl - firstIndexIncl);
             if (buffer == null)
+            {
                 buffer = new T[count];
+                offset = 0;
+            }
 
-            PerformFileAccess(firstIndexIncl, buffer, offset, count, false);
+            PerformFileAccess(firstIndexIncl, buffer, offset, count, Read);
         }
 
         /// <summary>
@@ -191,7 +185,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">The number of items to be read to the array.</param>
         public void ReadData(DateTime fromInclusive, T[] buffer, int offset, int count)
         {
-            PerformFileAccess(IndexToLong(fromInclusive), buffer, offset, count, false);
+            PerformFileAccess(IndexToLong(fromInclusive), buffer, offset, count, Read);
         }
 
         /// <summary>
@@ -202,10 +196,8 @@ namespace NYurik.FastBinTimeseries
         /// <returns>New array of elements</returns>
         public T[] ReadData(DateTime fromInclusive, int count)
         {
-            ThrowOnDisposed();
-
             var buffer = new T[count];
-            PerformFileAccess(IndexToLong(fromInclusive), buffer, 0, count, false);
+            PerformFileAccess(IndexToLong(fromInclusive), buffer, 0, count, Read);
             return buffer;
         }
 
@@ -229,7 +221,6 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">The number of items to be written from array. No action is performed when the count is 0.</param>
         public void WriteData(DateTime firstItemIndex, T[] buffer, int offset, int count)
         {
-            ThrowOnDisposed();
             Utilities.ValidateArrayParams(buffer, offset, count);
             if (!CanWrite) throw new InvalidOperationException("The file was opened as readonly");
 
@@ -255,7 +246,7 @@ namespace NYurik.FastBinTimeseries
             if (buffer.Length == 0)
                 return; // validate parameters but don't change anything
 
-            PerformFileAccess(itemLong, buffer, offset, count, true);
+            PerformFileAccess(itemLong, buffer, offset, count, Write);
         }
     }
 }

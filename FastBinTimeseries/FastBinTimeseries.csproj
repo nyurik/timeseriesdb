@@ -85,7 +85,11 @@
     <Compile Include="BinaryFile.cs" />
     <None Include="_ClassDiagram.cd" />
     <Compile Include="BinIndexedFile.cs" />
+    <Compile Include="BinTimeseriesFile.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="BinUniformTimeseriesFile.cs" />
+    <Compile Include="CombinedException.cs" />
     <Compile Include="DefaultTypeSerializer.cs" />
     <Compile Include="EmitExtensions\ILGeneratorExtensions.cs" />
     <Compile Include="EmitExtensions\TypeBuilderExtensions.cs" />

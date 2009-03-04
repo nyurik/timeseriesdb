@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using NUnit.Framework;
 
@@ -12,7 +12,6 @@ namespace NYurik.FastBinTimeseries.Test
         #region Setup/Teardown
 
         [SetUp]
-        [TearDown]
         public void Cleanup()
         {
             if (File.Exists(binFile))
@@ -21,71 +20,75 @@ namespace NYurik.FastBinTimeseries.Test
 
         #endregion
 
-        private const string binFile = @"LargeTempDataFile2.bsd";
+        private static readonly string binFile = MethodBase.GetCurrentMethod().DeclaringType + ".bsd";
 
-        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess) where T : IEquatable<T>
+        private static void WriteData<T>(BinIndexedFile<T> f, long firstItemIndex, T[] buffer)
         {
-            for (var i = 1; i < 5; i++)
-                PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
-
-            PageBorderOperations(converter, enableMemoryMappedAccess,
-                                 BinaryFile.MinLargePageSize - BinaryFile.MinPageSize);
-            PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinLargePageSize);
-            PageBorderOperations(converter, enableMemoryMappedAccess,
-                                 BinaryFile.MinLargePageSize + BinaryFile.MinPageSize);
-
-            PageBorderOperations(converter, enableMemoryMappedAccess,
-                                 2*BinaryFile.MinLargePageSize - BinaryFile.MinPageSize);
-            PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MinLargePageSize);
-            PageBorderOperations(converter, enableMemoryMappedAccess,
-                                 2*BinaryFile.MinLargePageSize + BinaryFile.MinPageSize);
+            f.WriteData(firstItemIndex, buffer, 0, buffer.Length);
         }
 
-        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess, int pageSize) where T : IEquatable<T>
+        private static void ReadAndAssert<T>(T[] expected, BinIndexedFile<T> f, int firstItemIndex, long count)
+            where T : IEquatable<T>
         {
-            Cleanup();
+            var buffer = new T[count];
+            f.ReadData(firstItemIndex, buffer, 0, buffer.Length);
+            UnitTestsUtils.AreEqual(expected, buffer);
+        }
+
+        private static void EmptyFile<T>(int expectedItemSize)
+        {
+            int hdrSize;
+            Version fileVersion, baseVersion, serializerVersion;
 
             using (var f = new BinIndexedFile<T>(binFile))
             {
-                f.EnableMemoryMappedFileAccess = enableMemoryMappedAccess;
+                f.InitializeNewFile();
+                fileVersion = f.FileVersion;
+                Assert.IsNotNull(fileVersion);
+                baseVersion = f.BaseVersion;
+                Assert.IsNotNull(baseVersion);
+                serializerVersion = f.SerializerVersion;
+                Assert.IsNotNull(serializerVersion);
 
-                var itemsPerPage = pageSize / Marshal.SizeOf(typeof(T));
-                var items1stPg = (int) RoundUpToMultiple(f.HeaderSizeAsItemCount, itemsPerPage) -
-                                 f.HeaderSizeAsItemCount;
+                Assert.AreEqual(true, f.CanWrite);
+                Assert.AreEqual(0, f.Count);
 
-                if (items1stPg == 0)
-                    items1stPg = itemsPerPage;
+                hdrSize = f.HeaderSize;
 
-                var dataMinusOne = GenerateData(converter, items1stPg - 1, 0);
-                var dataZero = GenerateData(converter, items1stPg, 0);
-                var dataPlusOne = GenerateData(converter, items1stPg + 1, 0);
+                Assert.AreEqual(expectedItemSize, f.ItemSize);
+                Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
+                Assert.IsTrue(f.IsEmpty);
+            }
 
-                f.WriteData(0, dataMinusOne, 0, dataMinusOne.Length);
-                Assert.AreEqual(f.HeaderSize + (items1stPg - 1)*f.ItemSize, new FileInfo(binFile).Length);
-                ReadAndAssert(dataMinusOne, f, 0, dataMinusOne.Length);
+            using (var file = BinaryFile.Open(binFile, false))
+            {
+                Assert.IsInstanceOfType(typeof (BinIndexedFile<T>), file);
+                var f = (BinIndexedFile<T>) file;
 
-                f.WriteData(0, dataZero, 0, dataZero.Length);
-                Assert.AreEqual(f.HeaderSize + items1stPg*f.ItemSize, new FileInfo(binFile).Length);
-                ReadAndAssert(dataZero, f, 0, dataZero.Length);
+                Assert.AreEqual(fileVersion, f.FileVersion);
+                Assert.AreEqual(baseVersion, f.BaseVersion);
+                Assert.AreEqual(serializerVersion, f.SerializerVersion);
 
-                f.WriteData(0, dataPlusOne, 0, dataPlusOne.Length);
-                Assert.AreEqual(f.HeaderSize + (items1stPg + 1)*f.ItemSize, new FileInfo(binFile).Length);
-                ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
+                Assert.AreEqual(false, f.CanWrite);
+                Assert.AreEqual(0, f.Count);
 
-                ReadAndAssert(GenerateData(converter, 1, items1stPg - 1), f, items1stPg - 1, 1);
-                ReadAndAssert(GenerateData(converter, 1, items1stPg), f, items1stPg, 1);
-                ReadAndAssert(GenerateData(converter, 2, items1stPg - 1), f, items1stPg - 1, 2);
+                Assert.AreEqual(hdrSize, f.HeaderSize);
+
+                Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
+                Assert.IsTrue(f.IsEmpty);
+                Assert.AreEqual(expectedItemSize, f.ItemSize);
             }
         }
 
         private static void FileIncrementalAddition<T>(Func<long, T> converter) where T : IEquatable<T>
         {
-            var data0 = GenerateData(converter, 1, 10);
-            var data1 = GenerateData(converter, 2, 20);
-            var data2 = GenerateData(converter, 3, 30);
+            var data0 = UnitTestsUtils.GenerateData(converter, 1, 10);
+            var data1 = UnitTestsUtils.GenerateData(converter, 2, 20);
+            var data2 = UnitTestsUtils.GenerateData(converter, 3, 30);
 
             using (var f = new BinIndexedFile<T>(binFile))
             {
+                f.InitializeNewFile();
                 f.WriteData(0, data0, 0, data0.Length);
 
                 Assert.AreEqual(1, f.Count);
@@ -114,196 +117,162 @@ namespace NYurik.FastBinTimeseries.Test
                 // Write buff3 instead of buff1
                 WriteData(f, data1.Length, data2);
                 Assert.AreEqual(data1.Length + data2.Length, f.Count);
-                ReadAndAssert(Concatenate(data1, data2), f, 0, f.Count);
+                ReadAndAssert(UnitTestsUtils.Concatenate(data1, data2), f, 0, f.Count);
             }
         }
 
-        private static long RoundUpToMultiple(long value, long multiple)
+        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess)
+            where T : IEquatable<T>
         {
-            if (value < 0)
-                throw new ArgumentOutOfRangeException("value", value, "Value must be >= 0");
-            if (value == 0)
-                return 0;
-            return value - 1 + (multiple - (value - 1)%multiple);
+            for (var i = 1; i < 5; i++)
+                PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
+
+            PageBorderOperations(converter, enableMemoryMappedAccess,
+                                 BinaryFile.MinLargePageSize - BinaryFile.MinPageSize);
+            PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinLargePageSize);
+            PageBorderOperations(converter, enableMemoryMappedAccess,
+                                 BinaryFile.MinLargePageSize + BinaryFile.MinPageSize);
+
+            PageBorderOperations(converter, enableMemoryMappedAccess,
+                                 2*BinaryFile.MinLargePageSize - BinaryFile.MinPageSize);
+            PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MinLargePageSize);
+            PageBorderOperations(converter, enableMemoryMappedAccess,
+                                 2*BinaryFile.MinLargePageSize + BinaryFile.MinPageSize);
         }
 
-        private static T[] Concatenate<T>(params T[][] arrays)
+        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess, int pageSize)
+            where T : IEquatable<T>
         {
-            var res = new List<T>();
-            foreach (var a in arrays)
-                res.AddRange(a);
-            return res.ToArray();
-        }
+            Cleanup();
 
-        private static void WriteData<T>(BinIndexedFile<T> f, long firstItemIndex, T[] buffer)
-        {
-            f.WriteData(firstItemIndex, buffer, 0, buffer.Length);
-        }
-
-        private static T[] GenerateData<T>(Func<long, T> converter, int count, int startFrom)
-        {
-            var result = new T[count];
-            for (long i = 0; i < count; i++)
-                result[i] = converter(i + startFrom);
-            return result;
-        }
-
-        private static void ReadAndAssert<T>(T[] expected, BinIndexedFile<T> f, int firstItemIndex, long count)
-            where T:IEquatable<T>
-        {
-            var buffer = new T[count];
-            f.ReadData(firstItemIndex, buffer, 0, buffer.Length);
-            AreEqual(expected, buffer);
-        }
-
-        private static void AreEqual<T>(T[] expected, T[] values) where T:IEquatable<T>
-        {
-            Assert.AreEqual(expected.Length, values.Length, "Array lengths");
-            for (int i = 0; i < expected.Length; i++)
+            using (var f = new BinIndexedFile<T>(binFile))
             {
-                if (!expected[i].Equals(values[i]))
-                    throw new Exception(
-                        string.Format("Items in position {0} is {1}, but expected {2}",
-                                      i, values[i], expected[i]));
-            }
-        }
+                f.InitializeNewFile();
+                f.EnableMemoryMappedFileAccess = enableMemoryMappedAccess;
 
-        private static Struct3Byte CreateStruct3(long i)
-        {
-            return new Struct3Byte(
-                (byte) ((i & 0xFF0000) >> 16), (byte) ((i & 0xFF00) >> 8),
-                (byte) (i & 0xFF));
-        }
+                var itemsPerPage = pageSize/Marshal.SizeOf(typeof (T));
+                var items1stPg = (int) UnitTestsUtils.RoundUpToMultiple(f.HeaderSizeAsItemCount, itemsPerPage) -
+                                 f.HeaderSizeAsItemCount;
 
-        private static byte CreateByte(long i)
-        {
-            return (byte) (i & 0xFF);
-        }
+                if (items1stPg == 0)
+                    items1stPg = itemsPerPage;
 
-        [Test]
-        public void ByteEmptyFile()
-        {
-            int hdrSize;
-            Version fileVersion, baseVersion, serializerVersion;
+                var dataMinusOne = UnitTestsUtils.GenerateData(converter, items1stPg - 1, 0);
+                var dataZero = UnitTestsUtils.GenerateData(converter, items1stPg, 0);
+                var dataPlusOne = UnitTestsUtils.GenerateData(converter, items1stPg + 1, 0);
 
-            using (var f = new BinIndexedFile<byte>(binFile))
-            {
-                fileVersion = f.FileVersion;
-                Assert.IsNotNull(fileVersion);
-                baseVersion = f.BaseVersion;
-                Assert.IsNotNull(baseVersion);
-                serializerVersion = f.SerializerVersion;
-                Assert.IsNotNull(serializerVersion);
+                f.WriteData(0, dataMinusOne, 0, dataMinusOne.Length);
+                Assert.AreEqual(f.HeaderSize + (items1stPg - 1)*f.ItemSize, new FileInfo(binFile).Length);
+                ReadAndAssert(dataMinusOne, f, 0, dataMinusOne.Length);
 
-                Assert.AreEqual(true, f.CanWrite);
-                Assert.AreEqual(0, f.Count);
+                f.WriteData(0, dataZero, 0, dataZero.Length);
+                Assert.AreEqual(f.HeaderSize + items1stPg*f.ItemSize, new FileInfo(binFile).Length);
+                ReadAndAssert(dataZero, f, 0, dataZero.Length);
 
-                hdrSize = f.HeaderSize;
+                f.WriteData(0, dataPlusOne, 0, dataPlusOne.Length);
+                Assert.AreEqual(f.HeaderSize + (items1stPg + 1)*f.ItemSize, new FileInfo(binFile).Length);
+                ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
 
-                Assert.AreEqual(1, f.ItemSize);
-                Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
-                Assert.IsTrue(f.IsEmpty);
-            }
-
-            using (var file = BinaryFile.Open(binFile, false))
-            {
-                Assert.IsInstanceOfType(typeof (BinIndexedFile<byte>), file);
-                var f = (BinIndexedFile<byte>) file;
-
-                Assert.AreEqual(fileVersion, f.FileVersion);
-                Assert.AreEqual(baseVersion, f.BaseVersion);
-                Assert.AreEqual(serializerVersion, f.SerializerVersion);
-
-                Assert.AreEqual(false, f.CanWrite);
-                Assert.AreEqual(0, f.Count);
-
-                Assert.AreEqual(hdrSize, f.HeaderSize);
-
-                Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
-                Assert.IsTrue(f.IsEmpty);
-                Assert.AreEqual(1, f.ItemSize);
+                ReadAndAssert(UnitTestsUtils.GenerateData(converter, 1, items1stPg - 1), f, items1stPg - 1, 1);
+                ReadAndAssert(UnitTestsUtils.GenerateData(converter, 1, items1stPg), f, items1stPg, 1);
+                ReadAndAssert(UnitTestsUtils.GenerateData(converter, 2, items1stPg - 1), f, items1stPg - 1, 2);
             }
         }
 
         [Test]
-        public void ByteFileIncrementalAddition()
+        public void EmptyFileByte()
         {
-            FileIncrementalAddition<byte>(CreateByte);
+            EmptyFile<byte>(1);
         }
 
         [Test]
-        public void ByteFilePageBorderOpsMMF()
+        public void EmptyFileStruct3()
         {
-            PageBorderOperations<byte>(CreateByte, true);
+            EmptyFile<Struct3Byte>(3);
         }
 
         [Test]
-        public void ByteFilePageBorderOpsStream()
+        public void EmptyFileStruct3Union()
         {
-            PageBorderOperations<byte>(CreateByte, false);
+            EmptyFile<Struct3ByteUnion>(3);
         }
 
         [Test]
-        public void Struct3EmptyFile()
+        public void EmptyFileStructTimeValue()
         {
-            int hdrSize;
-            Version fileVersion, baseVersion, serializerVersion;
-
-            using (var f = new BinIndexedFile<Struct3Byte>(binFile))
-            {
-                fileVersion = f.FileVersion;
-                Assert.IsNotNull(fileVersion);
-                baseVersion = f.BaseVersion;
-                Assert.IsNotNull(baseVersion);
-                serializerVersion = f.SerializerVersion;
-                Assert.IsNotNull(serializerVersion);
-
-                Assert.AreEqual(true, f.CanWrite);
-                Assert.AreEqual(0, f.Count);
-
-                hdrSize = f.HeaderSize;
-
-                Assert.AreEqual(3, f.ItemSize);
-                Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
-                Assert.IsTrue(f.IsEmpty);
-            }
-
-            using (var file = BinaryFile.Open(binFile, false))
-            {
-                Assert.IsInstanceOfType(typeof (BinIndexedFile<Struct3Byte>), file);
-                var f = (BinIndexedFile<Struct3Byte>) file;
-
-                Assert.AreEqual(fileVersion, f.FileVersion);
-                Assert.AreEqual(baseVersion, f.BaseVersion);
-                Assert.AreEqual(serializerVersion, f.SerializerVersion);
-
-                Assert.AreEqual(false, f.CanWrite);
-                Assert.AreEqual(0, f.Count);
-
-                Assert.AreEqual(hdrSize, f.HeaderSize);
-
-                Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
-                Assert.IsTrue(f.IsEmpty);
-                Assert.AreEqual(3, f.ItemSize);
-            }
+            EmptyFile<StructTimeValue>(12);
         }
 
         [Test]
-        public void Struct3FileIncrementalAddition()
+        public void IncrementalAdditionByte()
         {
-            FileIncrementalAddition<Struct3Byte>(CreateStruct3);
+            FileIncrementalAddition<byte>(UnitTestsUtils.CreateByte);
         }
 
         [Test]
-        public void Struct3PageBorderOpsMMF()
+        public void IncrementalAdditionStruct3()
         {
-            PageBorderOperations<Struct3Byte>(CreateStruct3, true);
+            FileIncrementalAddition<Struct3Byte>(UnitTestsUtils.CreateStruct3);
         }
 
         [Test]
-        public void Struct3PageBorderOpsStream()
+        public void IncrementalAdditionStruct3Union()
         {
-            PageBorderOperations<Struct3Byte>(CreateStruct3, false);
+            FileIncrementalAddition<Struct3ByteUnion>(UnitTestsUtils.CreateStruct3Union);
+        }
+
+        [Test]
+        public void IncrementalAdditionStructTimeValue()
+        {
+            FileIncrementalAddition<StructTimeValue>(UnitTestsUtils.CreateStructTimeValue);
+        }
+
+        [Test]
+        public void PageCheckMMFByte()
+        {
+            PageBorderOperations<byte>(UnitTestsUtils.CreateByte, true);
+        }
+
+        [Test]
+        public void PageCheckMMFStruct3Page()
+        {
+            PageBorderOperations<Struct3Byte>(UnitTestsUtils.CreateStruct3, true);
+        }
+
+        [Test]
+        public void PageCheckMMFStruct3Union()
+        {
+            PageBorderOperations<Struct3ByteUnion>(UnitTestsUtils.CreateStruct3Union, true);
+        }
+
+        [Test]
+        public void PageCheckMMFStructTimeValue()
+        {
+            PageBorderOperations<StructTimeValue>(UnitTestsUtils.CreateStructTimeValue, true);
+        }
+
+        [Test]
+        public void PageCheckStreamByte()
+        {
+            PageBorderOperations<byte>(UnitTestsUtils.CreateByte, false);
+        }
+
+        [Test]
+        public void PageCheckStreamStruct3Page()
+        {
+            PageBorderOperations<Struct3Byte>(UnitTestsUtils.CreateStruct3, false);
+        }
+
+        [Test]
+        public void PageCheckStreamStruct3Union()
+        {
+            PageBorderOperations<Struct3ByteUnion>(UnitTestsUtils.CreateStruct3Union, false);
+        }
+
+        [Test]
+        public void PageCheckStreamStructTimeValue()
+        {
+            PageBorderOperations<StructTimeValue>(UnitTestsUtils.CreateStructTimeValue, false);
         }
     }
 }

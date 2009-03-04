@@ -17,10 +17,11 @@ namespace NYurik.FastBinTimeseries
         {
             var info = DynamicCodeFactory.Instance.CreateSerializer<T>();
 
-            if (info.ItemSize <= 0)
+            _typeSize = (int) info.SizeOfMethod.Invoke(null, null);
+
+            if (_typeSize <= 0)
                 throw new InvalidOperationException("Struct size must be > 0");
 
-            _typeSize = info.ItemSize;
             processFileStream = (UnsafeActionDelegate<FileStream, T>)
                                 info.FileStreamMethod.CreateDelegate(
                                     typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (FileStream), typeof (T)),

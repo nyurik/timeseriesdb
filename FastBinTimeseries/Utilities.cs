@@ -176,28 +176,6 @@ namespace NYurik.FastBinTimeseries
             throw new ArgumentOutOfRangeException("version", version, "Unknown version for " + type.FullName);
         }
 
-        #region Helper methods
-
-        [ThreadStatic] private static bool _isGetTypeRunningOnThisThread;
-
-        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            Assembly assembly = null;
-
-            // Only process events from the thread that started it, not any other thread
-            if (_isGetTypeRunningOnThisThread)
-            {
-                // Extract assembly name, and checking it's the same as args.Name to prevent an infinite loop
-                var an = new AssemblyName(args.Name);
-                if (an.Name != args.Name)
-                    assembly = ((AppDomain) sender).Load(an.Name);
-            }
-
-            return assembly;
-        }
-
-        #endregion
-
         public static Version ReadVersion(BinaryReader reader)
         {
             var major = reader.ReadInt32();
@@ -219,5 +197,37 @@ namespace NYurik.FastBinTimeseries
             writer.Write(ver.Build);
             writer.Write(ver.Revision);
         }
+
+        public static int ToInt32Checked(long itemsCountLng)
+        {
+            if (itemsCountLng > Int32.MaxValue)
+                throw new ArgumentException(
+                    String.Format(
+                        "Attempted to process {0} items at once, which is over the maximum of {1}.",
+                        itemsCountLng, Int32.MaxValue));
+            return (int) itemsCountLng;
+        }
+
+        #region Helper methods
+
+        [ThreadStatic] private static bool _isGetTypeRunningOnThisThread;
+
+        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            Assembly assembly = null;
+
+            // Only process events from the thread that started it, not any other thread
+            if (_isGetTypeRunningOnThisThread)
+            {
+                // Extract assembly name, and checking it's the same as args.Name to prevent an infinite loop
+                var an = new AssemblyName(args.Name);
+                if (an.Name != args.Name)
+                    assembly = ((AppDomain) sender).Load(an.Name);
+            }
+
+            return assembly;
+        }
+
+        #endregion
     }
 }

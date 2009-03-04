@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 using NYurik.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries
@@ -16,7 +15,7 @@ namespace NYurik.FastBinTimeseries
 
         private static DynamicCodeFactory _instance;
         private readonly Dictionary<Type, BinSerializerInfo> _serializers = new Dictionary<Type, BinSerializerInfo>();
-        private readonly Dictionary<Type, Delegate> _tsAccessorExpr = new Dictionary<Type, Delegate>();
+        private readonly Dictionary<FieldInfo, Delegate> _tsAccessorExpr = new Dictionary<FieldInfo, Delegate>();
 
         private DynamicCodeFactory()
         {
@@ -26,17 +25,13 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
+                // todo: switch to LazyInit<> in .Net 4.0
                 if (_instance == null)
                     lock (typeof (DynamicCodeFactory))
                         if (_instance == null)
                             _instance = new DynamicCodeFactory();
                 return _instance;
             }
-        }
-
-        public void Save()
-        {
-            //_assemblyBuilder.Save(_moduleBuilder.ScopeName);
         }
 
         private static MethodInfo GetMethodInfo(Type baseType, string methodName)
@@ -76,12 +71,24 @@ namespace NYurik.FastBinTimeseries
 
             // Create the abstract method overrides
             return new BinSerializerInfo(
-                Marshal.SizeOf(itemType),
                 CreateSerializerMethodIL(
                     itemType, ifType, "DynProcessFileStream", "ProcessFileStreamPtr", typeof (FileStream)),
                 CreateSerializerMethodIL(
-                    itemType, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr))
+                    itemType, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr)),
+                CreateSizeOfMethodIL(itemType, ifType.Module)
                 );
+        }
+
+        private static DynamicMethod CreateSizeOfMethodIL(Type itemType, Module module)
+        {
+            var method = new DynamicMethod("SizeOf", typeof (int), null, module, true);
+            var emit = method.GetILGenerator();
+
+            emit
+                .@sizeof(itemType)
+                .ret();
+
+            return method;
         }
 
         private static DynamicMethod CreateSerializerMethodIL(Type itemType, Type baseType, string methodName,
@@ -150,12 +157,12 @@ namespace NYurik.FastBinTimeseries
                                                                   fieldInfo.Name, itemType.FullName));
 
             Delegate tsAccessorType;
-            if (!_tsAccessorExpr.TryGetValue(itemType, out tsAccessorType))
+            if (!_tsAccessorExpr.TryGetValue(fieldInfo, out tsAccessorType))
             {
                 var vParam = Expression.Parameter(itemType, "v");
                 var exprLambda = Expression.Lambda<Func<T, DateTime>>(
                     Expression.Field(vParam, fieldInfo), vParam);
-                _tsAccessorExpr[itemType] = tsAccessorType = exprLambda.Compile();
+                _tsAccessorExpr[fieldInfo] = tsAccessorType = exprLambda.Compile();
             }
 
             return (Func<T, DateTime>) tsAccessorType;
@@ -168,14 +175,15 @@ namespace NYurik.FastBinTimeseries
         internal class BinSerializerInfo
         {
             public readonly DynamicMethod FileStreamMethod;
-            public readonly int ItemSize;
             public readonly DynamicMethod MemMapMethod;
+            public readonly DynamicMethod SizeOfMethod;
 
-            public BinSerializerInfo(int itemSize, DynamicMethod fileStreamMethod, DynamicMethod memMapMethod)
+            public BinSerializerInfo(DynamicMethod fileStreamMethod, DynamicMethod memMapMethod,
+                                     DynamicMethod sizeOfMethod)
             {
-                ItemSize = itemSize;
                 FileStreamMethod = fileStreamMethod;
                 MemMapMethod = memMapMethod;
+                SizeOfMethod = sizeOfMethod;
             }
         }
 
