@@ -55,7 +55,7 @@ namespace NYurik.FastBinTimeseries.Test
     {
         public static DateTime FirstTimeStamp = new DateTime(2000, 1, 1);
 
-        public DateTime a;
+        public PackedDateTime a;
         public byte b;
 
         #region Implementation
@@ -82,7 +82,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public override string ToString()
         {
-            return String.Format("{0:u}, {1}", a, b);
+            return String.Format("{0:u}, {1}", (DateTime)a, b);
         }
 
         public static _DatetimeByte_SeqPk1 New(long i)
@@ -102,7 +102,7 @@ namespace NYurik.FastBinTimeseries.Test
     {
         public static DateTime FirstTimeStamp = new DateTime(2000, 1, 1);
 
-        public DateTime a;
+        public PackedDateTime a;
         public bool b;
 
         #region Implementation
@@ -129,7 +129,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public override string ToString()
         {
-            return String.Format("{0:u}, {1}", a, b);
+            return String.Format("{0:u}, {1}", (DateTime)a, b);
         }
 
         public static _DatetimeBool_SeqPk1 New(long i)

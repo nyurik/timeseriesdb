@@ -43,7 +43,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
         /// <param name="customSerializer">Custom serializer or null for default</param>
-        /// <param name="dateTimeFieldInfo">Field containing the DateTime timestamp</param>
+        /// <param name="dateTimeFieldInfo">Field containing the PackedDateTime timestamp</param>
         public BinTimeseriesFile(string fileName, IBinSerializer<T> customSerializer, FieldInfo dateTimeFieldInfo)
             : base(fileName, customSerializer)
         {
@@ -54,37 +54,38 @@ namespace NYurik.FastBinTimeseries
         private static FieldInfo GetDateTimeField()
         {
             var itemType = typeof (T);
-            var fieldInfo = itemType.GetFields(DynamicCodeFactory.FieldBindingFlags);
+            var fieldInfo = itemType.GetFields(DynamicCodeFactory.AllInstanceMembers);
             if (fieldInfo.Length < 1)
                 throw new InvalidOperationException("No fields found in type " + itemType.FullName);
 
             FieldInfo result = null;
             foreach (var fi in fieldInfo)
-                if (fi.FieldType == typeof (DateTime))
+                if (fi.FieldType == typeof (PackedDateTime))
                 {
                     if (result != null)
                         throw new InvalidOperationException(
-                            "Must explicitly specify the fieldInfo because there is more than one DateTime field in type " +
+                            "Must explicitly specify the fieldInfo because there is more than one PackedDateTime field in type " +
                             itemType.FullName);
                     result = fi;
                 }
 
             if (result == null)
-                throw new InvalidOperationException("No field of type DateTime was found in type " + itemType.FullName);
+                throw new InvalidOperationException("No field of type PackedDateTime was found in type " +
+                                                    itemType.FullName);
 
             return result;
         }
 
         #endregion
 
-        protected Func<T, DateTime> TSAccessor { get; private set; }
+        protected Func<T, PackedDateTime> TSAccessor { get; private set; }
 
         protected override void ReadCustomHeader(BinaryReader stream, Version version)
         {
             if (version == CurrentVersion)
             {
                 var fieldName = stream.ReadString();
-                DateTimeFieldInfo = typeof (T).GetField(fieldName, DynamicCodeFactory.FieldBindingFlags);
+                DateTimeFieldInfo = typeof (T).GetField(fieldName, DynamicCodeFactory.AllInstanceMembers);
 
                 if (DateTimeFieldInfo == null)
                     throw new InvalidOperationException(
@@ -113,7 +114,7 @@ namespace NYurik.FastBinTimeseries
                 var mid = start + ((end - start) >> 1);
 
                 PerformFileAccess(mid, oneElementBuff, 0, 1, Read);
-                var comp = TSAccessor(oneElementBuff[0]).CompareTo(value);
+                var comp = ((DateTime) TSAccessor(oneElementBuff[0])).CompareTo(value);
                 if (comp == 0)
                     return mid;
                 if (comp < 0)

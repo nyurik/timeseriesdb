@@ -83,59 +83,6 @@ namespace NYurik.EmitExtensions
         }
 
         /// <summary>
-        /// Recursively checks if the type with all of its members are expressable as a value type that may be cast to a pointer.
-        /// Equivalent to what compiler does to check for CS0208 error of this statement:
-        ///        fixed (int* p = new int[5]) {}
-        /// 
-        /// An unmanaged-type is any type that isn’t a reference-type and doesn’t contain reference-type fields 
-        /// at any level of nesting. In other words, an unmanaged-type is one of the following:
-        ///  * sbyte, byte, short, ushort, int, uint, long, ulong, char, float, double, decimal, or bool.
-        ///  * Any enum-type.
-        ///  * Any pointer-type.
-        ///  * Any user-defined struct-type that contains fields of unmanaged-types only.
-        /// 
-        /// Strings are not in that list, even though you can use them in structs. 
-        /// Fixed-size arrays of unmanaged-types are allowed.
-        /// </summary>
-        public static void ThrowIfNotUnmanagedType(this Type type)
-        {
-            ThrowIfNotUnmanagedType(type, new Stack<Type>(4));
-        }
-
-        private static void ThrowIfNotUnmanagedType(Type type, Stack<Type> typesStack)
-        {
-            if ((!type.IsValueType && !type.IsPointer) || type.IsGenericType || type.IsGenericParameter || type.IsArray)
-                throw new ArgumentException(String.Format("Type {0} is not an unmanaged type", type.FullName));
-
-            if (!type.IsPrimitive && !type.IsEnum && !type.IsPointer)
-                for (var p = type.DeclaringType; p != null; p = p.DeclaringType)
-                    if (p.IsGenericTypeDefinition)
-                        throw new ArgumentException(
-                            String.Format("Type {0} contains a generic type definition declaring type {1}",
-                                          type.FullName, p.FullName));
-
-            try
-            {
-                typesStack.Push(type);
-
-                var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-
-                foreach (var f in fields)
-                    if (!typesStack.Contains(f.FieldType))
-                        ThrowIfNotUnmanagedType(f.FieldType);
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException(
-                    String.Format("Error in subtype of type {0}. See InnerException.", type.FullName), ex);
-            }
-            finally
-            {
-                typesStack.Pop();
-            }
-        }
-
-        /// <summary>
         /// Substitutes the elements of an array of types for the type parameters
         /// of the current generic type definition and returns a Type object
         /// representing the resulting constructed type.
@@ -216,7 +163,7 @@ namespace NYurik.EmitExtensions
         {
             result.Add(subItemType);
 
-            var fields = subItemType.GetFields(DynamicCodeFactory.FieldBindingFlags);
+            var fields = subItemType.GetFields(DynamicCodeFactory.AllInstanceMembers);
             if (fields.Length == 1 && fields[0].FieldType == subItemType)
                 return;
 

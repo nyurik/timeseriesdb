@@ -90,6 +90,7 @@
     </Compile>
     <Compile Include="BinUniformTimeseriesFile.cs" />
     <Compile Include="CombinedException.cs" />
+    <Compile Include="PackedDateTime.cs" />
     <Compile Include="DefaultTypeSerializer.cs" />
     <Compile Include="EmitExtensions\ILGeneratorExtensions.cs" />
     <Compile Include="EmitExtensions\TypeBuilderExtensions.cs" />
