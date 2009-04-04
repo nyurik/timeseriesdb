@@ -5,29 +5,49 @@ namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile : IDisposable
     {
-        protected const int MaxHeaderSize = 64*1024;
+        protected const int BytesInHeaderSize = sizeof (int);
+        protected const int MaxHeaderSize = 4*1024*1024;
         protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB
-        protected static readonly Version BaseCurrentVersion = new Version(1, 0);
-        protected static readonly int BytesInHeaderSize = sizeof (int);
 
-        protected internal FileStream m_fileStream;
-        protected internal bool m_isDisposed;
-        private int m_headerSize;
+        protected static readonly Version BaseVersion_1_0_NoTag = new Version(1, 0);
+        protected static readonly Version BaseVersion_Current = new Version(1, 1);
 
-        protected BinaryFile()
+        protected internal Version _baseVersion;
+        protected internal FileStream _fileStream;
+        protected internal int _headerSize;
+        private bool _isDisposed;
+        protected internal bool _isInitialized;
+
+        public Version BaseVersion
         {
-            BaseVersion = BaseCurrentVersion;
+            get
+            {
+                ThrowOnNotInitialized();
+                return _baseVersion;
+            }
+            protected internal set
+            {
+                ThrowOnInitialized();
+                if (value == null) throw new ArgumentNullException("value");
+                if (value != BaseVersion_Current && value != BaseVersion_1_0_NoTag)
+                    Utilities.ThrowUnknownVersion(value, typeof (BinaryFile));
+                _baseVersion = value;
+            }
         }
-
-        public Version BaseVersion { get; private set; }
 
         /// <summary>Size of the file header in bytes</summary>
         public int HeaderSize
         {
-            get { return m_headerSize; }
-            protected set
+            get
             {
-                if (value == m_headerSize)
+                ThrowOnNotInitialized();
+                return _headerSize;
+            }
+            protected internal set
+            {
+                ThrowOnInitialized();
+
+                if (value == _headerSize)
                     return;
 
                 if (value > MaxHeaderSize || value < BytesInHeaderSize)
@@ -35,7 +55,7 @@ namespace NYurik.FastBinTimeseries
                         String.Format("File header size {0} is not within allowed range {1}..{2}",
                                       value, BytesInHeaderSize, MaxHeaderSize));
 
-                m_headerSize = value;
+                _headerSize = value;
             }
         }
 
@@ -73,9 +93,19 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                ThrowOnInvalidState();
-                return m_fileStream;
+                ThrowOnNotInitialized();
+                return _fileStream;
             }
+        }
+
+        public bool IsDisposed
+        {
+            get { return _isDisposed; }
+        }
+
+        public bool IsInitialized
+        {
+            get { return _isInitialized; }
         }
 
         #region IDisposable Members
@@ -88,17 +118,25 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        protected void ThrowOnInvalidState()
+        protected void ThrowOnNotInitialized()
         {
             ThrowOnDisposed();
-            if (m_fileStream == null)
+            if (!_isInitialized)
                 throw new InvalidOperationException(
-                    "You must call InitializeNewFile() before performing any operations on the new file");
+                    "InitializeNewFile() must be called before performing any operations on the new file");
+        }
+
+        protected void ThrowOnInitialized()
+        {
+            ThrowOnDisposed();
+            if (_isInitialized)
+                throw new InvalidOperationException(
+                    "This call is only allowed for new files before InitializeNewFile() was called");
         }
 
         protected void ThrowOnDisposed()
         {
-            if (m_isDisposed)
+            if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName, "The file has been closed");
         }
 
@@ -109,19 +147,19 @@ namespace NYurik.FastBinTimeseries
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!m_isDisposed)
+            if (!_isDisposed)
             {
                 if (disposing)
                 {
-                    var streamTmp = m_fileStream;
-                    m_fileStream = null;
+                    FileStream streamTmp = _fileStream;
+                    _fileStream = null;
                     if (streamTmp != null)
                         streamTmp.Close();
                 }
                 else
-                    m_fileStream = null;
+                    _fileStream = null;
 
-                m_isDisposed = true;
+                _isDisposed = true;
             }
         }
 
@@ -167,59 +205,54 @@ namespace NYurik.FastBinTimeseries
 
         /// <summary>
         /// Open a binary file from a filestream, and start reading the file header.
-        /// This method together with the <see cref="Init"/>
+        /// This method together with the <see cref="Open(System.Type,System.IO.BinaryReader,bool)"/>
         /// must match the <see cref="BinaryFile{T}.WriteHeader"/> method.
         /// </summary>
         public static BinaryFile Open(FileStream stream)
         {
-            if (stream == null)
-                throw new ArgumentNullException("stream");
+            if (stream == null) throw new ArgumentNullException("stream");
 
             stream.Seek(0, SeekOrigin.Begin);
 
             // Get header size
-            var hdrSize = BitConverter.ToInt32(ReadIntoNewBuffer(stream, BytesInHeaderSize), 0);
+            int hdrSize = BitConverter.ToInt32(ReadIntoNewBuffer(stream, BytesInHeaderSize), 0);
 
             // Read the rest of the header and create a memory reader so that we won't accidently go too far on string reads
             var memReader = new BinaryReader(
                 new MemoryStream(ReadIntoNewBuffer(stream, hdrSize - BytesInHeaderSize), false));
 
             // Instantiate BinaryFile-inherited class this file was created with
-            var baseVersion = Utilities.ReadVersion(memReader);
-
-            // Any older versions of the header should be processed here
-            if (baseVersion != BaseCurrentVersion)
-                Utilities.ThrowUnknownVersion(baseVersion, typeof (BinaryFile));
-
-
-            var classTypeName = memReader.ReadString();
-            var classType = Utilities.GetTypeFromAnyAssemblyVersion(classTypeName);
+            Version baseVersion = Utilities.ReadVersion(memReader);
+            string classTypeName = memReader.ReadString();
+            Type classType = Utilities.GetTypeFromAnyAssemblyVersion(classTypeName);
             if (classType == null)
                 throw new InvalidOperationException("Unable to find class type " + classTypeName);
             var inst = (BinaryFile) Activator.CreateInstance(classType, true);
 
             inst.HeaderSize = hdrSize;
             inst.BaseVersion = baseVersion;
-            inst.m_fileStream = stream;
+            inst._fileStream = stream;
 
             // Read values in the same order as WriteHeader()
             // Serializer
-            var serializerTypeName = memReader.ReadString();
-            var serializerType = Utilities.GetTypeFromAnyAssemblyVersion(serializerTypeName);
+            string serializerTypeName = memReader.ReadString();
+            Type serializerType = Utilities.GetTypeFromAnyAssemblyVersion(serializerTypeName);
             if (serializerType == null)
                 throw new InvalidOperationException("Unable to find serializer type " + serializerTypeName);
 
-            inst.Init(serializerType, memReader);
+            inst.Open(serializerType, memReader, stream.CanWrite);
+
+            inst._isInitialized = true;
 
             return inst;
         }
 
-        protected internal abstract void Init(Type serializerType, BinaryReader memReader);
+        protected internal abstract void Open(Type serializerType, BinaryReader memReader, bool canWrite);
 
         private static byte[] ReadIntoNewBuffer(Stream stream, int bufferSize)
         {
             var headerBuffer = new byte[bufferSize];
-            var bytesRead = stream.Read(headerBuffer, 0, bufferSize);
+            int bytesRead = stream.Read(headerBuffer, 0, bufferSize);
             if (bytesRead < bufferSize)
                 throw new IOException(
                     String.Format("Unable to read a block of size {0}: only {1} bytes were available", bufferSize,

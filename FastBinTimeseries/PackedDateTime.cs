@@ -13,8 +13,8 @@ namespace NYurik.FastBinTimeseries
     /// </summary>
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PackedDateTime
-       {
+    public struct PackedDateTime : IFormattable
+    {
         private static readonly Func<long, DateTime> FromBinaryRaw;
         private static readonly Func<DateTime, long> ToBinaryRaw;
 
@@ -26,18 +26,18 @@ namespace NYurik.FastBinTimeseries
         {
             // Get internal DateTime binary serializer methods
 
-            var longParam = Expression.Parameter(typeof (long), "v");
+            var longParam = Expression.Parameter(typeof(long), "v");
             FromBinaryRaw = Expression.Lambda<Func<long, DateTime>>(
                 Expression.Call(
-                    typeof (DateTime).GetMethod("FromBinaryRaw", BindingFlags.Static | BindingFlags.NonPublic),
+                    typeof(DateTime).GetMethod("FromBinaryRaw", BindingFlags.Static | BindingFlags.NonPublic),
                     longParam),
                 longParam).Compile();
 
-            var dtParam = Expression.Parameter(typeof (DateTime), "v");
+            var dtParam = Expression.Parameter(typeof(DateTime), "v");
             ToBinaryRaw = Expression.Lambda<Func<DateTime, long>>(
                 Expression.Call(
                     dtParam,
-                    typeof (DateTime).GetMethod("ToBinaryRaw", BindingFlags.Instance | BindingFlags.NonPublic)),
+                    typeof(DateTime).GetMethod("ToBinaryRaw", BindingFlags.Instance | BindingFlags.NonPublic)),
                 dtParam).Compile();
         }
 
@@ -59,6 +59,11 @@ namespace NYurik.FastBinTimeseries
         public static implicit operator PackedDateTime(DateTime value)
         {
             return new PackedDateTime(ToBinaryRaw(value));
+        }
+
+        public string ToString(string format, IFormatProvider formatProvider)
+        {
+            return FromBinaryRaw(_value).ToString(format, formatProvider);
         }
     }
 }

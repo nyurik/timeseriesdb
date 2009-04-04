@@ -24,7 +24,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
         public BinTimeseriesFile(string fileName)
-            : this(fileName, null)
+            : this(fileName, GetDateTimeField())
         {
         }
 
@@ -32,20 +32,9 @@ namespace NYurik.FastBinTimeseries
         /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
         /// </summary>
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
-        /// <param name="customSerializer">Custom serializer or null for default</param>
-        public BinTimeseriesFile(string fileName, IBinSerializer<T> customSerializer)
-            : this(fileName, customSerializer, GetDateTimeField())
-        {
-        }
-
-        /// <summary>
-        /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
-        /// </summary>
-        /// <param name="fileName">A relative or absolute path for the file to create.</param>
-        /// <param name="customSerializer">Custom serializer or null for default</param>
         /// <param name="dateTimeFieldInfo">Field containing the PackedDateTime timestamp</param>
-        public BinTimeseriesFile(string fileName, IBinSerializer<T> customSerializer, FieldInfo dateTimeFieldInfo)
-            : base(fileName, customSerializer)
+        public BinTimeseriesFile(string fileName, FieldInfo dateTimeFieldInfo)
+            : base(fileName)
         {
             DateTimeFieldInfo = dateTimeFieldInfo;
             TSAccessor = DynamicCodeFactory.Instance.CreateTSAccessor<T>(dateTimeFieldInfo);

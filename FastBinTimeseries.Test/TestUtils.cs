@@ -6,6 +6,8 @@ namespace NYurik.FastBinTimeseries.Test
 {
     internal class TestUtils
     {
+        private static readonly LinkedList<CacheItem> items = new LinkedList<CacheItem>();
+
         public static long RoundUpToMultiple(long value, long multiple)
         {
             if (value < 0)
@@ -18,7 +20,7 @@ namespace NYurik.FastBinTimeseries.Test
         public static void AreEqual<T>(T[] expected, T[] values) where T : IEquatable<T>
         {
             Assert.AreEqual(expected.Length, values.Length, "Array lengths");
-            for (var i = 0; i < expected.Length; i++)
+            for (int i = 0; i < expected.Length; i++)
             {
                 if (!expected[i].Equals(values[i]))
                     throw new Exception(
@@ -37,15 +39,78 @@ namespace NYurik.FastBinTimeseries.Test
 
         public static T[] GenerateData<T>(Func<long, T> converter, int count, int startFrom)
         {
-            var result = new T[count];
-            for (long i = 0; i < count; i++)
+            string key = string.Format("{0},{1},{2}", typeof (T).FullName, startFrom, converter);
+
+            T[] result;
+            LinkedListNode<CacheItem> res = items.Find(new CacheItem { Key = key });
+            if (res != null)
+            {
+                items.Remove(res);
+                
+                result = (T[])res.Value.Value;
+                if (result.Length >= count)
+                {
+                    if(result.Length > count)
+                    {
+                        var rOld = result;
+                        result = new T[count];
+                        Array.Copy(rOld, result, count);
+                    }
+
+                    items.AddFirst(res);
+                    return result;
+                }
+            }
+
+            result = new T[count+100];
+            for (long i = 0; i < count+100; i++)
                 result[i] = converter(i + startFrom);
-            return result;
+            items.AddFirst(new CacheItem {Key = key, Value = result});
+            if (items.Count > 100)
+                items.RemoveLast();
+
+            var rNew = new T[count];
+            Array.Copy(result, rNew, count);
+            return rNew;
         }
 
         public static byte NewByte(long i)
         {
             return (byte) (i & 0xFF);
         }
+
+        #region Nested type: CacheItem
+
+        private class CacheItem : IEquatable<CacheItem>
+        {
+            public string Key;
+            public object Value;
+
+            #region IEquatable<CacheItem> Members
+
+            public bool Equals(CacheItem other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Equals(other.Key, Key);
+            }
+
+            #endregion
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != typeof (CacheItem)) return false;
+                return Equals((CacheItem) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Key != null ? Key.GetHashCode() : 0);
+            }
+        }
+
+        #endregion
     }
 }

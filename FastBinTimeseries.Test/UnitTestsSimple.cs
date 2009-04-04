@@ -16,7 +16,7 @@ namespace NYurik.FastBinTimeseries.Test
         public void Cleanup()
         {
             // perform the init to count accurate performance
-            var init = new PackedDateTime();
+            new PackedDateTime();
             if (File.Exists(binFile))
                 File.Delete(binFile);
         }
@@ -43,7 +43,7 @@ namespace NYurik.FastBinTimeseries.Test
             const string testName = "EmptyFile";
             try
             {
-                var sw = TestStart();
+                Stopwatch sw = TestStart();
 
                 int hdrSize;
                 Version fileVersion, baseVersion, serializerVersion;
@@ -64,11 +64,11 @@ namespace NYurik.FastBinTimeseries.Test
                     hdrSize = f.HeaderSize;
 
                     Assert.AreEqual(expectedItemSize, f.ItemSize);
-                    Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
+                    Assert.IsTrue(hdrSize%f.ItemSize == 0);
                     Assert.IsTrue(f.IsEmpty);
                 }
 
-                using (var file = BinaryFile.Open(binFile, false))
+                using (BinaryFile file = BinaryFile.Open(binFile, false))
                 {
                     Assert.IsInstanceOfType(typeof (BinIndexedFile<T>), file);
                     var f = (BinIndexedFile<T>) file;
@@ -82,7 +82,6 @@ namespace NYurik.FastBinTimeseries.Test
 
                     Assert.AreEqual(hdrSize, f.HeaderSize);
 
-                    Assert.AreEqual(hdrSize, f.HeaderSizeAsItemCount*f.ItemSize);
                     Assert.IsTrue(f.IsEmpty);
                     Assert.AreEqual(expectedItemSize, f.ItemSize);
                 }
@@ -92,6 +91,7 @@ namespace NYurik.FastBinTimeseries.Test
             catch
             {
                 Console.WriteLine("Error in " + testName);
+                throw;
             }
         }
 
@@ -112,27 +112,29 @@ namespace NYurik.FastBinTimeseries.Test
             const string testName = "FileIncrementalAddition";
             try
             {
-                var sw = TestStart();
+                Stopwatch sw = TestStart();
 
-                var data0 = TestUtils.GenerateData(converter, 1, 10);
-                var data1 = TestUtils.GenerateData(converter, 2, 20);
-                var data2 = TestUtils.GenerateData(converter, 3, 30);
+                T[] data0 = TestUtils.GenerateData(converter, 1, 10);
+                T[] data1 = TestUtils.GenerateData(converter, 2, 20);
+                T[] data2 = TestUtils.GenerateData(converter, 3, 30);
 
                 using (var f = new BinIndexedFile<T>(binFile))
                 {
                     f.InitializeNewFile();
                     f.WriteData(0, data0, 0, data0.Length);
 
+                    Assert.AreEqual(true, f.CanWrite);
                     Assert.AreEqual(1, f.Count);
                     Assert.IsFalse(f.IsEmpty);
 
                     ReadAndAssert(data0, f, 0, f.Count);
                 }
 
-                using (var file = BinaryFile.Open(binFile, true))
+                using (BinaryFile file = BinaryFile.Open(binFile, true))
                 {
                     Assert.IsInstanceOfType(typeof (BinIndexedFile<T>), file);
                     var f = (BinIndexedFile<T>) file;
+                    Assert.AreEqual(true, f.CanWrite);
                     Assert.AreEqual(1, f.Count);
                     ReadAndAssert(data0, f, 0, f.Count);
 
@@ -157,18 +159,19 @@ namespace NYurik.FastBinTimeseries.Test
             catch
             {
                 Console.WriteLine("Error in " + testName);
+                throw;
             }
         }
 
         private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess)
             where T : IEquatable<T>
         {
-            var testName = "PageBorderOperations_" + (enableMemoryMappedAccess ? "MMF" : "Stream");
+            string testName = "PageBorderOperations_" + (enableMemoryMappedAccess ? "MMF" : "Stream");
             try
             {
-                var sw = TestStart();
+                Stopwatch sw = TestStart();
 
-                for (var i = 1; i < 5; i++)
+                for (int i = 1; i < 5; i++)
                     PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
 
                 PageBorderOperations(converter, enableMemoryMappedAccess,
@@ -202,16 +205,17 @@ namespace NYurik.FastBinTimeseries.Test
                 f.InitializeNewFile();
                 f.EnableMemoryMappedFileAccess = enableMemoryMappedAccess;
 
-                var itemsPerPage = pageSize/Marshal.SizeOf(typeof (T));
-                var items1stPg = (int) TestUtils.RoundUpToMultiple(f.HeaderSizeAsItemCount, itemsPerPage) -
-                                 f.HeaderSizeAsItemCount;
+                int itemsPerPage = pageSize/Marshal.SizeOf(typeof (T));
+                int headerSizeAsItemCount = f.HeaderSize/f.ItemSize;
+                int items1stPg = (int) TestUtils.RoundUpToMultiple(headerSizeAsItemCount, itemsPerPage) -
+                                 headerSizeAsItemCount;
 
                 if (items1stPg == 0)
                     items1stPg = itemsPerPage;
 
-                var dataMinusOne = TestUtils.GenerateData(converter, items1stPg - 1, 0);
-                var dataZero = TestUtils.GenerateData(converter, items1stPg, 0);
-                var dataPlusOne = TestUtils.GenerateData(converter, items1stPg + 1, 0);
+                T[] dataMinusOne = TestUtils.GenerateData(converter, items1stPg - 1, 0);
+                T[] dataZero = TestUtils.GenerateData(converter, items1stPg, 0);
+                T[] dataPlusOne = TestUtils.GenerateData(converter, items1stPg + 1, 0);
 
                 f.WriteData(0, dataMinusOne, 0, dataMinusOne.Length);
                 Assert.AreEqual(f.HeaderSize + (items1stPg - 1)*f.ItemSize, new FileInfo(binFile).Length);
@@ -233,7 +237,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         private static void PrintSize<T>(int size)
         {
-            var marshalSizeOf = Marshal.SizeOf(typeof (T));
+            int marshalSizeOf = Marshal.SizeOf(typeof (T));
             Console.WriteLine("Marshal.SizeOf({0}) = {1}", typeof (T).Name, marshalSizeOf);
             Console.WriteLine("sizeof({0})         = {1}{2}\n", typeof (T).Name, size,
                               marshalSizeOf != size ? " ****" : "");

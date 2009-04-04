@@ -23,18 +23,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
         ///   If less than a day, the day must be evenly divisible by this value</param>
         public BinIndexedFile(string fileName)
-            : this(fileName, null)
-        {
-        }
-
-        /// <summary>
-        /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
-        /// </summary>
-        /// <param name="fileName">A relative or absolute path for the file to create.</param>
-        ///   If less than a day, the day must be evenly divisible by this value</param>
-        /// <param name="customSerializer"></param>
-        public BinIndexedFile(string fileName, IBinSerializer<T> customSerializer)
-            : base(fileName, customSerializer)
+            : base(fileName)
         {
         }
 

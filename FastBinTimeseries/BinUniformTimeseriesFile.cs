@@ -23,22 +23,12 @@ namespace NYurik.FastBinTimeseries
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
         /// <param name="itemTimeSpan">Unit of time each value represents.
         ///   If less than a day, the day must be evenly divisible by this value</param>
-        public BinUniformTimeseriesFile(string fileName, TimeSpan itemTimeSpan)
-            : this(fileName, itemTimeSpan, null)
-        {
-        }
-
-        /// <summary>
-        /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
-        /// </summary>
-        /// <param name="fileName">A relative or absolute path for the file to create.</param>
-        /// <param name="itemTimeSpan">Unit of time each value represents.
-        ///   If less than a day, the day must be evenly divisible by this value</param>
-        /// <param name="customSerializer"></param>
-        public BinUniformTimeseriesFile(string fileName, TimeSpan itemTimeSpan, IBinSerializer<T> customSerializer)
-            : base(fileName, customSerializer)
+        /// <param name="firstTimestamp"></param>
+        public BinUniformTimeseriesFile(string fileName, TimeSpan itemTimeSpan, DateTime firstTimestamp)
+            : base(fileName)
         {
             ItemTimeSpan = itemTimeSpan;
+            FirstTimestamp = firstTimestamp;
         }
 
         #endregion
@@ -54,13 +44,6 @@ namespace NYurik.FastBinTimeseries
         public DateTime FirstFileTS
         {
             get { return _firstFileTs; }
-            set
-            {
-                if (Count != 0)
-                    throw new InvalidOperationException("Unable to set first file timestamp on a non-empty file");
-                ValidateIndex(FirstFileTS);
-                _firstFileTs = value;
-            }
         }
 
         /// <summary>Represents the timestamp of the first value beyond the end of the existing data.
@@ -86,6 +69,8 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+        public DateTime FirstTimestamp { get; set; }
+
         #endregion
 
         private static readonly Version CurrentVersion = new Version(1, 0);
@@ -95,7 +80,7 @@ namespace NYurik.FastBinTimeseries
             if (version == CurrentVersion)
             {
                 ItemTimeSpan = TimeSpan.FromTicks(stream.ReadInt64());
-                FirstFileTS = DateTime.FromBinary(stream.ReadInt64());
+                _firstFileTs = ValidateIndex(DateTime.FromBinary(stream.ReadInt64()));
             }
             else
                 Utilities.ThrowUnknownVersion(version, GetType());
@@ -111,8 +96,7 @@ namespace NYurik.FastBinTimeseries
 
         protected long IndexToLong(DateTime timestamp)
         {
-            ValidateIndex(timestamp);
-            return (timestamp.Ticks - FirstFileTS.Ticks)/ItemTimeSpan.Ticks;
+            return (ValidateIndex(timestamp).Ticks - FirstFileTS.Ticks)/ItemTimeSpan.Ticks;
         }
 
         public override string ToString()
@@ -120,11 +104,12 @@ namespace NYurik.FastBinTimeseries
             return string.Format("{0}, firstTS={1}, slice={2}", base.ToString(), FirstFileTS, ItemTimeSpan);
         }
 
-        private void ValidateIndex(DateTime timestamp)
+        private DateTime ValidateIndex(DateTime timestamp)
         {
             if (timestamp.TimeOfDay.Ticks%ItemTimeSpan.Ticks != 0)
                 throw new IOException(
                     String.Format("The timestamp {0} must be aligned by the time slice {1}", timestamp, ItemTimeSpan));
+            return timestamp;
         }
 
         /// <summary>
@@ -225,12 +210,9 @@ namespace NYurik.FastBinTimeseries
             if (!CanWrite) throw new InvalidOperationException("The file was opened as readonly");
 
             ValidateIndex(firstItemIndex);
-            if (!IsEmpty && firstItemIndex < FirstFileTS)
+            if (firstItemIndex < FirstFileTS)
                 throw new ArgumentOutOfRangeException("firstItemIndex",
                                                       "Must be >= FirstFileTS for non-empty data files");
-            if (IsEmpty)
-                FirstFileTS = firstItemIndex;
-
             var firstItemLong = IndexToLong(firstItemIndex);
             if (firstItemLong > Count + 1)
                 throw new ArgumentException(
