@@ -9,34 +9,34 @@ namespace NYurik.FastBinTimeseries
     internal class DefaultTypeSerializer<T> : IBinSerializer<T>
     {
         private static readonly Version CurrentVersion = new Version(1, 0);
-        private readonly int _typeSize;
-        private readonly UnsafeActionDelegate<FileStream, T> processFileStream;
-        private readonly UnsafeActionDelegate<IntPtr, T> processMemoryMap;
+        private readonly UnsafeActionDelegate<FileStream, T> m_processFileStream;
+        private readonly UnsafeActionDelegate<IntPtr, T> m_processMemoryMap;
+        private readonly int m_typeSize;
 
         public DefaultTypeSerializer()
         {
-            var info = DynamicCodeFactory.Instance.CreateSerializer<T>();
+            DynamicCodeFactory.BinSerializerInfo info = DynamicCodeFactory.Instance.CreateSerializer<T>();
 
-            _typeSize = info.TypeSize;
+            m_typeSize = info.TypeSize;
 
-            if (_typeSize <= 0)
+            if (m_typeSize <= 0)
                 throw new InvalidOperationException("Struct size must be > 0");
 
-            processFileStream = (UnsafeActionDelegate<FileStream, T>)
-                                info.FileStreamMethod.CreateDelegate(
-                                    typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (FileStream), typeof (T)),
-                                    this);
-            processMemoryMap = (UnsafeActionDelegate<IntPtr, T>)
-                               info.MemMapMethod.CreateDelegate(
-                                   typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (IntPtr), typeof (T)),
-                                   this);
+            m_processFileStream = (UnsafeActionDelegate<FileStream, T>)
+                                  info.FileStreamMethod.CreateDelegate(
+                                      typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (FileStream), typeof (T)),
+                                      this);
+            m_processMemoryMap = (UnsafeActionDelegate<IntPtr, T>)
+                                 info.MemMapMethod.CreateDelegate(
+                                     typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (IntPtr), typeof (T)),
+                                     this);
         }
 
         #region IBinSerializer<T> Members
 
         public int TypeSize
         {
-            get { return _typeSize; }
+            get { return m_typeSize; }
         }
 
         public bool SupportsMemoryMappedFiles
@@ -46,12 +46,12 @@ namespace NYurik.FastBinTimeseries
 
         public void ProcessFileStream(FileStream fileStream, T[] buffer, int offset, int count, bool isWriting)
         {
-            processFileStream(fileStream, buffer, offset, count, isWriting);
+            m_processFileStream(fileStream, buffer, offset, count, isWriting);
         }
 
         public void ProcessMemoryMap(IntPtr memMapPtr, T[] buffer, int offset, int count, bool isWriting)
         {
-            processMemoryMap(memMapPtr, buffer, offset, count, isWriting);
+            m_processMemoryMap(memMapPtr, buffer, offset, count, isWriting);
         }
 
         public void ReadCustomHeader(BinaryReader reader, Version version)
@@ -74,15 +74,16 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        protected unsafe void ProcessFileStreamPtr(FileStream fileStream, void* bufPtr, int offset, int count,
-                                                   bool isWriting)
+// ReSharper disable UnusedMember.Local
+        private unsafe void ProcessFileStreamPtr(FileStream fileStream, void* bufPtr, int offset, int count, bool isWriting)
+// ReSharper restore UnusedMember.Local
         {
-            var byteBufPtr = (byte*) bufPtr + offset*_typeSize;
-            var byteCount = count*_typeSize;
+            byte* byteBufPtr = (byte*) bufPtr + offset*m_typeSize;
+            int byteCount = count*m_typeSize;
 
-            var bytesProcessed = isWriting
-                                     ? Win32Apis.WriteFile(fileStream, byteBufPtr, byteCount)
-                                     : Win32Apis.ReadFile(fileStream, byteBufPtr, byteCount);
+            uint bytesProcessed = isWriting
+                                      ? Win32Apis.WriteFile(fileStream, byteBufPtr, byteCount)
+                                      : Win32Apis.ReadFile(fileStream, byteBufPtr, byteCount);
 
             if (bytesProcessed != byteCount)
                 throw new IOException(
@@ -90,13 +91,15 @@ namespace NYurik.FastBinTimeseries
                                   isWriting ? "write" : "read", byteCount, bytesProcessed));
         }
 
-        protected unsafe void ProcessMemoryMapPtr(IntPtr memMapPtr, void* bufPtr, int offset, int count, bool isWriting)
+// ReSharper disable UnusedMember.Local
+        private unsafe void ProcessMemoryMapPtr(IntPtr memMapPtr, void* bufPtr, int offset, int count, bool isWriting)
+// ReSharper restore UnusedMember.Local
         {
-            var byteBufPtr = (byte*) bufPtr + offset*_typeSize;
-            var byteCount = count*_typeSize;
+            byte* byteBufPtr = (byte*) bufPtr + offset*m_typeSize;
+            int byteCount = count*m_typeSize;
 
-            var src = isWriting ? byteBufPtr : (byte*) memMapPtr;
-            var dest = isWriting ? (byte*) memMapPtr : byteBufPtr;
+            byte* src = isWriting ? byteBufPtr : (byte*) memMapPtr;
+            byte* dest = isWriting ? (byte*) memMapPtr : byteBufPtr;
 
             Utilities.CopyMemory(dest, src, (uint) byteCount);
         }

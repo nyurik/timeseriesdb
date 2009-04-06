@@ -723,7 +723,7 @@ namespace NYurik.EmitExtensions
         {
             if (type == null) throw new ArgumentNullException("type");
 
-            var methodInfo = type.GetMethod(methodName, optionalParameterTypes);
+            MethodInfo methodInfo = type.GetMethod(methodName, optionalParameterTypes);
 
             if (methodInfo == null)
                 throw CreateNoSuchMethodException(type, methodName);
@@ -748,7 +748,7 @@ namespace NYurik.EmitExtensions
         {
             if (type == null) throw new ArgumentNullException("type");
 
-            var methodInfo = type.GetMethod(methodName, flags, null, optionalParameterTypes, null);
+            MethodInfo methodInfo = type.GetMethod(methodName, flags, null, optionalParameterTypes, null);
 
             if (methodInfo == null)
                 throw CreateNoSuchMethodException(type, methodName);
@@ -837,7 +837,7 @@ namespace NYurik.EmitExtensions
         {
             if (type == null) throw new ArgumentNullException("type");
 
-            var methodInfo = type.GetMethod(methodName, optionalParameterTypes);
+            MethodInfo methodInfo = type.GetMethod(methodName, optionalParameterTypes);
 
             if (methodInfo == null)
                 throw CreateNoSuchMethodException(type, methodName);
@@ -860,7 +860,7 @@ namespace NYurik.EmitExtensions
         public static ILGenerator callvirt(this ILGenerator il, Type type, string methodName, BindingFlags flags,
                                            params Type[] optionalParameterTypes)
         {
-            var methodInfo =
+            MethodInfo methodInfo =
                 optionalParameterTypes == null
                     ? type.GetMethod(methodName, flags)
                     : type.GetMethod(methodName, flags, null, optionalParameterTypes, null);
@@ -1116,19 +1116,39 @@ namespace NYurik.EmitExtensions
             switch (Type.GetTypeCode(type))
             {
                 case TypeCode.Boolean:
-                case TypeCode.SByte: il.conv_i1(); break;
-                case TypeCode.Int16: il.conv_i2(); break;
-                case TypeCode.Int32: il.conv_i4(); break;
-                case TypeCode.Int64: il.conv_i8(); break;
+                case TypeCode.SByte:
+                    il.conv_i1();
+                    break;
+                case TypeCode.Int16:
+                    il.conv_i2();
+                    break;
+                case TypeCode.Int32:
+                    il.conv_i4();
+                    break;
+                case TypeCode.Int64:
+                    il.conv_i8();
+                    break;
 
-                case TypeCode.Byte: il.conv_u1(); break;
+                case TypeCode.Byte:
+                    il.conv_u1();
+                    break;
                 case TypeCode.Char:
-                case TypeCode.UInt16: il.conv_u2(); break;
-                case TypeCode.UInt32: il.conv_u4(); break;
-                case TypeCode.UInt64: il.conv_u8(); break;
+                case TypeCode.UInt16:
+                    il.conv_u2();
+                    break;
+                case TypeCode.UInt32:
+                    il.conv_u4();
+                    break;
+                case TypeCode.UInt64:
+                    il.conv_u8();
+                    break;
 
-                case TypeCode.Single: il.conv_r4(); break;
-                case TypeCode.Double: il.conv_r8(); break;
+                case TypeCode.Single:
+                    il.conv_r4();
+                    break;
+                case TypeCode.Double:
+                    il.conv_r8();
+                    break;
 
                 default:
                     throw CreateNotExpectedTypeException(type);
@@ -1689,7 +1709,8 @@ namespace NYurik.EmitExtensions
         /// <param name="parameterInfo">A <see cref="ParameterInfo"/> representing a parameter.</param>
         /// <param name="box">True, if parameter must be converted to a reference.</param>
         /// <seealso cref="ldarg(ILGenerator,MethodBuilder,ParameterInfo)"/>
-        public static ILGenerator ldargEx(this ILGenerator il, MethodBuilder methodBuilder, ParameterInfo parameterInfo, bool box)
+        public static ILGenerator ldargEx(this ILGenerator il, MethodBuilder methodBuilder, ParameterInfo parameterInfo,
+                                          bool box)
         {
             il.ldarg(methodBuilder, parameterInfo);
 
@@ -1725,10 +1746,18 @@ namespace NYurik.EmitExtensions
         {
             switch (index)
             {
-                case 0: il.ldarg_0(); break;
-                case 1: il.ldarg_1(); break;
-                case 2: il.ldarg_2(); break;
-                case 3: il.ldarg_3(); break;
+                case 0:
+                    il.ldarg_0();
+                    break;
+                case 1:
+                    il.ldarg_1();
+                    break;
+                case 2:
+                    il.ldarg_2();
+                    break;
+                case 3:
+                    il.ldarg_3();
+                    break;
                 default:
                     if (index <= byte.MaxValue)
                         il.ldarg_s((byte) index);
@@ -2051,16 +2080,36 @@ namespace NYurik.EmitExtensions
         {
             switch (num)
             {
-                case -1: il.ldc_i4_m1(); break;
-                case 0: il.ldc_i4_0(); break;
-                case 1: il.ldc_i4_1(); break;
-                case 2: il.ldc_i4_2(); break;
-                case 3: il.ldc_i4_3(); break;
-                case 4: il.ldc_i4_4(); break;
-                case 5: il.ldc_i4_5(); break;
-                case 6: il.ldc_i4_6(); break;
-                case 7: il.ldc_i4_7(); break;
-                case 8: il.ldc_i4_8(); break;
+                case -1:
+                    il.ldc_i4_m1();
+                    break;
+                case 0:
+                    il.ldc_i4_0();
+                    break;
+                case 1:
+                    il.ldc_i4_1();
+                    break;
+                case 2:
+                    il.ldc_i4_2();
+                    break;
+                case 3:
+                    il.ldc_i4_3();
+                    break;
+                case 4:
+                    il.ldc_i4_4();
+                    break;
+                case 5:
+                    il.ldc_i4_5();
+                    break;
+                case 6:
+                    il.ldc_i4_6();
+                    break;
+                case 7:
+                    il.ldc_i4_7();
+                    break;
+                case 8:
+                    il.ldc_i4_8();
+                    break;
                 default:
                     if (num >= sbyte.MinValue && num <= sbyte.MaxValue)
                         il.ldc_i4_s((sbyte) num);
@@ -2491,20 +2540,32 @@ namespace NYurik.EmitExtensions
             {
                 case TypeCode.Boolean:
                 case TypeCode.Byte:
-                case TypeCode.SByte: il.ldind_i1(); break;
+                case TypeCode.SByte:
+                    il.ldind_i1();
+                    break;
 
                 case TypeCode.Char:
                 case TypeCode.Int16:
-                case TypeCode.UInt16: il.ldind_i2(); break;
+                case TypeCode.UInt16:
+                    il.ldind_i2();
+                    break;
 
                 case TypeCode.Int32:
-                case TypeCode.UInt32: il.ldind_i4(); break;
+                case TypeCode.UInt32:
+                    il.ldind_i4();
+                    break;
 
                 case TypeCode.Int64:
-                case TypeCode.UInt64: il.ldind_i8(); break;
+                case TypeCode.UInt64:
+                    il.ldind_i8();
+                    break;
 
-                case TypeCode.Single: il.ldind_r4(); break;
-                case TypeCode.Double: il.ldind_r8(); break;
+                case TypeCode.Single:
+                    il.ldind_r4();
+                    break;
+                case TypeCode.Double:
+                    il.ldind_r8();
+                    break;
 
                 default:
                     if (type.IsClass)
@@ -2978,7 +3039,7 @@ namespace NYurik.EmitExtensions
         {
             if (type == null) throw new ArgumentNullException("type");
 
-            var ci = type.GetConstructor(parameters);
+            ConstructorInfo ci = type.GetConstructor(parameters);
 
             return il.newobj(ci);
         }
@@ -3471,20 +3532,32 @@ namespace NYurik.EmitExtensions
             {
                 case TypeCode.Boolean:
                 case TypeCode.Byte:
-                case TypeCode.SByte: il.stind_i1(); break;
+                case TypeCode.SByte:
+                    il.stind_i1();
+                    break;
 
                 case TypeCode.Char:
                 case TypeCode.Int16:
-                case TypeCode.UInt16: il.stind_i2(); break;
+                case TypeCode.UInt16:
+                    il.stind_i2();
+                    break;
 
                 case TypeCode.Int32:
-                case TypeCode.UInt32: il.stind_i4(); break;
+                case TypeCode.UInt32:
+                    il.stind_i4();
+                    break;
 
                 case TypeCode.Int64:
-                case TypeCode.UInt64: il.stind_i8(); break;
+                case TypeCode.UInt64:
+                    il.stind_i8();
+                    break;
 
-                case TypeCode.Single: il.stind_r4(); break;
-                case TypeCode.Double: il.stind_r8(); break;
+                case TypeCode.Single:
+                    il.stind_r4();
+                    break;
+                case TypeCode.Double:
+                    il.stind_r8();
+                    break;
 
                 default:
                     if (type.IsClass)
@@ -3616,10 +3689,18 @@ namespace NYurik.EmitExtensions
         {
             switch (index)
             {
-                case 0: il.stloc_0(); break;
-                case 1: il.stloc_1(); break;
-                case 2: il.stloc_2(); break;
-                case 3: il.stloc_3(); break;
+                case 0:
+                    il.stloc_0();
+                    break;
+                case 1:
+                    il.stloc_1();
+                    break;
+                case 2:
+                    il.stloc_2();
+                    break;
+                case 3:
+                    il.stloc_3();
+                    break;
 
                 default:
                     il.Emit(OpCodes.Stloc_S, index);
@@ -3904,19 +3985,45 @@ namespace NYurik.EmitExtensions
             else
                 switch (Type.GetTypeCode(o.GetType()))
                 {
-                    case TypeCode.Boolean: il.ldc_bool((Boolean)o); break;
-                    case TypeCode.Char: il.ldc_i4_((Char)o); break;
-                    case TypeCode.Single: il.ldc_r4((Single)o); break;
-                    case TypeCode.Double: il.ldc_r8((Double)o); break;
-                    case TypeCode.String: il.ldstr((String)o); break;
-                    case TypeCode.SByte: il.ldc_i4_((SByte)o); break;
-                    case TypeCode.Int16: il.ldc_i4_((Int16)o); break;
-                    case TypeCode.Int32: il.ldc_i4_((Int32)o); break;
-                    case TypeCode.Int64: il.ldc_i8((Int64)o); break;
-                    case TypeCode.Byte: il.ldc_i4_((Byte)o); break;
-                    case TypeCode.UInt16: il.ldc_i4_((UInt16)o); break;
-                    case TypeCode.UInt32: il.ldc_i4_(unchecked((Int32)(UInt32)o)); break;
-                    case TypeCode.UInt64: il.ldc_i8(unchecked((Int64)(UInt64)o)); break;
+                    case TypeCode.Boolean:
+                        il.ldc_bool((Boolean) o);
+                        break;
+                    case TypeCode.Char:
+                        il.ldc_i4_((Char) o);
+                        break;
+                    case TypeCode.Single:
+                        il.ldc_r4((Single) o);
+                        break;
+                    case TypeCode.Double:
+                        il.ldc_r8((Double) o);
+                        break;
+                    case TypeCode.String:
+                        il.ldstr((String) o);
+                        break;
+                    case TypeCode.SByte:
+                        il.ldc_i4_((SByte) o);
+                        break;
+                    case TypeCode.Int16:
+                        il.ldc_i4_((Int16) o);
+                        break;
+                    case TypeCode.Int32:
+                        il.ldc_i4_((Int32) o);
+                        break;
+                    case TypeCode.Int64:
+                        il.ldc_i8((Int64) o);
+                        break;
+                    case TypeCode.Byte:
+                        il.ldc_i4_((Byte) o);
+                        break;
+                    case TypeCode.UInt16:
+                        il.ldc_i4_((UInt16) o);
+                        break;
+                    case TypeCode.UInt32:
+                        il.ldc_i4_(unchecked((Int32) (UInt32) o));
+                        break;
+                    case TypeCode.UInt64:
+                        il.ldc_i8(unchecked((Int64) (UInt64) o));
+                        break;
                     default:
                         return false;
                 }
@@ -3934,7 +4041,7 @@ namespace NYurik.EmitExtensions
         {
             if (parameterInfo == null) throw new ArgumentNullException("parameterInfo");
 
-            var type = parameterInfo.ParameterType.GetUnderlyingType();
+            Type type = parameterInfo.ParameterType.GetUnderlyingType();
 
             if (parameterInfo.ParameterType.IsByRef)
             {
@@ -3944,7 +4051,7 @@ namespace NYurik.EmitExtensions
                            ? il.ldarg(index).initobj(type)
                            : il.ldarg(index).LoadInitValue(type).stind(type);
             }
-            
+
             return type.IsValueType && type.IsPrimitive == false
                        ? il.ldarga(index).initobj(type)
                        : il.LoadInitValue(type).starg(index);
@@ -3977,7 +4084,7 @@ namespace NYurik.EmitExtensions
         {
             if (localBuilder == null) throw new ArgumentNullException("localBuilder");
 
-            var type = localBuilder.LocalType;
+            Type type = localBuilder.LocalType;
 
             if (type.IsEnum)
                 type = Enum.GetUnderlyingType(type);
@@ -4044,8 +4151,8 @@ namespace NYurik.EmitExtensions
                 TypeExtensions.IsSameOrParent(expectedType, actualType)
                     ? il
                     : actualType.IsValueType
-                            ? il.unbox_any(expectedType)
-                            : il.castclass(expectedType);
+                          ? il.unbox_any(expectedType)
+                          : il.castclass(expectedType);
         }
 
         /// <summary>
@@ -4057,7 +4164,7 @@ namespace NYurik.EmitExtensions
         {
             // m_maxStackSize isn't public so we need some hacking here.
             //
-            var fi = il.GetType().GetField(
+            FieldInfo fi = il.GetType().GetField(
                 "m_maxStackSize", BindingFlags.Instance | BindingFlags.NonPublic);
 
             if (fi != null)

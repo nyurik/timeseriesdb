@@ -27,18 +27,18 @@ namespace NYurik.EmitExtensions
             if (methodBuilder == null) throw new ArgumentNullException("methodBuilder");
             if (genericArguments == null) throw new ArgumentNullException("genericArguments");
 
-            var genArgNames = Array.ConvertAll(genericArguments, t => t.Name);
+            string[] genArgNames = Array.ConvertAll(genericArguments, t => t.Name);
 
-            var genParams = methodBuilder.DefineGenericParameters(genArgNames);
+            GenericTypeParameterBuilder[] genParams = methodBuilder.DefineGenericParameters(genArgNames);
 
             // Copy parameter constraints.
             //
             List<Type> interfaceConstraints = null;
-            for (var i = 0; i < genParams.Length; i++)
+            for (int i = 0; i < genParams.Length; i++)
             {
                 genParams[i].SetGenericParameterAttributes(genericArguments[i].GenericParameterAttributes);
 
-                foreach (var constraint in genericArguments[i].GetGenericParameterConstraints())
+                foreach (Type constraint in genericArguments[i].GetGenericParameterConstraints())
                 {
                     if (constraint.IsClass)
                         genParams[i].SetBaseTypeConstraint(constraint);
@@ -60,7 +60,7 @@ namespace NYurik.EmitExtensions
             // When a method contains a generic parameter we need to replace all
             // generic types from methodInfoDeclaration with local ones.
             //
-            for (var i = 0; i < parameterTypes.Length; i++)
+            for (int i = 0; i < parameterTypes.Length; i++)
                 parameterTypes[i] = parameterTypes[i].TranslateGenericParameters(genParams);
 
             methodBuilder.SetParameters(parameterTypes);
@@ -110,26 +110,26 @@ namespace NYurik.EmitExtensions
         {
             if (methodInfoDeclaration == null) throw new ArgumentNullException("methodInfoDeclaration");
 
-            var pi = methodInfoDeclaration.GetParameters();
+            ParameterInfo[] pi = methodInfoDeclaration.GetParameters();
             var parameters = new Type[pi.Length];
 
-            for (var i = 0; i < pi.Length; i++)
+            for (int i = 0; i < pi.Length; i++)
                 parameters[i] = pi[i].ParameterType;
 
-            var method = methodInfoDeclaration.ContainsGenericParameters
-                             ? typeBuilder.DefineGenericMethod(
-                                   name,
-                                   attributes,
-                                   methodInfoDeclaration.CallingConvention,
-                                   methodInfoDeclaration.GetGenericArguments(),
-                                   methodInfoDeclaration.ReturnType,
-                                   parameters)
-                             : typeBuilder.DefineMethod(
-                                   name,
-                                   attributes,
-                                   methodInfoDeclaration.CallingConvention,
-                                   methodInfoDeclaration.ReturnType,
-                                   parameters);
+            MethodBuilder method = methodInfoDeclaration.ContainsGenericParameters
+                                       ? typeBuilder.DefineGenericMethod(
+                                             name,
+                                             attributes,
+                                             methodInfoDeclaration.CallingConvention,
+                                             methodInfoDeclaration.GetGenericArguments(),
+                                             methodInfoDeclaration.ReturnType,
+                                             parameters)
+                                       : typeBuilder.DefineMethod(
+                                             name,
+                                             attributes,
+                                             methodInfoDeclaration.CallingConvention,
+                                             methodInfoDeclaration.ReturnType,
+                                             parameters);
 
             // Compiler overrides methods only for interfaces. We do the same.
             // If we wanted to override virtual methods, then methods should've had
@@ -145,7 +145,7 @@ namespace NYurik.EmitExtensions
 
             //method.OverriddenMethod = methodInfoDeclaration;
 
-            for (var i = 0; i < pi.Length; i++)
+            for (int i = 0; i < pi.Length; i++)
                 method.DefineParameter(i + 1, pi[i].Attributes, pi[i].Name);
 
             return method;
@@ -161,13 +161,13 @@ namespace NYurik.EmitExtensions
         {
             if (methodInfoDeclaration == null) throw new ArgumentNullException("methodInfoDeclaration");
 
-            var isInterface = methodInfoDeclaration.DeclaringType.IsInterface;
+            bool isInterface = methodInfoDeclaration.DeclaringType.IsInterface;
 
-            var name = isInterface
-                           ? methodInfoDeclaration.DeclaringType.FullName + "." + methodInfoDeclaration.Name
-                           : methodInfoDeclaration.Name;
+            string name = isInterface
+                              ? methodInfoDeclaration.DeclaringType.FullName + "." + methodInfoDeclaration.Name
+                              : methodInfoDeclaration.Name;
 
-            var attributes =
+            MethodAttributes attributes =
                 MethodAttributes.Virtual |
                 MethodAttributes.HideBySig |
                 MethodAttributes.PrivateScope |

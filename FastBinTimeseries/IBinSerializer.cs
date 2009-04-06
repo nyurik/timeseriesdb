@@ -14,6 +14,16 @@ namespace NYurik.FastBinTimeseries
         /// Will be set to true when this provider supports reading and writing from fast memory mapped files
         /// </summary>
         bool SupportsMemoryMappedFiles { get; }
+
+        /// <summary>
+        /// Optionaly initialize this serializer from a binary reader. Must match all actions by <see cref="WriteCustomHeader"/>
+        /// </summary>
+        void ReadCustomHeader(BinaryReader reader, Version version);
+
+        /// <summary>
+        /// Optionaly save this serializer's parameters to a binary writer. Must match all actions by <see cref="ReadCustomHeader"/>
+        /// </summary>
+        Version WriteCustomHeader(BinaryWriter writer);
     }
 
     public interface IBinSerializer<T> : IBinSerializer
@@ -39,15 +49,5 @@ namespace NYurik.FastBinTimeseries
         /// <param name="count">Number of values to read/write</param>
         /// <param name="isWriting">True when buffer should be written into a file, false - when reading into the buffer</param>
         void ProcessMemoryMap(IntPtr memMapPtr, T[] buffer, int offset, int count, bool isWriting);
-
-        /// <summary>
-        /// Optionaly initialize this serializer from a binary reader. Must match all actions by <see cref="WriteCustomHeader"/>
-        /// </summary>
-        void ReadCustomHeader(BinaryReader reader, Version version);
-
-        /// <summary>
-        /// Optionaly save this serializer's parameters to a binary writer. Must match all actions by <see cref="ReadCustomHeader"/>
-        /// </summary>
-        Version WriteCustomHeader(BinaryWriter writer);
     }
 }

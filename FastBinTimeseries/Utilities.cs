@@ -16,8 +16,8 @@ namespace NYurik.FastBinTimeseries
         public static TAttr[] GetEnumAttributes<TAttr, TEnum>(TEnum value)
             where TAttr : Attribute
         {
-            var enumType = typeof (TEnum);
-            var name = Enum.GetName(enumType, value);
+            Type enumType = typeof (TEnum);
+            string name = Enum.GetName(enumType, value);
             return Array.ConvertAll(
                 enumType.GetField(name).GetCustomAttributes(typeof (TAttr), false), input => (TAttr) input);
         }
@@ -33,8 +33,8 @@ namespace NYurik.FastBinTimeseries
         public static TAttr GetEnumSingleAttribute<TAttr, TEnum>(TEnum value)
             where TAttr : Attribute
         {
-            var enumType = typeof (TEnum);
-            var name = Enum.GetName(enumType, value);
+            Type enumType = typeof (TEnum);
+            string name = Enum.GetName(enumType, value);
             return ExtractSingleAttribute<TAttr>(enumType.GetField(name));
         }
 
@@ -49,7 +49,7 @@ namespace NYurik.FastBinTimeseries
         public static TAttr ExtractSingleAttribute<TAttr>(ICustomAttributeProvider customAttrProvider)
             where TAttr : Attribute
         {
-            var attributes = customAttrProvider.GetCustomAttributes(typeof (TAttr), true);
+            object[] attributes = customAttrProvider.GetCustomAttributes(typeof (TAttr), true);
             if (attributes.Length > 0)
             {
                 if (attributes.Length > 1)
@@ -82,7 +82,7 @@ namespace NYurik.FastBinTimeseries
                 // Attach our custom assembly name resolver, attempt to resolve again, and detach it
                 AppDomain.CurrentDomain.AssemblyResolve += resolve;
                 _isGetTypeRunningOnThisThread = true;
-                var type = Type.GetType(typeName);
+                Type type = Type.GetType(typeName);
                 AppDomain.CurrentDomain.AssemblyResolve -= resolve;
 
                 return type;
@@ -178,10 +178,10 @@ namespace NYurik.FastBinTimeseries
 
         public static Version ReadVersion(BinaryReader reader)
         {
-            var major = reader.ReadInt32();
-            var minor = reader.ReadInt32();
-            var build = reader.ReadInt32();
-            var revision = reader.ReadInt32();
+            int major = reader.ReadInt32();
+            int minor = reader.ReadInt32();
+            int build = reader.ReadInt32();
+            int revision = reader.ReadInt32();
 
             return build < 0
                        ? new Version(major, minor)

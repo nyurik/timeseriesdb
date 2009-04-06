@@ -7,7 +7,7 @@ namespace NYurik.FastBinTimeseries
     public class BinTimeseriesFile<T> : BinaryFile<T>
     {
         private static readonly Version CurrentVersion = new Version(1, 0);
-        private FieldInfo DateTimeFieldInfo;
+        private FieldInfo m_dateTimeFieldInfo;
         private DateTime m_lastTimestamp = DateTime.MinValue;
 
         #region Constructors
@@ -36,19 +36,19 @@ namespace NYurik.FastBinTimeseries
         public BinTimeseriesFile(string fileName, FieldInfo dateTimeFieldInfo)
             : base(fileName)
         {
-            DateTimeFieldInfo = dateTimeFieldInfo;
+            m_dateTimeFieldInfo = dateTimeFieldInfo;
             TSAccessor = DynamicCodeFactory.Instance.CreateTSAccessor<T>(dateTimeFieldInfo);
         }
 
         private static FieldInfo GetDateTimeField()
         {
-            var itemType = typeof (T);
-            var fieldInfo = itemType.GetFields(DynamicCodeFactory.AllInstanceMembers);
+            Type itemType = typeof (T);
+            FieldInfo[] fieldInfo = itemType.GetFields(DynamicCodeFactory.AllInstanceMembers);
             if (fieldInfo.Length < 1)
                 throw new InvalidOperationException("No fields found in type " + itemType.FullName);
 
             FieldInfo result = null;
-            foreach (var fi in fieldInfo)
+            foreach (FieldInfo fi in fieldInfo)
                 if (fi.FieldType == typeof (PackedDateTime))
                 {
                     if (result != null)
@@ -73,14 +73,14 @@ namespace NYurik.FastBinTimeseries
         {
             if (version == CurrentVersion)
             {
-                var fieldName = stream.ReadString();
-                DateTimeFieldInfo = typeof (T).GetField(fieldName, DynamicCodeFactory.AllInstanceMembers);
+                string fieldName = stream.ReadString();
+                m_dateTimeFieldInfo = typeof (T).GetField(fieldName, DynamicCodeFactory.AllInstanceMembers);
 
-                if (DateTimeFieldInfo == null)
+                if (m_dateTimeFieldInfo == null)
                     throw new InvalidOperationException(
                         string.Format("Timestamp field {0} was not found in type {1}", fieldName, typeof (T).FullName));
 
-                TSAccessor = DynamicCodeFactory.Instance.CreateTSAccessor<T>(DateTimeFieldInfo);
+                TSAccessor = DynamicCodeFactory.Instance.CreateTSAccessor<T>(m_dateTimeFieldInfo);
             }
             else
                 Utilities.ThrowUnknownVersion(version, GetType());
@@ -88,22 +88,22 @@ namespace NYurik.FastBinTimeseries
 
         protected override Version WriteCustomHeader(BinaryWriter stream)
         {
-            stream.Write(DateTimeFieldInfo.Name);
+            stream.Write(m_dateTimeFieldInfo.Name);
             return CurrentVersion;
         }
 
         protected long BinarySearch(DateTime value)
         {
-            var start = 0L;
-            var end = Count - 1;
+            long start = 0L;
+            long end = Count - 1;
             var oneElementBuff = new T[1];
 
             while (start <= end)
             {
-                var mid = start + ((end - start) >> 1);
+                long mid = start + ((end - start) >> 1);
 
-                PerformFileAccess(mid, oneElementBuff, 0, 1, Read);
-                var comp = ((DateTime) TSAccessor(oneElementBuff[0])).CompareTo(value);
+                Read(mid, oneElementBuff, 0, 1);
+                int comp = ((DateTime) TSAccessor(oneElementBuff[0])).CompareTo(value);
                 if (comp == 0)
                     return mid;
                 if (comp < 0)
@@ -145,21 +145,21 @@ namespace NYurik.FastBinTimeseries
             if (buffer != null)
                 Utilities.ValidateArrayParams(buffer, offset, maxItemsToRead);
 
-            var start = BinarySearch(fromInclusive);
+            long start = BinarySearch(fromInclusive);
             if (start < 0)
                 start = ~start;
-            var end = BinarySearch(toExclusive);
+            long end = BinarySearch(toExclusive);
             if (end < 0)
                 end = ~end;
 
-            var neededLength = Utilities.ToInt32Checked(end - start);
+            int neededLength = Utilities.ToInt32Checked(end - start);
             if (buffer == null)
             {
                 buffer = new T[Math.Min(neededLength, maxItemsToRead)];
                 offset = 0;
             }
 
-            PerformFileAccess(start, buffer, offset, Math.Min(neededLength, maxItemsToRead), Read);
+            Read(start, buffer, offset, Math.Min(neededLength, maxItemsToRead));
 
             return neededLength;
         }
@@ -171,16 +171,16 @@ namespace NYurik.FastBinTimeseries
                 return;
 
             // Get last file timestamp
-            var lastDt = m_lastTimestamp;
+            DateTime lastDt = m_lastTimestamp;
             if (lastDt == DateTime.MinValue && Count > 0)
             {
                 var oneElementBuff = new T[1];
-                PerformFileAccess(Count - 1, oneElementBuff, 0, 1, Read);
+                Read(Count - 1, oneElementBuff, 0, 1);
                 m_lastTimestamp = lastDt = TSAccessor(oneElementBuff[0]);
             }
 
             // Make sure new data goes after the last item
-            var newDt = TSAccessor(buffer[offset]);
+            PackedDateTime newDt = TSAccessor(buffer[offset]);
             if (newDt < lastDt)
                 throw new ArgumentException(
                     string.Format("Last file item ({0}) is greater than the first new item ({1})",
@@ -188,8 +188,8 @@ namespace NYurik.FastBinTimeseries
             lastDt = newDt;
 
             // Validate new data
-            var lastOffset = offset + count;
-            for (var i = offset + 1; i < lastOffset; i++)
+            int lastOffset = offset + count;
+            for (int i = offset + 1; i < lastOffset; i++)
             {
                 newDt = TSAccessor(buffer[i]);
                 if (newDt < lastDt)
@@ -199,7 +199,7 @@ namespace NYurik.FastBinTimeseries
                 lastDt = newDt;
             }
 
-            PerformFileAccess(Count, buffer, offset, count, Write);
+            Write(Count, buffer, offset, count);
 
             m_lastTimestamp = lastDt;
         }

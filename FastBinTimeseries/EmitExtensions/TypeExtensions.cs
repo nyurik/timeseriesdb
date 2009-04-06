@@ -72,9 +72,9 @@ namespace NYurik.EmitExtensions
 
             if (parent.IsInterface)
             {
-                var interfaces = child.GetInterfaces();
+                Type[] interfaces = child.GetInterfaces();
 
-                foreach (var t in interfaces)
+                foreach (Type t in interfaces)
                     if (t == parent)
                         return true;
             }
@@ -105,9 +105,9 @@ namespace NYurik.EmitExtensions
             //
             if (type.IsGenericType && type.ContainsGenericParameters)
             {
-                var genArgs = type.GetGenericArguments();
+                Type[] genArgs = type.GetGenericArguments();
 
-                for (var i = 0; i < genArgs.Length; ++i)
+                for (int i = 0; i < genArgs.Length; ++i)
                     genArgs[i] = TranslateGenericParameters(genArgs[i], typeArguments);
 
                 return type.GetGenericTypeDefinition().MakeGenericType(genArgs);
@@ -163,11 +163,11 @@ namespace NYurik.EmitExtensions
         {
             result.Add(subItemType);
 
-            var fields = subItemType.GetFields(DynamicCodeFactory.AllInstanceMembers);
+            FieldInfo[] fields = subItemType.GetFields(DynamicCodeFactory.AllInstanceMembers);
             if (fields.Length == 1 && fields[0].FieldType == subItemType)
                 return;
 
-            foreach (var fi in fields)
+            foreach (FieldInfo fi in fields)
             {
                 if (fi.FieldType == subItemType)
                     throw new InvalidOperationException("More than one field refers back to " + subItemType.FullName);

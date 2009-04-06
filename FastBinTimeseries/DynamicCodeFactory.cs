@@ -14,9 +14,9 @@ namespace NYurik.FastBinTimeseries
         internal const BindingFlags AllInstanceMembers =
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        private static DynamicCodeFactory _instance;
-        private readonly Dictionary<Type, BinSerializerInfo> _serializers = new Dictionary<Type, BinSerializerInfo>();
-        private readonly Dictionary<FieldInfo, Delegate> _tsAccessorExpr = new Dictionary<FieldInfo, Delegate>();
+        private static DynamicCodeFactory s_instance;
+        private readonly Dictionary<Type, BinSerializerInfo> m_serializers = new Dictionary<Type, BinSerializerInfo>();
+        private readonly Dictionary<FieldInfo, Delegate> m_tsAccessorExpr = new Dictionary<FieldInfo, Delegate>();
 
         private DynamicCodeFactory()
         {
@@ -27,17 +27,17 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 // todo: switch to LazyInit<> in .Net 4.0
-                if (_instance == null)
+                if (s_instance == null)
                     lock (typeof (DynamicCodeFactory))
-                        if (_instance == null)
-                            _instance = new DynamicCodeFactory();
-                return _instance;
+                        if (s_instance == null)
+                            s_instance = new DynamicCodeFactory();
+                return s_instance;
             }
         }
 
         private static MethodInfo GetMethodInfo(Type baseType, string methodName)
         {
-            var methodToCall = baseType.GetMethod(methodName, AllInstanceMembers);
+            MethodInfo methodToCall = baseType.GetMethod(methodName, AllInstanceMembers);
             if (methodToCall == null)
                 throw new ArgumentOutOfRangeException(
                     "methodName", methodName, "Method not found in the base type " + baseType.FullName);
@@ -70,7 +70,7 @@ namespace NYurik.FastBinTimeseries
                 throw new ArgumentException(String.Format("Type {0} is not an unmanaged type", type.FullName));
 
             if (!type.IsPrimitive && !type.IsEnum && !type.IsPointer)
-                for (var p = type.DeclaringType; p != null; p = p.DeclaringType)
+                for (Type p = type.DeclaringType; p != null; p = p.DeclaringType)
                     if (p.IsGenericTypeDefinition)
                         throw new ArgumentException(
                             String.Format("Type {0} contains a generic type definition declaring type {1}",
@@ -90,9 +90,9 @@ namespace NYurik.FastBinTimeseries
             {
                 typesStack.Push(type);
 
-                var fields = type.GetFields(AllInstanceMembers);
+                FieldInfo[] fields = type.GetFields(AllInstanceMembers);
 
-                foreach (var f in fields)
+                foreach (FieldInfo f in fields)
                     if (!typesStack.Contains(f.FieldType))
                         ThrowIfNotUnmanagedType(f.FieldType, typesStack);
             }
@@ -111,11 +111,11 @@ namespace NYurik.FastBinTimeseries
 
         internal BinSerializerInfo CreateSerializer<T>()
         {
-            var itemType = typeof (T);
+            Type itemType = typeof (T);
 
             BinSerializerInfo info;
-            if (!_serializers.TryGetValue(itemType, out info))
-                _serializers[itemType] = info = CreateDynamicSerializerType(itemType);
+            if (!m_serializers.TryGetValue(itemType, out info))
+                m_serializers[itemType] = info = CreateDynamicSerializerType(itemType);
 
             return info;
         }
@@ -125,7 +125,7 @@ namespace NYurik.FastBinTimeseries
             // Parameter validation
             ThrowIfNotUnmanagedType(itemType);
 
-            var ifType = typeof (DefaultTypeSerializer<>).MakeGenericType(itemType);
+            Type ifType = typeof (DefaultTypeSerializer<>).MakeGenericType(itemType);
 
             // Create the abstract method overrides
             return new BinSerializerInfo(
@@ -140,7 +140,7 @@ namespace NYurik.FastBinTimeseries
         private static DynamicMethod CreateSizeOfMethodIL(Type itemType, Module module)
         {
             var method = new DynamicMethod("SizeOf", typeof (int), null, module, true);
-            var emit = method.GetILGenerator();
+            ILGenerator emit = method.GetILGenerator();
 
             emit
                 .@sizeof(itemType)
@@ -152,7 +152,7 @@ namespace NYurik.FastBinTimeseries
         private static DynamicMethod CreateSerializerMethodIL(Type itemType, Type baseType, string methodName,
                                                               string methodToCallName, Type firstParamType)
         {
-            var methodToCall = GetMethodInfo(baseType, methodToCallName);
+            MethodInfo methodToCall = GetMethodInfo(baseType, methodToCallName);
 
             var method = new DynamicMethod(
                 methodName,
@@ -161,11 +161,11 @@ namespace NYurik.FastBinTimeseries
                 baseType.Module,
                 true);
 
-            var emit = method.GetILGenerator();
+            ILGenerator emit = method.GetILGenerator();
 
             //                .locals init (
             //                    [0] void& pinned bufPtr)
-            var bufPtr = emit.DeclareLocal(typeof (void).MakeByRefType(), true);
+            LocalBuilder bufPtr = emit.DeclareLocal(typeof (void).MakeByRefType(), true);
 
             // Argument index: 
             // 0 - this
@@ -206,7 +206,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         internal Func<T, PackedDateTime> CreateTSAccessor<T>(FieldInfo fieldInfo)
         {
-            var itemType = typeof (T);
+            Type itemType = typeof (T);
             if (fieldInfo.DeclaringType != itemType)
                 throw new InvalidOperationException(String.Format("The field {0} does not belong to type {1}",
                                                                   fieldInfo.Name, itemType.FullName));
@@ -215,12 +215,12 @@ namespace NYurik.FastBinTimeseries
                                                                   fieldInfo.Name, itemType.FullName));
 
             Delegate tsAccessorType;
-            if (!_tsAccessorExpr.TryGetValue(fieldInfo, out tsAccessorType))
+            if (!m_tsAccessorExpr.TryGetValue(fieldInfo, out tsAccessorType))
             {
-                var vParam = Expression.Parameter(itemType, "v");
-                var exprLambda = Expression.Lambda<Func<T, PackedDateTime>>(
+                ParameterExpression vParam = Expression.Parameter(itemType, "v");
+                Expression<Func<T, PackedDateTime>> exprLambda = Expression.Lambda<Func<T, PackedDateTime>>(
                     Expression.Field(vParam, fieldInfo), vParam);
-                _tsAccessorExpr[fieldInfo] = tsAccessorType = exprLambda.Compile();
+                m_tsAccessorExpr[fieldInfo] = tsAccessorType = exprLambda.Compile();
             }
 
             return (Func<T, PackedDateTime>) tsAccessorType;
