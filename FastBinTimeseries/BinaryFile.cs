@@ -5,7 +5,7 @@ namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile<T> : BinaryFile
     {
-        private IBinSerializer<T> m_serializer;
+        private IBinSerializer<T> _serializer;
 
         /// <summary>
         /// Must override this constructor to allow Activator non-public instantiation
@@ -29,9 +29,9 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                if (m_serializer == null)
+                if (_serializer == null)
                     throw new InvalidOperationException("Serializer is not initialized");
-                return m_serializer;
+                return _serializer;
             }
             set
             {
@@ -44,7 +44,7 @@ namespace NYurik.FastBinTimeseries
                     throw new ArgumentOutOfRangeException(
                         "typeSize" + "", itemSize, "Element size given by the serializer must be > 0");
 
-                m_serializer = value;
+                _serializer = value;
                 m_itemSize = itemSize;
                 EnableMemoryMappedFileAccess = value.SupportsMemoryMappedFiles;
             }
@@ -57,43 +57,46 @@ namespace NYurik.FastBinTimeseries
 
         protected internal override sealed void SetSerializer(IBinSerializer nonGenericSerializer)
         {
-            m_serializer = (IBinSerializer<T>) nonGenericSerializer;
+            _serializer = (IBinSerializer<T>) nonGenericSerializer;
         }
 
-        protected void Read(long firstItemIdx, T[] buffer, int bufOffset, int bufCount)
+        public sealed override Type ItemType
         {
-            PerformFileAccess(firstItemIdx, buffer, bufOffset, bufCount, false);
+            get { return typeof (T); }
         }
 
-        protected void Write(long firstItemIdx, T[] buffer, int bufOffset, int bufCount)
+        protected void PerformRead(long firstItemIdx, ArraySegment<T> buffer)
         {
-            PerformFileAccess(firstItemIdx, buffer, bufOffset, bufCount, true);
+            PerformFileAccess(firstItemIdx, buffer, false);
         }
 
-        private void PerformFileAccess(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
+        protected void PerformWrite(long firstItemIdx, ArraySegment<T> buffer)
+        {
+            PerformFileAccess(firstItemIdx, buffer, true);
+        }
+
+        private void PerformFileAccess(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             ThrowOnNotInitialized();
-            Utilities.ValidateArrayParams(buffer, bufOffset, bufCount);
-
             if (firstItemIdx < 0 || firstItemIdx > Count)
                 throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx, "Must be >= 0 and <= Count");
 
-            if (!isWriting && firstItemIdx + bufCount > Count)
+            if (!isWriting && firstItemIdx + buffer.Count > Count)
                 throw new ArgumentOutOfRangeException(
-                    "bufCount", bufCount,
-                    "There is not enough data to fulfill this request. FirstItemIndex + BufferCount > Count");
+                    "buffer", buffer.Count,
+                    "There is not enough data to fulfill this request. FirstItemIndex + Buffer.Count > Count");
 
             // Optimize out empty requests
-            if (bufCount == 0)
+            if (buffer.Count == 0)
                 return;
 
             bool useMemMapping = EnableMemoryMappedFileAccess
-                                 && ItemIdxToOffset(bufCount) > MinReqSizeToUseMapView;
+                                 && ItemIdxToOffset(buffer.Count) > MinReqSizeToUseMapView;
 
             if (useMemMapping)
-                ProcessFileMMF(firstItemIdx, buffer, bufOffset, bufCount, isWriting);
+                ProcessFileMMF(firstItemIdx, buffer, isWriting);
             else
-                ProcessFileNoMMF(firstItemIdx, buffer, bufOffset, bufCount, isWriting);
+                ProcessFileNoMMF(firstItemIdx, buffer, isWriting);
 
             if (isWriting)
             {
@@ -107,14 +110,14 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// Access file using FileStream object
-        private void ProcessFileNoMMF(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
+        private void ProcessFileNoMMF(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             long fileOffset = ItemIdxToOffset(firstItemIdx);
 
             FileStream.Seek(fileOffset, SeekOrigin.Begin);
-            Serializer.ProcessFileStream(FileStream, buffer, bufOffset, bufCount, isWriting);
+            Serializer.ProcessFileStream(FileStream, buffer, isWriting);
 
-            long expectedStreamPos = fileOffset + bufCount*ItemSize;
+            long expectedStreamPos = fileOffset + buffer.Count*ItemSize;
             if (expectedStreamPos != FileStream.Position)
                 throw new InvalidOperationException(
                     String.Format(
@@ -122,15 +125,15 @@ namespace NYurik.FastBinTimeseries
                         "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
                         "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
                         isWriting ? "writing" : "reading",
-                        bufCount, fileOffset, expectedStreamPos, FileStream.Position));
+                        buffer.Count, fileOffset, expectedStreamPos, FileStream.Position));
         }
 
-        private void ProcessFileMMF(long firstItemIdx, T[] buffer, int bufOffset, int bufCount, bool isWriting)
+        private void ProcessFileMMF(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             SafeMapHandle hMap = null;
             try
             {
-                long idxToStopAt = firstItemIdx + bufCount;
+                long idxToStopAt = firstItemIdx + buffer.Count;
                 long offsetToStopAt = ItemIdxToOffset(idxToStopAt);
                 long idxCurrent = firstItemIdx;
 
@@ -138,7 +141,7 @@ namespace NYurik.FastBinTimeseries
                 long fileSize = FileStream.Length;
                 if (isWriting && offsetToStopAt > fileSize)
                     fileSize = offsetToStopAt;
-                hMap = Win32Apis.CreateFileMapping(
+                hMap = NativeWinApis.CreateFileMapping(
                     FileStream, fileSize,
                     isWriting ? FileMapProtection.PageReadWrite : FileMapProtection.PageReadOnly);
 
@@ -148,7 +151,7 @@ namespace NYurik.FastBinTimeseries
                     try
                     {
                         long offsetCurrent = ItemIdxToOffset(idxCurrent);
-                        long mapViewFileOffset = Utilities.RoundDownToMultiple(offsetCurrent, MinPageSize);
+                        long mapViewFileOffset = FastBinFileUtils.RoundDownToMultiple(offsetCurrent, MinPageSize);
 
                         long mapViewSize = offsetToStopAt - mapViewFileOffset;
                         long itemsToProcessThisRun = idxToStopAt - idxCurrent;
@@ -160,17 +163,17 @@ namespace NYurik.FastBinTimeseries
                         }
 
                         // The size of the new map view.
-                        ptrMapViewBaseAddr = Win32Apis.MapViewOfFile(
+                        ptrMapViewBaseAddr = NativeWinApis.MapViewOfFile(
                             hMap, mapViewFileOffset, mapViewSize,
                             isWriting ? FileMapAccess.Write : FileMapAccess.Read);
 
                         long totalItemsDone = idxCurrent - firstItemIdx;
-                        long bufItemOffset = bufOffset + totalItemsDone;
+                        long bufItemOffset = buffer.Offset + totalItemsDone;
 
                         // Access file using memory-mapped pages
                         Serializer.ProcessMemoryMap(
                             (IntPtr) (ptrMapViewBaseAddr.Address + offsetCurrent - mapViewFileOffset),
-                            buffer, (int) bufItemOffset, (int) itemsToProcessThisRun, isWriting);
+                            new ArraySegment<T>(buffer.Array, (int) bufItemOffset, (int) itemsToProcessThisRun), isWriting);
 
                         idxCurrent += itemsToProcessThisRun;
                     }

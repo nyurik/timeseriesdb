@@ -27,14 +27,14 @@ namespace NYurik.FastBinTimeseries.Test
 
         private static void WriteData<T>(BinIndexedFile<T> f, long firstItemIndex, T[] buffer)
         {
-            f.WriteData(firstItemIndex, buffer, 0, buffer.Length);
+            f.WriteData(firstItemIndex, new ArraySegment<T>(buffer));
         }
 
         private static void ReadAndAssert<T>(T[] expected, BinIndexedFile<T> f, int firstItemIndex, long count)
             where T : IEquatable<T>
         {
             var buffer = new T[count];
-            f.ReadData(firstItemIndex, buffer, 0, buffer.Length);
+            f.ReadData(firstItemIndex, new ArraySegment<T>(buffer));
             TestUtils.AreEqual(expected, buffer);
         }
 
@@ -121,7 +121,7 @@ namespace NYurik.FastBinTimeseries.Test
                 using (var f = new BinIndexedFile<T>(binFile))
                 {
                     f.InitializeNewFile();
-                    f.WriteData(0, data0, 0, data0.Length);
+                    f.WriteData(0, new ArraySegment<T>(data0));
 
                     Assert.AreEqual(true, f.CanWrite);
                     Assert.AreEqual(1, f.Count);
@@ -217,15 +217,15 @@ namespace NYurik.FastBinTimeseries.Test
                 T[] dataZero = TestUtils.GenerateData(converter, items1stPg, 0);
                 T[] dataPlusOne = TestUtils.GenerateData(converter, items1stPg + 1, 0);
 
-                f.WriteData(0, dataMinusOne, 0, dataMinusOne.Length);
+                f.WriteData(0, new ArraySegment<T>(dataMinusOne));
                 Assert.AreEqual(f.HeaderSize + (items1stPg - 1)*f.ItemSize, new FileInfo(binFile).Length);
                 ReadAndAssert(dataMinusOne, f, 0, dataMinusOne.Length);
 
-                f.WriteData(0, dataZero, 0, dataZero.Length);
+                f.WriteData(0, new ArraySegment<T>(dataZero));
                 Assert.AreEqual(f.HeaderSize + items1stPg*f.ItemSize, new FileInfo(binFile).Length);
                 ReadAndAssert(dataZero, f, 0, dataZero.Length);
 
-                f.WriteData(0, dataPlusOne, 0, dataPlusOne.Length);
+                f.WriteData(0, new ArraySegment<T>(dataPlusOne));
                 Assert.AreEqual(f.HeaderSize + (items1stPg + 1)*f.ItemSize, new FileInfo(binFile).Length);
                 ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
 

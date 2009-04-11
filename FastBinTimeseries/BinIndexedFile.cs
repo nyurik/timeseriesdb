@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace NYurik.FastBinTimeseries
@@ -36,11 +37,9 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="firstItemIndex">Index of the item to start from.</param>
         /// <param name="buffer">Array of values to be written into a file.</param>
-        /// <param name="offset">The offset in buffer at which to begin copying items to the file.</param>
-        /// <param name="count">The number of items to be read to the array.</param>
-        public void ReadData(long firstItemIndex, T[] buffer, int offset, int count)
+        public void ReadData(long firstItemIndex, ArraySegment<T> buffer)
         {
-            Read(firstItemIndex, buffer, offset, count);
+            PerformRead(firstItemIndex, buffer);
         }
 
         /// <summary>
@@ -48,18 +47,15 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="firstItemIndex">The index of the first value in the <paramref name="buffer"/> array.</param>
         /// <param name="buffer">Array of values to be written into a file.</param>
-        /// <param name="offset">The offset in buffer at which to begin copying items to the file.</param>
-        /// <param name="count">The number of items to be written from array. No action is performed when the count is 0.</param>
-        public void WriteData(long firstItemIndex, T[] buffer, int offset, int count)
+        public void WriteData(long firstItemIndex, ArraySegment<T> buffer)
         {
-            Write(firstItemIndex, buffer, offset, count);
+            PerformWrite(firstItemIndex, buffer);
         }
 
-
-        protected override void ReadCustomHeader(BinaryReader stream, Version version)
+        protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
         {
             if (version != CurrentVersion)
-                Utilities.ThrowUnknownVersion(version, GetType());
+                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
         }
 
         protected override Version WriteCustomHeader(BinaryWriter stream)

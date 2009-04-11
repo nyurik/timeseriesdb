@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -15,8 +16,12 @@ namespace NYurik.FastBinTimeseries
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
         private static DynamicCodeFactory s_instance;
-        private readonly Dictionary<Type, BinSerializerInfo> m_serializers = new Dictionary<Type, BinSerializerInfo>();
-        private readonly Dictionary<FieldInfo, Delegate> m_tsAccessorExpr = new Dictionary<FieldInfo, Delegate>();
+
+        private readonly SynchronizedDictionary<Type, BinSerializerInfo> _serializers =
+            new SynchronizedDictionary<Type, BinSerializerInfo>();
+
+        private readonly SynchronizedDictionary<FieldInfo, Delegate> _tsAccessorExpr =
+            new SynchronizedDictionary<FieldInfo, Delegate>();
 
         private DynamicCodeFactory()
         {
@@ -111,13 +116,7 @@ namespace NYurik.FastBinTimeseries
 
         internal BinSerializerInfo CreateSerializer<T>()
         {
-            Type itemType = typeof (T);
-
-            BinSerializerInfo info;
-            if (!m_serializers.TryGetValue(itemType, out info))
-                m_serializers[itemType] = info = CreateDynamicSerializerType(itemType);
-
-            return info;
+            return _serializers.GetCreateValue(typeof (T), CreateDynamicSerializerType);
         }
 
         private static BinSerializerInfo CreateDynamicSerializerType(Type itemType)
@@ -133,7 +132,8 @@ namespace NYurik.FastBinTimeseries
                 CreateSerializerMethodIL(
                     itemType, ifType, "DynProcessFileStream", "ProcessFileStreamPtr", typeof (FileStream)),
                 CreateSerializerMethodIL(
-                    itemType, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr))
+                    itemType, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr)),
+                CreateMemComparerMethodIL(itemType, ifType)
                 );
         }
 
@@ -177,7 +177,7 @@ namespace NYurik.FastBinTimeseries
             emit
                 .ldarg_2() //         L_0000: ldarg.2 
                 .ldc_i4_0() //        L_0001: ldc.i4.0 
-                .ldelema(itemType) // L_0002: ldelema NYurik.FastBinTimeseries.PrototypeStruct
+                .ldelema(itemType) // L_0002: ldelema _MyItemType_
                 .stloc(bufPtr) //     L_0007: stloc.0 
                 .ldarg_0() //         L_0008: ldarg.0 
                 .ldarg_1() //         L_0009: ldarg.1 
@@ -186,11 +186,75 @@ namespace NYurik.FastBinTimeseries
                 .ldarg_3() //         L_000c: ldarg.3 
                 .ldarg_s(4) //        L_000d: ldarg.s count
                 .ldarg_s(5) //        L_000f: ldarg.s isWriting
-                .call(methodToCall) //L_0011: call instance ... (parent method)
+                .call(methodToCall) //L_0011: call instance ... (our method)
                 .ldc_i4_0() //        L_0016: ldc.i4.0 
                 .conv_u() //          L_0017: conv.u 
                 .stloc(bufPtr) //     L_0018: stloc.0 
                 .ret() //             L_0019: ret 
+                ;
+
+            return method;
+        }
+
+        private static DynamicMethod CreateMemComparerMethodIL(Type itemType, Type baseType)
+        {
+            MethodInfo methodToCall = GetMethodInfo(baseType, "CompareMemoryPtr");
+
+            var method = new DynamicMethod(
+                "DynCompareMemory",
+                typeof (bool),
+                new[]
+                    {
+                        baseType, itemType.MakeArrayType(), typeof (int), itemType.MakeArrayType(), typeof (int),
+                        typeof (int)
+                    },
+                baseType.Module,
+                true);
+
+            ILGenerator emit = method.GetILGenerator();
+
+            //.method private hidebysig instance bool Foo(uint8[] buffer1, int32 offset1, uint8[] buffer2, int32 offset2, int32 count) cil managed
+            //{
+            //    .maxstack 6
+            //    .locals init (
+            //        [0] uint8& pinned p1,
+            //        [1] uint8& pinned p2,
+            //        [2] bool CS$1$0000)
+            emit.DeclareLocal(typeof (void).MakeByRefType(), true);
+            emit.DeclareLocal(typeof (void).MakeByRefType(), true);
+            emit.DeclareLocal(typeof (bool));
+
+            // Argument index: 
+            // 0 - this
+            // 1 - void* bufPtr1
+            // 2 - int offset1
+            // 3 - void* bufPtr2
+            // 4 - int offset2
+            // 5 - int count
+            Label L_0022 = emit.DefineLabel();
+            emit
+                .ldarg_1() //           L_0000: ldarg.1 
+                .ldc_i4_0() //          L_0001: ldc.i4.0 
+                .ldelema(itemType) //   L_0002: ldelema _MyItemType_
+                .stloc_0() //           L_0007: stloc.0 
+                .ldarg_3() //           L_0008: ldarg.3 
+                .ldc_i4_0() //          L_0009: ldc.i4.0 
+                .ldelema(itemType) //   L_000a: ldelema _MyItemType_
+                .stloc_1() //           L_000f: stloc.1 
+                .ldarg_0() //           L_0010: ldarg.0 
+                .ldloc_0() //           L_0011: ldloc.0 
+                .conv_i() //            L_0012: conv.i 
+                .ldarg_2() //           L_0013: ldarg.2 
+                .ldloc_1() //           L_0014: ldloc.1 
+                .conv_i() //            L_0015: conv.i 
+                .ldarg_s(4) //          L_0016: ldarg.s offset2
+                .ldarg_s(5) //          L_0018: ldarg.s count
+                .call(methodToCall) //  L_001a: call instance ... (our method)
+                .stloc_2() //           L_001f: stloc.2 
+                .leave_s(L_0022) //     L_0020: leave.s L_0022
+                .MarkLabelExt(L_0022)
+                .ldloc_2() //           L_0022: ldloc.2 
+                .ret() //               L_0023: ret 
                 ;
 
             return method;
@@ -206,24 +270,25 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         internal Func<T, PackedDateTime> CreateTSAccessor<T>(FieldInfo fieldInfo)
         {
+            return (Func<T, PackedDateTime>) _tsAccessorExpr.GetCreateValue(fieldInfo, CreateAccessor<T>);
+        }
+
+        private static Delegate CreateAccessor<T>(FieldInfo fieldInfo)
+        {
             Type itemType = typeof (T);
             if (fieldInfo.DeclaringType != itemType)
-                throw new InvalidOperationException(String.Format("The field {0} does not belong to type {1}",
-                                                                  fieldInfo.Name, itemType.FullName));
+                throw new InvalidOperationException(
+                    String.Format("The field {0} does not belong to type {1}",
+                                  fieldInfo.Name, itemType.FullName));
             if (fieldInfo.FieldType != typeof (PackedDateTime))
-                throw new InvalidOperationException(String.Format("The field {0} in type {1} is not a PackedDateTime",
-                                                                  fieldInfo.Name, itemType.FullName));
+                throw new InvalidOperationException(
+                    String.Format("The field {0} in type {1} is not a PackedDateTime",
+                                  fieldInfo.Name, itemType.FullName));
 
-            Delegate tsAccessorType;
-            if (!m_tsAccessorExpr.TryGetValue(fieldInfo, out tsAccessorType))
-            {
-                ParameterExpression vParam = Expression.Parameter(itemType, "v");
-                Expression<Func<T, PackedDateTime>> exprLambda = Expression.Lambda<Func<T, PackedDateTime>>(
-                    Expression.Field(vParam, fieldInfo), vParam);
-                m_tsAccessorExpr[fieldInfo] = tsAccessorType = exprLambda.Compile();
-            }
-
-            return (Func<T, PackedDateTime>) tsAccessorType;
+            ParameterExpression vParam = Expression.Parameter(itemType, "v");
+            Expression<Func<T, PackedDateTime>> exprLambda = Expression.Lambda<Func<T, PackedDateTime>>(
+                Expression.Field(vParam, fieldInfo), vParam);
+            return exprLambda.Compile();
         }
 
         #endregion
@@ -233,14 +298,17 @@ namespace NYurik.FastBinTimeseries
         internal class BinSerializerInfo
         {
             public readonly DynamicMethod FileStreamMethod;
+            public readonly DynamicMethod MemCompareMethod;
             public readonly DynamicMethod MemMapMethod;
             public readonly int TypeSize;
 
-            public BinSerializerInfo(int typeSize, DynamicMethod fileStreamMethod, DynamicMethod memMapMethod)
+            public BinSerializerInfo(int typeSize, DynamicMethod fileStreamMethod, DynamicMethod memMapMethod,
+                                     DynamicMethod memCompareMethod)
             {
                 TypeSize = typeSize;
                 FileStreamMethod = fileStreamMethod;
                 MemMapMethod = memMapMethod;
+                MemCompareMethod = memCompareMethod;
             }
         }
 

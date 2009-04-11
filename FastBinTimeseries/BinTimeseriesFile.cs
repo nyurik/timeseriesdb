@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -69,7 +71,7 @@ namespace NYurik.FastBinTimeseries
 
         protected Func<T, PackedDateTime> TSAccessor { get; private set; }
 
-        protected override void ReadCustomHeader(BinaryReader stream, Version version)
+        protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
         {
             if (version == CurrentVersion)
             {
@@ -83,7 +85,7 @@ namespace NYurik.FastBinTimeseries
                 TSAccessor = DynamicCodeFactory.Instance.CreateTSAccessor<T>(m_dateTimeFieldInfo);
             }
             else
-                Utilities.ThrowUnknownVersion(version, GetType());
+                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
         }
 
         protected override Version WriteCustomHeader(BinaryWriter stream)
@@ -102,7 +104,7 @@ namespace NYurik.FastBinTimeseries
             {
                 long mid = start + ((end - start) >> 1);
 
-                Read(mid, oneElementBuff, 0, 1);
+                PerformRead(mid, new ArraySegment<T>(oneElementBuff));
                 int comp = ((DateTime) TSAccessor(oneElementBuff[0])).CompareTo(value);
                 if (comp == 0)
                     return mid;
@@ -116,58 +118,41 @@ namespace NYurik.FastBinTimeseries
 
         /// <summary>
         /// Read data starting at <paramref name="fromInclusive"/>, up to, 
+        /// but not including <paramref name="toExclusive"/> into the <paramref name="buffer"/>.
+        /// No more than <paramref name="buffer.Count"/> items will be read.
+        /// </summary>
+        /// <returns>The total number of items read.</returns>
+        public int ReadData(DateTime fromInclusive, DateTime toExclusive, ArraySegment<T> buffer)
+        {
+            if (buffer.Array == null) throw new ArgumentNullException("buffer");
+            var rng = CalcNeededBuffer(fromInclusive, toExclusive);
+
+            PerformRead(rng.First, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Second)));
+
+            return rng.Second;
+        }
+
+        /// <summary>
+        /// Read data starting at <paramref name="fromInclusive"/>, up to, 
         /// but not including <paramref name="toExclusive"/>.
         /// </summary>
         /// <returns>An array of items no bigger than <paramref name="maxItemsToRead"/></returns>
         public T[] ReadData(DateTime fromInclusive, DateTime toExclusive, int maxItemsToRead)
         {
-            T[] buffer = null;
-            ReadData(fromInclusive, toExclusive, ref buffer, 0, maxItemsToRead);
+            if (maxItemsToRead < 0) throw new ArgumentOutOfRangeException("maxItemsToRead", maxItemsToRead, "<0");
+            var rng = CalcNeededBuffer(fromInclusive, toExclusive);
+            
+            var buffer = new T[Math.Min(maxItemsToRead, rng.Second)];
+
+            PerformRead(rng.First, new ArraySegment<T>(buffer));
+
             return buffer;
         }
 
-        /// <summary>
-        /// Read data starting at <paramref name="fromInclusive"/>, up to, 
-        /// but not including <paramref name="toExclusive"/> into the <paramref name="buffer"/>
-        /// starting at <paramref name="offset"/>. No more than <paramref name="maxItemsToRead"/> items
-        /// will be read.
-        /// </summary>
-        /// <returns>The total number of items between the given timestamps.</returns>
-        public int ReadData(DateTime fromInclusive, DateTime toExclusive, T[] buffer, int offset, int maxItemsToRead)
+        public void AppendData(ArraySegment<T> buffer)
         {
-            if (buffer == null) throw new ArgumentNullException("buffer");
-            return ReadData(fromInclusive, toExclusive, ref buffer, offset, maxItemsToRead);
-        }
-
-        private int ReadData(DateTime fromInclusive, DateTime toExclusive, ref T[] buffer, int offset,
-                             int maxItemsToRead)
-        {
-            if (buffer != null)
-                Utilities.ValidateArrayParams(buffer, offset, maxItemsToRead);
-
-            long start = BinarySearch(fromInclusive);
-            if (start < 0)
-                start = ~start;
-            long end = BinarySearch(toExclusive);
-            if (end < 0)
-                end = ~end;
-
-            int neededLength = Utilities.ToInt32Checked(end - start);
-            if (buffer == null)
-            {
-                buffer = new T[Math.Min(neededLength, maxItemsToRead)];
-                offset = 0;
-            }
-
-            Read(start, buffer, offset, Math.Min(neededLength, maxItemsToRead));
-
-            return neededLength;
-        }
-
-        public void AppendData(T[] buffer, int offset, int count)
-        {
-            Utilities.ValidateArrayParams(buffer, offset, count);
-            if (count == 0)
+            if (buffer.Array == null) throw new ArgumentNullException("buffer");
+            if (buffer.Count == 0)
                 return;
 
             // Get last file timestamp
@@ -175,12 +160,12 @@ namespace NYurik.FastBinTimeseries
             if (lastDt == DateTime.MinValue && Count > 0)
             {
                 var oneElementBuff = new T[1];
-                Read(Count - 1, oneElementBuff, 0, 1);
+                PerformRead(Count - 1, new ArraySegment<T>(oneElementBuff));
                 m_lastTimestamp = lastDt = TSAccessor(oneElementBuff[0]);
             }
 
             // Make sure new data goes after the last item
-            PackedDateTime newDt = TSAccessor(buffer[offset]);
+            PackedDateTime newDt = TSAccessor(buffer.Array[buffer.Offset]);
             if (newDt < lastDt)
                 throw new ArgumentException(
                     string.Format("Last file item ({0}) is greater than the first new item ({1})",
@@ -188,10 +173,10 @@ namespace NYurik.FastBinTimeseries
             lastDt = newDt;
 
             // Validate new data
-            int lastOffset = offset + count;
-            for (int i = offset + 1; i < lastOffset; i++)
+            int lastOffset = buffer.Offset + buffer.Count;
+            for (int i = buffer.Offset + 1; i < lastOffset; i++)
             {
-                newDt = TSAccessor(buffer[i]);
+                newDt = TSAccessor(buffer.Array[i]);
                 if (newDt < lastDt)
                     throw new ArgumentException(
                         string.Format("Item at #{0} ({1}) is greater than item #{2} ({3})",
@@ -199,9 +184,29 @@ namespace NYurik.FastBinTimeseries
                 lastDt = newDt;
             }
 
-            Write(Count, buffer, offset, count);
+            PerformWrite(Count, buffer);
 
             m_lastTimestamp = lastDt;
+        }
+
+        /// <summary>
+        /// Returns the first index and the length of the data available in this file for the given range of dates
+        /// </summary>
+        protected Tuple<long, int> CalcNeededBuffer(DateTime fromInclusive, DateTime toExclusive)
+        {
+            if (fromInclusive.CompareTo(toExclusive) > 0)
+                throw new ArgumentOutOfRangeException("fromInclusive", "'from' must be <= 'to'");
+
+            long start = IndexToLong(fromInclusive);
+            return Tuple.Create(start, (IndexToLong(toExclusive) - start).ToInt32Checked());
+        }
+
+        protected long IndexToLong(DateTime timestamp)
+        {
+            long start = BinarySearch(timestamp);
+            if (start < 0)
+                start = ~start;
+            return start;
         }
     }
 }

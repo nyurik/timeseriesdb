@@ -29,7 +29,7 @@ namespace NYurik.FastBinTimeseries
         AllAccess = 0x1f,
     }
 
-    internal static class Win32Apis
+    internal static class NativeWinApis
     {
         public static readonly unsafe bool Is64bit = sizeof (void*) == sizeof (long);
         private static SYSTEM_INFO? _sysInfo;
@@ -39,7 +39,7 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 if (!_sysInfo.HasValue)
-                    lock (typeof (Win32Apis))
+                    lock (typeof (NativeWinApis))
                         if (!_sysInfo.HasValue)
                         {
                             SYSTEM_INFO info;
@@ -215,7 +215,7 @@ namespace NYurik.FastBinTimeseries
 
         protected override bool ReleaseHandle()
         {
-            return Win32Apis.UnmapViewOfFile(handle);
+            return NativeWinApis.UnmapViewOfFile(handle);
         }
     }
 
@@ -228,7 +228,7 @@ namespace NYurik.FastBinTimeseries
 
         protected override bool ReleaseHandle()
         {
-            return Win32Apis.CloseHandle(handle);
+            return NativeWinApis.CloseHandle(handle);
         }
     }
 }

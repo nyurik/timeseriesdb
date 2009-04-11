@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -12,20 +14,24 @@ namespace NYurik.FastBinTimeseries
         protected static readonly Version BaseVersion_1_0_NoTag = new Version(1, 0);
         protected static readonly Version BaseVersion_Current = new Version(1, 1);
 
-        private readonly string m_fileName;
-        private Version m_baseVersion;
-        private bool m_canWrite;
+        private static readonly Version s_dummyVersion = new Version(int.MaxValue, int.MaxValue, int.MaxValue,
+                                                                     int.MaxValue);
+
+        private readonly string _fileName;
+        private Version _baseVersion;
+        private bool _canWrite;
+        private bool _enableMemoryMappedFileAccess;
+        private Version _fileVersion;
+        private int _headerSize;
+        private bool _isDisposed;
+        private bool _isInitialized;
+        private Version _serializerVersion;
+        private string _tag = "";
+        
+        // These fields are accessed from the derived BinaryFile<T> class.
         protected internal long m_count;
-        private bool m_enableMemoryMappedFileAccess;
         protected internal FileStream m_fileStream;
-        private Version m_fileVersion;
-        private int m_headerSize;
-        private bool m_isDisposed;
-        private bool m_isInitialized;
         protected internal int m_itemSize;
-        private Version m_serializerVersion;
-        private string m_tag = "";
-        private readonly static Version s_dummyVersion = new Version(int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue);
 
         protected BinaryFile()
         {
@@ -33,8 +39,8 @@ namespace NYurik.FastBinTimeseries
 
         protected BinaryFile(string fileName)
         {
-            m_canWrite = true;
-            m_fileName = fileName;
+            _canWrite = true;
+            _fileName = fileName;
         }
 
         /// <summary>
@@ -42,7 +48,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public static int MinPageSize
         {
-            get { return (int) Win32Apis.SystemInfo.dwAllocationGranularity; }
+            get { return (int) NativeWinApis.SystemInfo.dwAllocationGranularity; }
         }
 
         /// <summary>
@@ -52,13 +58,13 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                switch (Win32Apis.SystemInfo.ProcessorInfo.wProcessorArchitecture)
+                switch (NativeWinApis.SystemInfo.ProcessorInfo.wProcessorArchitecture)
                 {
-                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_INTEL:
+                    case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_INTEL:
                         return 4*1024*1024;
 
-                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_AMD64:
-                    case Win32Apis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_IA64:
+                    case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_AMD64:
+                    case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_IA64:
                         return 16*1024*1024;
 
                     default:
@@ -98,19 +104,21 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+        public abstract Type ItemType { get; }
+
         public string Tag
         {
             get
             {
                 ThrowOnDisposed();
-                return m_tag;
+                return _tag;
             }
             set
             {
                 ThrowOnInitialized();
                 if (value == null)
                     throw new ArgumentNullException("value");
-                m_tag = value;
+                _tag = value;
             }
         }
 
@@ -126,21 +134,21 @@ namespace NYurik.FastBinTimeseries
 
         public bool EnableMemoryMappedFileAccess
         {
-            get { return m_enableMemoryMappedFileAccess; }
+            get { return _enableMemoryMappedFileAccess; }
             set
             {
-                if (m_enableMemoryMappedFileAccess != value)
+                if (_enableMemoryMappedFileAccess != value)
                 {
                     if (!NonGenericSerializer.SupportsMemoryMappedFiles && value)
                         throw new NotSupportedException("Memory mapped files are not supported by the serializer");
-                    m_enableMemoryMappedFileAccess = value;
+                    _enableMemoryMappedFileAccess = value;
                 }
             }
         }
 
         public string FileName
         {
-            get { return m_fileName; }
+            get { return _fileName; }
         }
 
         public Version BaseVersion
@@ -148,15 +156,15 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 ThrowOnNotInitialized();
-                return m_baseVersion;
+                return _baseVersion;
             }
             protected internal set
             {
                 ThrowOnInitialized();
                 if (value == null) throw new ArgumentNullException("value");
                 if (value != BaseVersion_Current && value != BaseVersion_1_0_NoTag)
-                    Utilities.ThrowUnknownVersion(value, typeof (BinaryFile));
-                m_baseVersion = value;
+                    FastBinFileUtils.ThrowUnknownVersion(value, typeof (BinaryFile));
+                _baseVersion = value;
             }
         }
 
@@ -165,13 +173,13 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 ThrowOnNotInitialized();
-                return m_headerSize;
+                return _headerSize;
             }
             protected internal set
             {
                 ThrowOnInitialized();
 
-                if (value == m_headerSize)
+                if (value == _headerSize)
                     return;
 
                 if (value > MaxHeaderSize || value < BytesInHeaderSize)
@@ -179,7 +187,7 @@ namespace NYurik.FastBinTimeseries
                         String.Format("File header size {0} is not within allowed range {1}..{2}",
                                       value, BytesInHeaderSize, MaxHeaderSize));
 
-                m_headerSize = value;
+                _headerSize = value;
             }
         }
 
@@ -188,7 +196,7 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 ThrowOnDisposed();
-                return m_canWrite;
+                return _canWrite;
             }
         }
 
@@ -197,7 +205,7 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 ThrowOnNotInitialized();
-                return m_serializerVersion;
+                return _serializerVersion;
             }
         }
 
@@ -206,18 +214,18 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 ThrowOnNotInitialized();
-                return m_fileVersion;
+                return _fileVersion;
             }
         }
 
         public bool IsDisposed
         {
-            get { return m_isDisposed; }
+            get { return _isDisposed; }
         }
 
         public bool IsInitialized
         {
-            get { return m_isInitialized; }
+            get { return _isInitialized; }
         }
 
         public void Close()
@@ -240,13 +248,24 @@ namespace NYurik.FastBinTimeseries
         /// <param name="canWrite">Should allow write operations</param>
         public static BinaryFile Open(string fileName, bool canWrite)
         {
+            return Open(fileName, canWrite, null);
+        }
+
+        /// <summary>
+        /// Open existing binary timeseries file. A <see cref="FileNotFoundException"/> if the file does not exist.
+        /// </summary>
+        /// <param name="fileName">A relative or absolute path for the existing file to open.</param>
+        /// <param name="canWrite">Should allow write operations</param>
+        /// <param name="typeMap">An optional map that would override the type strings in the file with the given types.</param>
+        public static BinaryFile Open(string fileName, bool canWrite, IDictionary<string, Type> typeMap)
+        {
             FileStream stream = null;
             try
             {
                 stream = new FileStream(
                     fileName, FileMode.Open, canWrite ? FileAccess.ReadWrite : FileAccess.Read,
                     canWrite ? FileShare.Read : FileShare.ReadWrite);
-                return Open(stream);
+                return Open(stream, typeMap);
             }
             catch
             {
@@ -272,7 +291,11 @@ namespace NYurik.FastBinTimeseries
         /// Open a binary file from a filestream, and start reading the file header.
         /// This method must match the <see cref="BinaryFile.WriteHeader"/> method.
         /// </summary>
-        public static BinaryFile Open(FileStream stream)
+        /// <param name="stream">Stream from which to read the binary data</param>
+        /// <param name="typeMap">
+        /// An optional map that would override the type strings in the file with the given types.
+        /// </param>
+        public static BinaryFile Open(FileStream stream, IDictionary<string, Type> typeMap)
         {
             if (stream == null) throw new ArgumentNullException("stream");
 
@@ -286,9 +309,12 @@ namespace NYurik.FastBinTimeseries
                 new MemoryStream(ReadIntoNewBuffer(stream, hdrSize - BytesInHeaderSize), false));
 
             // Instantiate BinaryFile-inherited class this file was created with
-            Version baseVersion = Utilities.ReadVersion(memReader);
+            Version baseVersion = FastBinFileUtils.ReadVersion(memReader);
+
             string classTypeName = memReader.ReadString();
-            Type classType = Utilities.GetTypeFromAnyAssemblyVersion(classTypeName);
+            Type classType;
+            if (typeMap == null || !typeMap.TryGetValue(classTypeName, out classType))
+                classType = TypeUtils.GetTypeFromAnyAssemblyVersion(classTypeName);
             if (classType == null)
                 throw new InvalidOperationException("Unable to find class type " + classTypeName);
             var inst = (BinaryFile) Activator.CreateInstance(classType, true);
@@ -300,11 +326,13 @@ namespace NYurik.FastBinTimeseries
             // Read values in the same order as WriteHeader()
             // Serializer
             string serializerTypeName = memReader.ReadString();
-            Type serializerType = Utilities.GetTypeFromAnyAssemblyVersion(serializerTypeName);
+            Type serializerType;
+            if (typeMap == null || !typeMap.TryGetValue(serializerTypeName, out serializerType))
+                serializerType = TypeUtils.GetTypeFromAnyAssemblyVersion(serializerTypeName);
             if (serializerType == null)
                 throw new InvalidOperationException("Unable to find serializer type " + serializerTypeName);
 
-            inst.m_canWrite = stream.CanWrite;
+            inst._canWrite = stream.CanWrite;
             var serializer = (IBinSerializer) Activator.CreateInstance(serializerType);
             inst.SetSerializer(serializer);
 
@@ -320,18 +348,18 @@ namespace NYurik.FastBinTimeseries
                         inst.GetType().FullName, itemSize, inst.ItemSize));
             inst.m_itemSize = serializerTypeSize;
 
-            if (inst.m_baseVersion > BaseVersion_1_0_NoTag)
+            if (inst._baseVersion > BaseVersion_1_0_NoTag)
                 inst.Tag = memReader.ReadString();
 
-            inst.m_fileVersion = Utilities.ReadVersion(memReader);
-            inst.ReadCustomHeader(memReader, inst.m_fileVersion);
+            inst._fileVersion = FastBinFileUtils.ReadVersion(memReader);
+            inst.ReadCustomHeader(memReader, inst._fileVersion, typeMap);
 
-            inst.m_serializerVersion = Utilities.ReadVersion(memReader);
-            serializer.ReadCustomHeader(memReader, inst.m_serializerVersion);
+            inst._serializerVersion = FastBinFileUtils.ReadVersion(memReader);
+            serializer.ReadCustomHeader(memReader, inst._serializerVersion, typeMap);
 
             inst.m_count = inst.CalculateItemCountFromFilePosition(inst.m_fileStream.Length);
 
-            inst.m_isInitialized = true;
+            inst._isInitialized = true;
 
             return inst;
         }
@@ -354,7 +382,7 @@ namespace NYurik.FastBinTimeseries
             try
             {
                 WriteHeader();
-                m_isInitialized = true;
+                _isInitialized = true;
             }
             catch (Exception ex)
             {
@@ -376,7 +404,7 @@ namespace NYurik.FastBinTimeseries
         protected void ThrowOnNotInitialized()
         {
             ThrowOnDisposed();
-            if (!m_isInitialized)
+            if (!_isInitialized)
                 throw new InvalidOperationException(
                     "InitializeNewFile() must be called before performing any operations on the new file");
         }
@@ -384,20 +412,20 @@ namespace NYurik.FastBinTimeseries
         protected void ThrowOnInitialized()
         {
             ThrowOnDisposed();
-            if (m_isInitialized)
+            if (_isInitialized)
                 throw new InvalidOperationException(
                     "This call is only allowed for new files before InitializeNewFile() was called");
         }
 
         protected void ThrowOnDisposed()
         {
-            if (m_isDisposed)
+            if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName, "The file has been closed");
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!m_isDisposed)
+            if (!_isDisposed)
             {
                 if (disposing)
                 {
@@ -409,7 +437,7 @@ namespace NYurik.FastBinTimeseries
                 else
                     m_fileStream = null;
 
-                m_isDisposed = true;
+                _isDisposed = true;
             }
         }
 
@@ -434,7 +462,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>Size of the file header expressed as a number of items</summary>
         protected int CalculateHeaderSizeAsItemCount()
         {
-            return m_headerSize/m_itemSize;
+            return _headerSize/m_itemSize;
         }
 
         /// <summary>Calculates the number of items that would make up the given file size</summary>
@@ -470,7 +498,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Write the header info into the begining of the file.
         /// This method must match the reading sequence in the
-        /// <see cref="Open(System.IO.FileStream)"/>.
+        /// <see cref="Open(System.IO.FileStream,System.Collections.Generic.IDictionary{string,System.Type})"/>.
         /// </summary>
         /// <remarks>
         ///            ***  Header structure: ***
@@ -496,7 +524,7 @@ namespace NYurik.FastBinTimeseries
 
             // Header size will be replaced by an actual length later
             memWriter.Write(0);
-            Utilities.WriteVersion(memWriter, BaseVersion_Current);
+            FastBinFileUtils.WriteVersion(memWriter, BaseVersion_Current);
             BaseVersion = BaseVersion_Current;
 
             memWriter.Write(GetType().AssemblyQualifiedName);
@@ -509,11 +537,11 @@ namespace NYurik.FastBinTimeseries
             memWriter.Write(Tag);
 
             // Save versions and custom headers
-            m_fileVersion = WriteHeaderWithVersion(memWriter, WriteCustomHeader);
-            m_serializerVersion = WriteHeaderWithVersion(memWriter, NonGenericSerializer.WriteCustomHeader);
+            _fileVersion = WriteHeaderWithVersion(memWriter, WriteCustomHeader);
+            _serializerVersion = WriteHeaderWithVersion(memWriter, NonGenericSerializer.WriteCustomHeader);
 
             // Header size must be dividable by the item size
-            var headerSize = (int) Utilities.RoundUpToMultiple(memWriter.BaseStream.Position, m_itemSize);
+            var headerSize = (int) FastBinFileUtils.RoundUpToMultiple(memWriter.BaseStream.Position, m_itemSize);
 
             // Override the header size value at the first position of the header
             memWriter.Seek(0, SeekOrigin.Begin);
@@ -535,7 +563,7 @@ namespace NYurik.FastBinTimeseries
         {
             // Record original postition and write dummy version
             long versionPos = memWriter.BaseStream.Position;
-            Utilities.WriteVersion(memWriter, s_dummyVersion);
+            FastBinFileUtils.WriteVersion(memWriter, s_dummyVersion);
 
             // Write real version and save final position
             Version version = writeHeaderMethod(memWriter);
@@ -543,7 +571,7 @@ namespace NYurik.FastBinTimeseries
 
             // Seek back, rerecord the proper version instead of the dummy one, and move back to the end
             memWriter.BaseStream.Seek(versionPos, SeekOrigin.Begin);
-            Utilities.WriteVersion(memWriter, version);
+            FastBinFileUtils.WriteVersion(memWriter, version);
             memWriter.BaseStream.Seek(latestPos, SeekOrigin.Begin);
 
             return version;
@@ -552,7 +580,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Override to read custom header info. Must match the <see cref="WriteCustomHeader"/>.
         /// </summary>
-        protected abstract void ReadCustomHeader(BinaryReader stream, Version version);
+        protected abstract void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap);
 
         /// <summary>
         /// Override to write custom header info. Must match the <see cref="ReadCustomHeader"/>.

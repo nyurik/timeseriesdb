@@ -15,6 +15,9 @@ namespace NYurik.FastBinTimeseries
         /// <summary>The size of each item of data in bytes</summary>
         int ItemSize { get; }
 
+        /// <summary>Type of the items stored in this file</summary>
+        Type ItemType { get; }
+
         /// <summary>User string stored in the header</summary>
         string Tag { get; set; }
 

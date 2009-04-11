@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -64,34 +66,44 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        #endregion
-
-        private static readonly Version CurrentVersion = new Version(1, 0);
-
-        #region IBinUniformTimeseriesFile Members
-
-        /// <summary>
-        /// Returns adjusted index that would correspond to the valid timestamp in this file.
-        /// The FirstFileTS has no affect, and index will always be valid.
-        /// </summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public DateTime RoundDownToTimeSpanStart(DateTime index)
+        public int AdjustRangeToExistingData(ref DateTime fromInclusive, ref DateTime toExclusive)
         {
-            return index - TimeSpan.FromTicks(index.TimeOfDay.Ticks%ItemTimeSpan.Ticks);
+            if (fromInclusive.EnsureUtc() < FirstFileTS)
+                fromInclusive = FirstFileTS;
+            else
+                fromInclusive = new DateTime(
+                    FastBinFileUtils.RoundUpToMultiple(fromInclusive.Ticks, ItemTimeSpan.Ticks),
+                    DateTimeKind.Utc);
+
+            if (toExclusive.EnsureUtc() > FirstUnavailableTimestamp)
+                toExclusive = FirstUnavailableTimestamp;
+            else
+                toExclusive = new DateTime(
+                    FastBinFileUtils.RoundUpToMultiple(toExclusive.Ticks, ItemTimeSpan.Ticks),
+                    DateTimeKind.Utc);
+
+            if (fromInclusive >= FirstUnavailableTimestamp || toExclusive <= FirstFileTS)
+                return 0;
+
+            long len = IndexToLong(toExclusive) - IndexToLong(fromInclusive);
+            if (len > int.MaxValue)
+                return 0;
+            return (int) len;
         }
 
         #endregion
 
-        protected override void ReadCustomHeader(BinaryReader stream, Version version)
+        private static readonly Version CurrentVersion = new Version(1, 0);
+
+        protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
         {
             if (version == CurrentVersion)
             {
                 ItemTimeSpan = TimeSpan.FromTicks(stream.ReadInt64());
-                FirstFileTS = ValidateIndex(DateTime.FromBinary(stream.ReadInt64()));
+                FirstFileTS = ValidateIndex(DateTime.FromBinary(stream.ReadInt64())).EnsureUtc();
             }
             else
-                Utilities.ThrowUnknownVersion(version, GetType());
+                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
         }
 
         protected override Version WriteCustomHeader(BinaryWriter stream)
@@ -102,11 +114,6 @@ namespace NYurik.FastBinTimeseries
             return CurrentVersion;
         }
 
-        protected long IndexToLong(DateTime timestamp)
-        {
-            return (ValidateIndex(timestamp).Ticks - FirstFileTS.Ticks)/ItemTimeSpan.Ticks;
-        }
-
         public override string ToString()
         {
             return string.Format("{0}, firstTS={1}, slice={2}", base.ToString(), FirstFileTS, ItemTimeSpan);
@@ -114,9 +121,7 @@ namespace NYurik.FastBinTimeseries
 
         private DateTime ValidateIndex(DateTime timestamp)
         {
-            if (timestamp.Kind != DateTimeKind.Utc)
-                throw new ArgumentOutOfRangeException("timestamp", timestamp, "DateTime must be in UTC form");
-            if (timestamp.TimeOfDay.Ticks % ItemTimeSpan.Ticks != 0)
+            if (timestamp.EnsureUtc().TimeOfDay.Ticks%ItemTimeSpan.Ticks != 0)
                 throw new IOException(
                     String.Format("The timestamp {0} must be aligned by the time slice {1}", timestamp, ItemTimeSpan));
             return timestamp;
@@ -125,10 +130,13 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Read data starting at <paramref name="fromInclusive"/>, up to, but not including <paramref name="toExclusive"/>.
         /// </summary>
-        public void ReadData(DateTime fromInclusive, DateTime toExclusive, T[] buffer, int offset)
+        /// <returns>The total number of items read.</returns>
+        public int ReadData(DateTime fromInclusive, DateTime toExclusive, ArraySegment<T> buffer)
         {
-            if (buffer == null) throw new ArgumentNullException("buffer");
-            ReadData(fromInclusive, toExclusive, ref buffer, offset);
+            if (buffer.Array == null) throw new ArgumentNullException("buffer");
+            var rng = CalcNeededBuffer(fromInclusive, toExclusive);
+            PerformRead(rng.First, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Second)));
+            return rng.Second;
         }
 
         /// <summary>
@@ -136,40 +144,22 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public T[] ReadData(DateTime fromInclusive, DateTime toExclusive)
         {
-            T[] newData = null;
-            ReadData(fromInclusive, toExclusive, ref newData, 0);
-            return newData;
-        }
+            var rng = CalcNeededBuffer(fromInclusive, toExclusive);
+            var buffer = new T[rng.Second];
 
-        private void ReadData(DateTime fromInclusive, DateTime toExclusive, ref T[] buffer, int offset)
-        {
-            if (fromInclusive.CompareTo(toExclusive) > 0)
-                throw new ArgumentOutOfRangeException("fromInclusive", "'from' must be <= 'to'");
+            PerformRead(rng.First, new ArraySegment<T>(buffer));
 
-            long firstIndexIncl = IndexToLong(fromInclusive);
-            long lastIndexExcl = IndexToLong(toExclusive);
-
-            // Switiching to int array refs. No 64bit array support yet
-            int count = Utilities.ToInt32Checked(lastIndexExcl - firstIndexIncl);
-            if (buffer == null)
-            {
-                buffer = new T[count];
-                offset = 0;
-            }
-
-            Read(firstIndexIncl, buffer, offset, count);
+            return buffer;
         }
 
         /// <summary>
-        /// Read <paramref name="count"/> items starting at <paramref name="fromInclusive"/>. Read backwards if count is negative.
+        /// Read items starting at <paramref name="fromInclusive"/>. Read backwards if count is negative.
         /// </summary>
         /// <param name="fromInclusive">Index of the item to start from.</param>
         /// <param name="buffer">Array of values to be written into a file.</param>
-        /// <param name="offset">The offset in buffer at which to begin copying items to the file.</param>
-        /// <param name="count">The number of items to be read to the array.</param>
-        public void ReadData(DateTime fromInclusive, T[] buffer, int offset, int count)
+        public void ReadData(DateTime fromInclusive, ArraySegment<T> buffer)
         {
-            Read(IndexToLong(fromInclusive), buffer, offset, count);
+            PerformRead(IndexToLong(fromInclusive), buffer);
         }
 
         /// <summary>
@@ -181,7 +171,7 @@ namespace NYurik.FastBinTimeseries
         public T[] ReadData(DateTime fromInclusive, int count)
         {
             var buffer = new T[count];
-            Read(IndexToLong(fromInclusive), buffer, 0, count);
+            PerformRead(IndexToLong(fromInclusive), new ArraySegment<T>(buffer));
             return buffer;
         }
 
@@ -189,33 +179,41 @@ namespace NYurik.FastBinTimeseries
         /// Write an array of items to the file.
         /// </summary>
         /// <param name="firstItemIndex">The index of the first value in the <paramref name="buffer"/> array.</param>
-        /// <param name="buffer">Array of values to be written into a file. No action is performed when the array is empty.</param>
-        public void WriteData(DateTime firstItemIndex, T[] buffer)
-        {
-            if (buffer == null) throw new ArgumentNullException("buffer");
-            WriteData(firstItemIndex, buffer, 0, buffer.Length);
-        }
-
-        /// <summary>
-        /// Write an array of items to the file.
-        /// </summary>
-        /// <param name="firstItemIndex">The index of the first value in the <paramref name="buffer"/> array.</param>
         /// <param name="buffer">Array of values to be written into a file.</param>
-        /// <param name="offset">The offset in buffer at which to begin copying items to the file.</param>
-        /// <param name="count">The number of items to be written from array. No action is performed when the count is 0.</param>
-        public void WriteData(DateTime firstItemIndex, T[] buffer, int offset, int count)
+        public void WriteData(DateTime firstItemIndex, ArraySegment<T> buffer)
         {
-            Utilities.ValidateArrayParams(buffer, offset, count);
+            if(buffer.Array == null) throw new ArgumentException("buffer");
+
             if (!CanWrite) throw new InvalidOperationException("The file was opened as readonly");
 
             if (firstItemIndex < FirstFileTS)
-                throw new ArgumentOutOfRangeException("firstItemIndex", firstItemIndex, "Must be >= FirstFileTS ("+FirstFileTS +")");
+                throw new ArgumentOutOfRangeException("firstItemIndex", firstItemIndex,
+                                                      "Must be >= FirstFileTS (" + FirstFileTS + ")");
             if (firstItemIndex > FirstUnavailableTimestamp)
-                throw new ArgumentOutOfRangeException("firstItemIndex", firstItemIndex, "Must be <= FirstUnavailableTimestamp (" + FirstUnavailableTimestamp + ")");
-            
+                throw new ArgumentOutOfRangeException("firstItemIndex", firstItemIndex,
+                                                      "Must be <= FirstUnavailableTimestamp (" +
+                                                      FirstUnavailableTimestamp + ")");
+
             long itemLong = IndexToLong(firstItemIndex);
 
-            Write(itemLong, buffer, offset, count);
+            PerformWrite(itemLong, buffer);
+        }
+
+        /// <summary>
+        /// Returns the first index and the length of the data available in this file for the given range of dates
+        /// </summary>
+        protected Tuple<long, int> CalcNeededBuffer(DateTime fromInclusive, DateTime toExclusive)
+        {
+            if (fromInclusive.CompareTo(toExclusive) > 0)
+                throw new ArgumentOutOfRangeException("fromInclusive", "'from' must be <= 'to'");
+
+            long firstIndexIncl = IndexToLong(fromInclusive);
+            return Tuple.Create(firstIndexIncl, (IndexToLong(toExclusive) - firstIndexIncl).ToInt32Checked());
+        }
+
+        protected long IndexToLong(DateTime timestamp)
+        {
+            return (ValidateIndex(timestamp).Ticks - FirstFileTS.Ticks)/ItemTimeSpan.Ticks;
         }
     }
 }

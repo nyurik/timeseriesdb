@@ -52,9 +52,45 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         [Test]
+        public void ArrayCompare()
+        {
+            const int bufSize = 1024 * 1024 * 1;
+            var buf1 = new byte[bufSize];
+            var buf2 = new byte[bufSize];
+
+            var s = new DefaultTypeSerializer<byte>();
+
+            Assert.IsTrue(s.CompareArrays(buf1, 0, buf2, 0, bufSize), "compare zeroes");
+
+            for (int i = 0; i < bufSize; i++) buf2[i] = buf1[i] = (byte)(i & 0xFF);
+
+            Assert.IsTrue(s.CompareArrays(buf1, 0, buf2, 0, bufSize), "compare byte 0,1,2,3,...,255,0,...");
+            Assert.IsFalse(s.CompareArrays(buf1, 255, buf2, 0, bufSize-255));
+            Assert.IsTrue(s.CompareArrays(buf1, 256, buf2, 0, bufSize-256));
+            Assert.IsFalse(s.CompareArrays(buf1, 257, buf2, 0, bufSize-257));
+            Assert.IsTrue(s.CompareArrays(buf1, 255, buf2, 511, bufSize - 511));
+            Assert.IsTrue(s.CompareArrays(buf1, 257, buf2, 1, bufSize - 257));
+
+            for (int i = 0; i < 1000; i++)
+            {
+                buf1[i]++;
+                Assert.IsFalse(s.CompareArrays(buf1, 0, buf2, 0, bufSize));
+                buf1[i]--;
+            }
+            Assert.IsTrue(s.CompareArrays(buf1, 0, buf2, 0, bufSize));
+            for (int i = 0; i < 1000; i++)
+            {
+                buf1[bufSize-i-1]++;
+                Assert.IsFalse(s.CompareArrays(buf1, 0, buf2, 0, bufSize));
+                buf1[bufSize - i - 1]--;
+            }
+            Assert.IsTrue(s.CompareArrays(buf1, 0, buf2, 0, bufSize));
+        }
+
+        [Test]
         public void BasicFunctionality()
         {
-            BinIndexedFile<byte> temp = null;
+            BinIndexedFile<byte> temp;
             using (var f = new BinIndexedFile<byte>(binFile))
             {
                 temp = f;

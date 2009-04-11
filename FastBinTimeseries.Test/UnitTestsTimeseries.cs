@@ -30,7 +30,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                 var newData = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New,
                                                                         itemCount, 0);
-                f.AppendData(newData, 0, newData.Length);
+                f.AppendData(new ArraySegment<_DatetimeByte_SeqPk1>(newData));
 
                 var res = f.ReadData(DateTime.MinValue, DateTime.MaxValue, int.MaxValue);
                 TestUtils.AreEqual(newData, res);
