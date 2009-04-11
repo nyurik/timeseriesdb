@@ -17,7 +17,7 @@ namespace NYurik.FastBinTimeseries
         private static readonly Version s_dummyVersion = new Version(int.MaxValue, int.MaxValue, int.MaxValue,
                                                                      int.MaxValue);
 
-        private readonly string _fileName;
+        private string _fileName;
         private Version _baseVersion;
         private bool _canWrite;
         private bool _enableMemoryMappedFileAccess;
@@ -265,7 +265,11 @@ namespace NYurik.FastBinTimeseries
                 stream = new FileStream(
                     fileName, FileMode.Open, canWrite ? FileAccess.ReadWrite : FileAccess.Read,
                     canWrite ? FileShare.Read : FileShare.ReadWrite);
-                return Open(stream, typeMap);
+                
+                BinaryFile file = Open(stream, typeMap);
+                file._fileName = fileName;
+
+                return file;
             }
             catch
             {

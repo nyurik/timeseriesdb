@@ -37,6 +37,7 @@ namespace NYurik.FastBinTimeseries.Test
             Assert.AreEqual(1, f.ItemSize);
             Assert.AreEqual(canWrite, f.CanWrite);
             Assert.AreEqual(TagString, f.Tag);
+            Assert.AreEqual(binFile, f.FileName);
         }
 
         private static void AssertInvalidOperationException<T>(BinaryFile<T> f, Func<BinaryFile<T>, object> operation)
@@ -60,31 +61,34 @@ namespace NYurik.FastBinTimeseries.Test
 
             var s = new DefaultTypeSerializer<byte>();
 
-            Assert.IsTrue(s.CompareArrays(buf1, 0, buf2, 0, bufSize), "compare zeroes");
+            var buf1all = new ArraySegment<byte>(buf1);
+            var buf2all = new ArraySegment<byte>(buf2);
+
+            Assert.IsTrue(s.CompareArrays(buf1all, buf2all), "compare zeroes");
 
             for (int i = 0; i < bufSize; i++) buf2[i] = buf1[i] = (byte)(i & 0xFF);
 
-            Assert.IsTrue(s.CompareArrays(buf1, 0, buf2, 0, bufSize), "compare byte 0,1,2,3,...,255,0,...");
-            Assert.IsFalse(s.CompareArrays(buf1, 255, buf2, 0, bufSize-255));
-            Assert.IsTrue(s.CompareArrays(buf1, 256, buf2, 0, bufSize-256));
-            Assert.IsFalse(s.CompareArrays(buf1, 257, buf2, 0, bufSize-257));
-            Assert.IsTrue(s.CompareArrays(buf1, 255, buf2, 511, bufSize - 511));
-            Assert.IsTrue(s.CompareArrays(buf1, 257, buf2, 1, bufSize - 257));
+            Assert.IsTrue(s.CompareArrays(buf1all, buf2all), "compare byte 0,1,2,3,...,255,0,...");
+            Assert.IsFalse(s.CompareArrays(new ArraySegment<byte>(buf1, 255, bufSize-255),new ArraySegment<byte>(buf2, 0, bufSize-255)));
+            Assert.IsTrue(s.CompareArrays(new ArraySegment<byte>(buf1, 256, bufSize-256),new ArraySegment<byte>(buf2, 0, bufSize-256)));
+            Assert.IsFalse(s.CompareArrays(new ArraySegment<byte>(buf1, 257, bufSize-257),new ArraySegment<byte>(buf2, 0, bufSize-257)));
+            Assert.IsTrue(s.CompareArrays(new ArraySegment<byte>(buf1, 255, bufSize-511),new ArraySegment<byte>(buf2, 511, bufSize-511)));
+            Assert.IsTrue(s.CompareArrays(new ArraySegment<byte>(buf1, 257, bufSize-257),new ArraySegment<byte>(buf2, 1, bufSize-257)));
 
             for (int i = 0; i < 1000; i++)
             {
                 buf1[i]++;
-                Assert.IsFalse(s.CompareArrays(buf1, 0, buf2, 0, bufSize));
+                Assert.IsFalse(s.CompareArrays(buf1all, buf2all));
                 buf1[i]--;
             }
-            Assert.IsTrue(s.CompareArrays(buf1, 0, buf2, 0, bufSize));
+            Assert.IsTrue(s.CompareArrays(buf1all, buf2all));
             for (int i = 0; i < 1000; i++)
             {
                 buf1[bufSize-i-1]++;
-                Assert.IsFalse(s.CompareArrays(buf1, 0, buf2, 0, bufSize));
+                Assert.IsFalse(s.CompareArrays(buf1all, buf2all));
                 buf1[bufSize - i - 1]--;
             }
-            Assert.IsTrue(s.CompareArrays(buf1, 0, buf2, 0, bufSize));
+            Assert.IsTrue(s.CompareArrays(buf1all, buf2all));
         }
 
         [Test]
@@ -106,6 +110,7 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.IsFalse(f.IsInitialized);
                 Assert.IsFalse(f.IsDisposed);
                 Assert.IsFalse(f.IsOpen);
+                Assert.AreEqual(binFile, f.FileName);
                 Assert.AreEqual("", f.Tag);
                 f.Tag = TagString;
 
@@ -114,12 +119,14 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.IsTrue(f.IsInitialized);
                 Assert.IsFalse(f.IsDisposed);
                 Assert.IsTrue(f.IsOpen);
+                Assert.AreEqual(binFile, f.FileName);
 
-                AssertInvalidOperationException(f, i =>
-                                                       {
-                                                           i.InitializeNewFile();
-                                                           return null;
-                                                       });
+                AssertInvalidOperationException(
+                    f, i =>
+                           {
+                               i.InitializeNewFile();
+                               return null;
+                           });
 
                 AfterInitValidation(f, true);
             }
@@ -132,6 +139,7 @@ namespace NYurik.FastBinTimeseries.Test
             Assert.IsTrue(temp.IsInitialized);
             Assert.IsTrue(temp.IsDisposed);
             Assert.IsFalse(temp.IsOpen);
+            Assert.AreEqual(binFile, temp.FileName);
 
             using (var file = (BinIndexedFile<byte>) BinaryFile.Open(binFile, true))
             {
@@ -142,6 +150,7 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.IsTrue(file.IsInitialized);
                 Assert.IsTrue(file.IsDisposed);
                 Assert.IsFalse(file.IsOpen);
+                Assert.AreEqual(binFile, file.FileName);
             }
 
             using (var file = (BinIndexedFile<byte>) BinaryFile.Open(binFile, false))

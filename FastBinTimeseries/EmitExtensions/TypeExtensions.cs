@@ -118,40 +118,6 @@ namespace NYurik.EmitExtensions
             return type;
         }
 
-        /// <summary>
-        /// The type must either be public, or internal and reside in an assembly 
-        /// that has listed DynamicAssemblyName in the assembly:InternalsVisibleToAttribute()
-        /// </summary>
-        /// <param name="itemType"/>
-        /// <param name="dynamicAssemblyName">The name of the dynamic assembly that will need access</param>
-        /// <param name="dynamicAssemblyNameConstant">The name of the constant or the dynamic 
-        /// assembly name in quotes that will be included in the error message</param>
-        public static void ThrowIfNotAccessible(this Type itemType, string dynamicAssemblyName,
-                                                string dynamicAssemblyNameConstant)
-        {
-            if (itemType.IsPublic)
-                return;
-
-            if (itemType.IsNestedPrivate)
-                throw new ArgumentException(
-                    String.Format(
-                        "The type {0} is a private nested class, and is not accessible from the dynamic assembly",
-                        itemType.FullName));
-
-            foreach (InternalsVisibleToAttribute attr in 
-                itemType.Assembly.GetCustomAttributes(typeof (InternalsVisibleToAttribute), false))
-            {
-                if (dynamicAssemblyName == attr.AssemblyName)
-                    return;
-            }
-
-            throw new ArgumentException(
-                String.Format(
-                    "The type {0} must either be public, or be part of the assembly with an attribute " +
-                    "[assembly:InternalsVisibleTo({1})]",
-                    itemType.FullName, dynamicAssemblyNameConstant));
-        }
-
         public static List<string> GenerateTypeSignature(this Type subItemType)
         {
             var result = new List<Type>();

@@ -152,6 +152,8 @@ namespace NYurik.FastBinTimeseries
 
         public static int ToInt32Checked(this long itemsCountLng)
         {
+            if (itemsCountLng < 0)
+                throw new ArgumentOutOfRangeException("itemsCountLng", itemsCountLng, "<0");
             if (itemsCountLng > Int32.MaxValue)
                 throw new ArgumentException(
                     String.Format(

@@ -47,9 +47,8 @@ namespace NYurik.FastBinTimeseries
         void ProcessMemoryMap(IntPtr memMapPtr, ArraySegment<T> buffer, bool isWriting);
 
         /// <summary>
-        /// Compare <param name="count"/> elements of <paramref name="buffer1"/> starting at <param name="offset1"/> 
-        /// with <paramref name="buffer2"/> starting at <param name="offset2"/>, and returns true if they are the same
+        /// Compare the elements of <paramref name="buffer1"/> with <paramref name="buffer2"/>, and returns true if they are the same
         /// </summary>
-        bool CompareArrays(T[] buffer1, int offset1, T[] buffer2, int offset2, int count);
+        bool CompareArrays(ArraySegment<T> buffer1, ArraySegment<T> buffer2);
     }
 }

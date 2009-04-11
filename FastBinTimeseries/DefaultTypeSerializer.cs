@@ -70,9 +70,14 @@ namespace NYurik.FastBinTimeseries
             _processMemoryMap(memMapPtr, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
-        public bool CompareArrays(T[] buffer1, int offset1, T[] buffer2, int offset2, int count)
+        public bool CompareArrays(ArraySegment<T> buffer1, ArraySegment<T> buffer2)
         {
-            return _compareArrays(buffer1, offset1, buffer2, offset2, count);
+            if(buffer1.Array == null) throw new ArgumentNullException("buffer1");
+            if(buffer2.Array == null) throw new ArgumentNullException("buffer2");
+            
+            // minor optimization
+            if(buffer1.Count != buffer2.Count) return false;
+            return _compareArrays(buffer1.Array, buffer1.Offset, buffer2.Array, buffer2.Offset, buffer1.Count);
         }
 
         public void ReadCustomHeader(BinaryReader reader, Version version, IDictionary<string, Type> typeMap)
