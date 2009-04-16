@@ -250,20 +250,20 @@ namespace NYurik.FastBinTimeseries
             return ~start;
         }
 
-        public void TrimData(UtcDateTime lastTimestampToPreserve)
+        public void TruncateFile(UtcDateTime lastTimestampToPreserve)
         {
             long newCount = BinarySearch(lastTimestampToPreserve, false);
             newCount = newCount < 0 ? ~newCount : newCount + 1;
 
-            TrimData(newCount);
+            TruncateFile(newCount);
         }
 
-        public void TrimData(long newCount)
+        public void TruncateFile(long newCount)
         {
             if (newCount == Count)
                 return;
 
-            PerformFileTrim(newCount);
+            PerformTruncateFile(newCount);
 
             // Invalidate timestamps
             if (Count == 0)

@@ -63,6 +63,6 @@ namespace NYurik.FastBinTimeseries
         /// Truncate existing file to the new date.
         /// </summary>
         /// <param name="newFirstUnavailableTimestamp">Must be less then or equal to <see cref="FirstUnavailableTS"/></param>
-        void TrimData(UtcDateTime newFirstUnavailableTimestamp);
+        void TruncateFile(UtcDateTime newFirstUnavailableTimestamp);
     }
 }

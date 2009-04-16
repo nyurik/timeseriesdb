@@ -127,9 +127,9 @@ namespace NYurik.FastBinTimeseries
             WriteData(firstItemIndex, new ArraySegment<T>((T[]) buffer, offset, count));
         }
 
-        public void TrimData(UtcDateTime newFirstUnavailableTimestamp)
+        public void TruncateFile(UtcDateTime newFirstUnavailableTimestamp)
         {
-            PerformFileTrim(IndexToLong(newFirstUnavailableTimestamp));
+            PerformTruncateFile(IndexToLong(newFirstUnavailableTimestamp));
         }
 
         #endregion

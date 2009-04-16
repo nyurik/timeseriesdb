@@ -596,7 +596,7 @@ namespace NYurik.FastBinTimeseries
         /// Shrink file to the new size.
         /// </summary>
         /// <param name="newCount">Number of items the file should contain after this operation</param>
-        protected void PerformFileTrim(long newCount)
+        protected void PerformTruncateFile(long newCount)
         {
             ThrowOnNotInitialized();
             if (newCount < 0 || newCount > Count)

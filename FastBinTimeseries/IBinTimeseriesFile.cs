@@ -57,11 +57,11 @@ namespace NYurik.FastBinTimeseries
         /// Truncate existing file to the new date.
         /// </summary>
         /// <param name="lastTimestampToPreserve">After truncation, the file will have up to and including this timestamp</param>
-        void TrimData(UtcDateTime lastTimestampToPreserve);
+        void TruncateFile(UtcDateTime lastTimestampToPreserve);
 
         /// <summary>
         /// Truncate existing file to the new item count.
         /// </summary>
-        void TrimData(long newCount);
+        void TruncateFile(long newCount);
     }
 }
