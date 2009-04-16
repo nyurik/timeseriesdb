@@ -93,9 +93,9 @@
     <Compile Include="CommonCode\DateTimeUtils.cs" />
     <Compile Include="FastBinFileUtils.cs" />
     <Compile Include="IBinaryFile.cs" />
+    <Compile Include="IBinTimeseriesFile.cs" />
     <Compile Include="IBinUniformTimeseriesFile.cs" />
     <Compile Include="NativeWinApis.cs" />
-    <Compile Include="PackedDateTime.cs" />
     <Compile Include="DefaultTypeSerializer.cs" />
     <Compile Include="EmitExtensions\ILGeneratorExtensions.cs" />
     <Compile Include="EmitExtensions\TypeBuilderExtensions.cs" />
@@ -106,6 +106,7 @@
     <Compile Include="CommonCode\SynchronizedDictionary.cs" />
     <Compile Include="CommonCode\Tuple.cs" />
     <Compile Include="CommonCode\TypeUtils.cs" />
+    <Compile Include="CommonCode\UtcDateTime.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

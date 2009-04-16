@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries.Test
 {
@@ -53,9 +54,9 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _DatetimeByte_SeqPk1 : IEquatable<_DatetimeByte_SeqPk1>
     {
-        public static DateTime FirstTimeStamp = new DateTime(2000, 1, 1);
+        public static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
 
-        public PackedDateTime a;
+        public UtcDateTime a;
         public byte b;
 
         #region Implementation
@@ -82,7 +83,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public override string ToString()
         {
-            return String.Format("{0:u}, {1}", (DateTime)a, b);
+            return String.Format("{0:u}, {1}", a, b);
         }
 
         public static _DatetimeByte_SeqPk1 New(long i)
@@ -100,9 +101,9 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _DatetimeBool_SeqPk1 : IEquatable<_DatetimeBool_SeqPk1>
     {
-        public static DateTime FirstTimeStamp = new DateTime(2000, 1, 1);
+        public static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
 
-        public PackedDateTime a;
+        public UtcDateTime a;
         public bool b;
 
         #region Implementation
@@ -129,7 +130,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public override string ToString()
         {
-            return String.Format("{0:u}, {1}", (DateTime)a, b);
+            return String.Format("{0:u}, {1}", a, b);
         }
 
         public static _DatetimeBool_SeqPk1 New(long i)
@@ -220,7 +221,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public static _LongByte_SeqPk1 New(long i)
         {
-            return new _LongByte_SeqPk1 { a = i, b = ((byte)(i & 0xFF)) };
+            return new _LongByte_SeqPk1 {a = i, b = ((byte) (i & 0xFF))};
         }
 
         #endregion
@@ -229,7 +230,6 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _BoolLongBool_SeqPk1 : IEquatable<_BoolLongBool_SeqPk1>
     {
-
         public bool a;
         public long b;
         public bool c;

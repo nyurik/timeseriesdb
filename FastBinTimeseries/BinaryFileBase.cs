@@ -17,17 +17,17 @@ namespace NYurik.FastBinTimeseries
         private static readonly Version s_dummyVersion = new Version(int.MaxValue, int.MaxValue, int.MaxValue,
                                                                      int.MaxValue);
 
-        private string _fileName;
         private Version _baseVersion;
         private bool _canWrite;
         private bool _enableMemoryMappedFileAccess;
+        private string _fileName;
         private Version _fileVersion;
         private int _headerSize;
         private bool _isDisposed;
         private bool _isInitialized;
         private Version _serializerVersion;
         private string _tag = "";
-        
+
         // These fields are accessed from the derived BinaryFile<T> class.
         protected internal long m_count;
         protected internal FileStream m_fileStream;
@@ -265,7 +265,7 @@ namespace NYurik.FastBinTimeseries
                 stream = new FileStream(
                     fileName, FileMode.Open, canWrite ? FileAccess.ReadWrite : FileAccess.Read,
                     canWrite ? FileShare.Read : FileShare.ReadWrite);
-                
+
                 BinaryFile file = Open(stream, typeMap);
                 file._fileName = fileName;
 
@@ -591,5 +591,31 @@ namespace NYurik.FastBinTimeseries
         /// Return the version number of the header.
         /// </summary>
         protected abstract Version WriteCustomHeader(BinaryWriter stream);
+
+        /// <summary>
+        /// Shrink file to the new size.
+        /// </summary>
+        /// <param name="newCount">Number of items the file should contain after this operation</param>
+        protected void PerformFileTrim(long newCount)
+        {
+            ThrowOnNotInitialized();
+            if (newCount < 0 || newCount > Count)
+                throw new ArgumentOutOfRangeException("newCount", newCount, "Must be >= 0 and <= Count");
+
+            // Optimize empty requests
+            if (Count == newCount)
+                return;
+
+            FileStream.SetLength(ItemIdxToOffset(newCount));
+            FileStream.Flush();
+            m_count = CalculateItemCountFromFilePosition(FileStream.Length);
+
+            // Just in case, hope this will never happen
+            if (newCount != m_count)
+                throw new IOException(
+                    string.Format(
+                        "Internal error: the new file should have had {0} items, but was calculated to have {1}",
+                        newCount, m_count));
+        }
     }
 }

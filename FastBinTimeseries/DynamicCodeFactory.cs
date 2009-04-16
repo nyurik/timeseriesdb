@@ -268,9 +268,9 @@ namespace NYurik.FastBinTimeseries
         /// Create a delegate that extracts a timestamp from the struct of type T.
         /// A datetime field must be first in the struct.
         /// </summary>
-        internal Func<T, PackedDateTime> CreateTSAccessor<T>(FieldInfo fieldInfo)
+        internal Func<T, UtcDateTime> CreateTSAccessor<T>(FieldInfo fieldInfo)
         {
-            return (Func<T, PackedDateTime>) _tsAccessorExpr.GetCreateValue(fieldInfo, CreateAccessor<T>);
+            return (Func<T, UtcDateTime>) _tsAccessorExpr.GetCreateValue(fieldInfo, CreateAccessor<T>);
         }
 
         private static Delegate CreateAccessor<T>(FieldInfo fieldInfo)
@@ -280,13 +280,13 @@ namespace NYurik.FastBinTimeseries
                 throw new InvalidOperationException(
                     String.Format("The field {0} does not belong to type {1}",
                                   fieldInfo.Name, itemType.FullName));
-            if (fieldInfo.FieldType != typeof (PackedDateTime))
+            if (fieldInfo.FieldType != typeof (UtcDateTime))
                 throw new InvalidOperationException(
-                    String.Format("The field {0} in type {1} is not a PackedDateTime",
+                    String.Format("The field {0} in type {1} is not a UtcDateTime",
                                   fieldInfo.Name, itemType.FullName));
 
             ParameterExpression vParam = Expression.Parameter(itemType, "v");
-            Expression<Func<T, PackedDateTime>> exprLambda = Expression.Lambda<Func<T, PackedDateTime>>(
+            Expression<Func<T, UtcDateTime>> exprLambda = Expression.Lambda<Func<T, UtcDateTime>>(
                 Expression.Field(vParam, fieldInfo), vParam);
             return exprLambda.Compile();
         }

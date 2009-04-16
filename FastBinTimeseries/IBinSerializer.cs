@@ -49,6 +49,6 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Compare the elements of <paramref name="buffer1"/> with <paramref name="buffer2"/>, and returns true if they are the same
         /// </summary>
-        bool CompareArrays(ArraySegment<T> buffer1, ArraySegment<T> buffer2);
+        bool BinaryArrayCompare(ArraySegment<T> buffer1, ArraySegment<T> buffer2);
     }
 }

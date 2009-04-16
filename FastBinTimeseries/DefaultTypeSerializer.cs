@@ -48,6 +48,7 @@ namespace NYurik.FastBinTimeseries
 //                return CompareMemoryPtr(p1, offset1, p2, offset2, count);
 //        }
 //
+
         #region IBinSerializer<T> Members
 
         public int TypeSize
@@ -70,13 +71,15 @@ namespace NYurik.FastBinTimeseries
             _processMemoryMap(memMapPtr, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
-        public bool CompareArrays(ArraySegment<T> buffer1, ArraySegment<T> buffer2)
+        public bool BinaryArrayCompare(ArraySegment<T> buffer1, ArraySegment<T> buffer2)
         {
-            if(buffer1.Array == null) throw new ArgumentNullException("buffer1");
-            if(buffer2.Array == null) throw new ArgumentNullException("buffer2");
-            
-            // minor optimization
-            if(buffer1.Count != buffer2.Count) return false;
+            if (buffer1.Array == null) throw new ArgumentNullException("buffer1");
+            if (buffer2.Array == null) throw new ArgumentNullException("buffer2");
+
+            // minor optimizations
+            if (buffer1.Count != buffer2.Count) return false;
+            if (buffer1.Count == 0) return true;
+
             return _compareArrays(buffer1.Array, buffer1.Offset, buffer2.Array, buffer2.Offset, buffer1.Count);
         }
 

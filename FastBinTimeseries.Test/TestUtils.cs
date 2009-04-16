@@ -17,16 +17,41 @@ namespace NYurik.FastBinTimeseries.Test
             return value - 1 + (multiple - (value - 1)%multiple);
         }
 
-        public static void AreEqual<T>(T[] expected, T[] values) where T : IEquatable<T>
+        public static void AreNotEqual<T>(T[] expected, T[] values, string description)
         {
-            Assert.AreEqual(expected.Length, values.Length, "Array lengths");
-            for (int i = 0; i < expected.Length; i++)
-            {
-                if (!expected[i].Equals(values[i]))
-                    throw new Exception(
-                        String.Format("Items in position {0} is {1}, but expected {2}",
-                                      i, values[i], expected[i]));
-            }
+            AreNotEqual(new ArraySegment<T>(expected), new ArraySegment<T>(values), description);
+        }
+
+        public static void AreNotEqual<T>(ArraySegment<T> expected, ArraySegment<T> values)
+        {
+            AreNotEqual(expected, values, null);
+        }
+
+        public static void AreNotEqual<T>(ArraySegment<T> expected, ArraySegment<T> values, string description)
+        {
+            var s = new DefaultTypeSerializer<T>();
+            Assert.IsFalse(s.BinaryArrayCompare(expected, values), description);
+        }
+
+        public static void AreEqual<T>(T[] expected, T[] values)
+        {
+            AreEqual(expected, values, null);
+        }
+
+        public static void AreEqual<T>(T[] expected, T[] values, string description)
+        {
+            AreEqual(new ArraySegment<T>(expected), new ArraySegment<T>(values), description);
+        }
+
+        public static void AreEqual<T>(ArraySegment<T> expected, ArraySegment<T> values)
+        {
+            AreEqual(expected, values, null);
+        }
+
+        public static void AreEqual<T>(ArraySegment<T> expected, ArraySegment<T> values, string description)
+        {
+            var s = new DefaultTypeSerializer<T>();
+            Assert.IsTrue(s.BinaryArrayCompare(expected, values), description);
         }
 
         public static T[] Concatenate<T>(params T[][] arrays)
@@ -42,17 +67,17 @@ namespace NYurik.FastBinTimeseries.Test
             string key = string.Format("{0},{1},{2}", typeof (T).FullName, startFrom, converter);
 
             T[] result;
-            LinkedListNode<CacheItem> res = items.Find(new CacheItem { Key = key });
+            LinkedListNode<CacheItem> res = items.Find(new CacheItem {Key = key});
             if (res != null)
             {
                 items.Remove(res);
-                
-                result = (T[])res.Value.Value;
+
+                result = (T[]) res.Value.Value;
                 if (result.Length >= count)
                 {
-                    if(result.Length > count)
+                    if (result.Length > count)
                     {
-                        var rOld = result;
+                        T[] rOld = result;
                         result = new T[count];
                         Array.Copy(rOld, result, count);
                     }
@@ -62,8 +87,8 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
 
-            result = new T[count+100];
-            for (long i = 0; i < count+100; i++)
+            result = new T[count + 100];
+            for (long i = 0; i < count + 100; i++)
                 result[i] = converter(i + startFrom);
             items.AddFirst(new CacheItem {Key = key, Value = result});
             if (items.Count > 100)

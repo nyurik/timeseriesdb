@@ -55,14 +55,14 @@ namespace NYurik.FastBinTimeseries
             get { return Serializer; }
         }
 
+        public override sealed Type ItemType
+        {
+            get { return typeof (T); }
+        }
+
         protected internal override sealed void SetSerializer(IBinSerializer nonGenericSerializer)
         {
             _serializer = (IBinSerializer<T>) nonGenericSerializer;
-        }
-
-        public sealed override Type ItemType
-        {
-            get { return typeof (T); }
         }
 
         protected void PerformRead(long firstItemIdx, ArraySegment<T> buffer)
@@ -86,7 +86,7 @@ namespace NYurik.FastBinTimeseries
                     "buffer", buffer.Count,
                     "There is not enough data to fulfill this request. FirstItemIndex + Buffer.Count > Count");
 
-            // Optimize out empty requests
+            // Optimize empty requests
             if (buffer.Count == 0)
                 return;
 
@@ -173,7 +173,8 @@ namespace NYurik.FastBinTimeseries
                         // Access file using memory-mapped pages
                         Serializer.ProcessMemoryMap(
                             (IntPtr) (ptrMapViewBaseAddr.Address + offsetCurrent - mapViewFileOffset),
-                            new ArraySegment<T>(buffer.Array, (int) bufItemOffset, (int) itemsToProcessThisRun), isWriting);
+                            new ArraySegment<T>(buffer.Array, (int) bufItemOffset, (int) itemsToProcessThisRun),
+                            isWriting);
 
                         idxCurrent += itemsToProcessThisRun;
                     }

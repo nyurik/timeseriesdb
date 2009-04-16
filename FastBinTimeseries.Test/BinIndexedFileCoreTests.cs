@@ -1,27 +1,12 @@
 using System;
 using System.IO;
-using System.Reflection;
 using NUnit.Framework;
 
 namespace NYurik.FastBinTimeseries.Test
 {
     [TestFixture]
-    public class CoreTests
+    public class BinIndexedFileCoreTests : TestsBase
     {
-        #region Setup/Teardown
-
-        [SetUp]
-        public void Cleanup()
-        {
-            // perform the init to count accurate performance
-            new PackedDateTime();
-            if (File.Exists(binFile))
-                File.Delete(binFile);
-        }
-
-        #endregion
-
-        private static readonly string binFile = MethodBase.GetCurrentMethod().DeclaringType + ".bsd";
         private const string TagString = "Test123";
 
         private static void AfterInitValidation(BinaryFile<byte> f, bool canWrite)
@@ -37,7 +22,7 @@ namespace NYurik.FastBinTimeseries.Test
             Assert.AreEqual(1, f.ItemSize);
             Assert.AreEqual(canWrite, f.CanWrite);
             Assert.AreEqual(TagString, f.Tag);
-            Assert.AreEqual(binFile, f.FileName);
+            Assert.AreEqual(BinFileName, f.FileName);
         }
 
         private static void AssertInvalidOperationException<T>(BinaryFile<T> f, Func<BinaryFile<T>, object> operation)
@@ -55,47 +40,50 @@ namespace NYurik.FastBinTimeseries.Test
         [Test]
         public void ArrayCompare()
         {
-            const int bufSize = 1024 * 1024 * 1;
+            const int bufSize = 1024*1024*1;
             var buf1 = new byte[bufSize];
             var buf2 = new byte[bufSize];
-
-            var s = new DefaultTypeSerializer<byte>();
 
             var buf1all = new ArraySegment<byte>(buf1);
             var buf2all = new ArraySegment<byte>(buf2);
 
-            Assert.IsTrue(s.CompareArrays(buf1all, buf2all), "compare zeroes");
+            TestUtils.AreEqual(buf1all, buf2all, "compare zeroes");
 
-            for (int i = 0; i < bufSize; i++) buf2[i] = buf1[i] = (byte)(i & 0xFF);
+            for (int i = 0; i < bufSize; i++) buf2[i] = buf1[i] = (byte) (i & 0xFF);
 
-            Assert.IsTrue(s.CompareArrays(buf1all, buf2all), "compare byte 0,1,2,3,...,255,0,...");
-            Assert.IsFalse(s.CompareArrays(new ArraySegment<byte>(buf1, 255, bufSize-255),new ArraySegment<byte>(buf2, 0, bufSize-255)));
-            Assert.IsTrue(s.CompareArrays(new ArraySegment<byte>(buf1, 256, bufSize-256),new ArraySegment<byte>(buf2, 0, bufSize-256)));
-            Assert.IsFalse(s.CompareArrays(new ArraySegment<byte>(buf1, 257, bufSize-257),new ArraySegment<byte>(buf2, 0, bufSize-257)));
-            Assert.IsTrue(s.CompareArrays(new ArraySegment<byte>(buf1, 255, bufSize-511),new ArraySegment<byte>(buf2, 511, bufSize-511)));
-            Assert.IsTrue(s.CompareArrays(new ArraySegment<byte>(buf1, 257, bufSize-257),new ArraySegment<byte>(buf2, 1, bufSize-257)));
+            TestUtils.AreEqual(buf1all, buf2all, "compare byte 0,1,2,3,...,255,0,...");
+            TestUtils.AreNotEqual(new ArraySegment<byte>(buf1, 255, bufSize - 255),
+                                  new ArraySegment<byte>(buf2, 0, bufSize - 255));
+            TestUtils.AreEqual(new ArraySegment<byte>(buf1, 256, bufSize - 256),
+                               new ArraySegment<byte>(buf2, 0, bufSize - 256));
+            TestUtils.AreNotEqual(new ArraySegment<byte>(buf1, 257, bufSize - 257),
+                                  new ArraySegment<byte>(buf2, 0, bufSize - 257));
+            TestUtils.AreEqual(new ArraySegment<byte>(buf1, 255, bufSize - 511),
+                               new ArraySegment<byte>(buf2, 511, bufSize - 511));
+            TestUtils.AreEqual(new ArraySegment<byte>(buf1, 257, bufSize - 257),
+                               new ArraySegment<byte>(buf2, 1, bufSize - 257));
 
             for (int i = 0; i < 1000; i++)
             {
                 buf1[i]++;
-                Assert.IsFalse(s.CompareArrays(buf1all, buf2all));
+                TestUtils.AreNotEqual(buf1all, buf2all);
                 buf1[i]--;
             }
-            Assert.IsTrue(s.CompareArrays(buf1all, buf2all));
+            TestUtils.AreEqual(buf1all, buf2all);
             for (int i = 0; i < 1000; i++)
             {
-                buf1[bufSize-i-1]++;
-                Assert.IsFalse(s.CompareArrays(buf1all, buf2all));
+                buf1[bufSize - i - 1]++;
+                TestUtils.AreNotEqual(buf1all, buf2all);
                 buf1[bufSize - i - 1]--;
             }
-            Assert.IsTrue(s.CompareArrays(buf1all, buf2all));
+            TestUtils.AreEqual(buf1all, buf2all);
         }
 
         [Test]
         public void BasicFunctionality()
         {
             BinIndexedFile<byte> temp;
-            using (var f = new BinIndexedFile<byte>(binFile))
+            using (var f = new BinIndexedFile<byte>(BinFileName))
             {
                 temp = f;
                 AssertInvalidOperationException(f, i => i.Count);
@@ -110,7 +98,7 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.IsFalse(f.IsInitialized);
                 Assert.IsFalse(f.IsDisposed);
                 Assert.IsFalse(f.IsOpen);
-                Assert.AreEqual(binFile, f.FileName);
+                Assert.AreEqual(BinFileName, f.FileName);
                 Assert.AreEqual("", f.Tag);
                 f.Tag = TagString;
 
@@ -119,7 +107,7 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.IsTrue(f.IsInitialized);
                 Assert.IsFalse(f.IsDisposed);
                 Assert.IsTrue(f.IsOpen);
-                Assert.AreEqual(binFile, f.FileName);
+                Assert.AreEqual(BinFileName, f.FileName);
 
                 AssertInvalidOperationException(
                     f, i =>
@@ -139,9 +127,9 @@ namespace NYurik.FastBinTimeseries.Test
             Assert.IsTrue(temp.IsInitialized);
             Assert.IsTrue(temp.IsDisposed);
             Assert.IsFalse(temp.IsOpen);
-            Assert.AreEqual(binFile, temp.FileName);
+            Assert.AreEqual(BinFileName, temp.FileName);
 
-            using (var file = (BinIndexedFile<byte>) BinaryFile.Open(binFile, true))
+            using (var file = (BinIndexedFile<byte>) BinaryFile.Open(BinFileName, true))
             {
                 AfterInitValidation(file, true);
                 file.Close();
@@ -150,17 +138,17 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.IsTrue(file.IsInitialized);
                 Assert.IsTrue(file.IsDisposed);
                 Assert.IsFalse(file.IsOpen);
-                Assert.AreEqual(binFile, file.FileName);
+                Assert.AreEqual(BinFileName, file.FileName);
             }
 
-            using (var file = (BinIndexedFile<byte>) BinaryFile.Open(binFile, false))
+            using (var file = (BinIndexedFile<byte>) BinaryFile.Open(BinFileName, false))
             {
                 AfterInitValidation(file, false);
                 ((IDisposable) file).Dispose();
                 AssertInvalidOperationException(file, i => i.Tag);
             }
 
-            using (var f = new BinIndexedFile<byte>(binFile))
+            using (var f = new BinIndexedFile<byte>(BinFileName))
             {
                 try
                 {
@@ -171,7 +159,7 @@ namespace NYurik.FastBinTimeseries.Test
                 {
                 }
 
-                File.Delete(binFile);
+                File.Delete(BinFileName);
 
                 f.InitializeNewFile();
             }
