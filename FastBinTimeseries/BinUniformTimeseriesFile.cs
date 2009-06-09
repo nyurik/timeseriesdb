@@ -8,7 +8,7 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Helper non-generic class aids in creating a new instance of <see cref="BinUniformTimeseriesFile{T}"/>.
     /// </summary>
-    public class BinUniformTimeseriesFile
+    public static class BinUniformTimeseriesFile
     {
         /// <summary>
         /// Uses reflection to create an instance of <see cref="BinUniformTimeseriesFile{T}"/>.
@@ -27,7 +27,8 @@ namespace NYurik.FastBinTimeseries
     /// Object representing a binary-serialized timeseries file with each item with uniform distribution of items
     /// one <see cref="ItemTimeSpan"/> from each other.
     /// </summary>
-    public class BinUniformTimeseriesFile<T> : BinaryFile<T>, IBinUniformTimeseriesFile
+    public class BinUniformTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinUniformTimeseriesFile,
+                                               IStoredUniformTimeseries<T>
     {
         #region Constructors
 
@@ -49,31 +50,39 @@ namespace NYurik.FastBinTimeseries
             : base(fileName)
         {
             ItemTimeSpan = itemTimeSpan;
-            FirstFileTS = firstTimestamp;
+            FirstTimestamp = firstTimestamp;
         }
 
         #endregion
 
         #region Fields
 
-        private UtcDateTime _firstFileTs;
+        private UtcDateTime _firstTimestamp;
         private TimeSpan _itemTimeSpan;
 
-        public UtcDateTime FirstFileTS
+        /// <summary>
+        /// The timestamp of the first item in the file.
+        /// May only be set before the <see cref="BinaryFile.InitializeNewFile"/> is called.
+        /// </summary>
+        public UtcDateTime FirstTimestamp
         {
-            get { return _firstFileTs; }
+            get { return _firstTimestamp; }
             set
             {
                 ThrowOnInitialized();
-                _firstFileTs = ValidateIndex(value);
+                _firstTimestamp = this.ValidateIndex(value);
             }
         }
 
-        public UtcDateTime FirstUnavailableTS
+        public UtcDateTime FirstUnavailableTimestamp
         {
-            get { return FirstFileTS + ItemTimeSpan.Multiple(Count); }
+            get { return FirstTimestamp + ItemTimeSpan.Multiply(Count); }
         }
 
+        /// <summary>
+        /// Span of time each item represents.
+        /// May only be set before the <see cref="BinaryFile.InitializeNewFile"/> is called.
+        /// </summary>
         public TimeSpan ItemTimeSpan
         {
             get { return _itemTimeSpan; }
@@ -91,35 +100,41 @@ namespace NYurik.FastBinTimeseries
 
         public int AdjustRangeToExistingData(ref UtcDateTime fromInclusive, ref UtcDateTime toExclusive)
         {
-            if (fromInclusive < FirstFileTS)
-                fromInclusive = FirstFileTS;
+            if (fromInclusive < FirstTimestamp)
+                fromInclusive = FirstTimestamp;
             else
                 fromInclusive = new UtcDateTime(
                     FastBinFileUtils.RoundUpToMultiple(fromInclusive.Ticks, ItemTimeSpan.Ticks));
 
-            if (toExclusive > FirstUnavailableTS)
-                toExclusive = FirstUnavailableTS;
+            if (toExclusive > FirstUnavailableTimestamp)
+                toExclusive = FirstUnavailableTimestamp;
             else
                 toExclusive = new UtcDateTime(
                     FastBinFileUtils.RoundUpToMultiple(toExclusive.Ticks, ItemTimeSpan.Ticks));
 
-            if (fromInclusive >= FirstUnavailableTS || toExclusive <= FirstFileTS)
+            if (fromInclusive >= FirstUnavailableTimestamp || toExclusive <= FirstTimestamp)
                 return 0;
 
-            long len = IndexToLong(toExclusive) - IndexToLong(fromInclusive);
+            long len = this.IndexToLong(toExclusive) - this.IndexToLong(fromInclusive);
             if (len > int.MaxValue)
                 return 0;
             return (int) len;
         }
 
-        Array IBinUniformTimeseriesFile.GenericReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive)
+        Array IStoredUniformTimeseries.GenericReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive)
         {
             return ReadData(fromInclusive, toExclusive);
         }
 
-        Array IBinUniformTimeseriesFile.GenericReadData(UtcDateTime fromInclusive, int count)
+        Array IStoredUniformTimeseries.GenericReadData(UtcDateTime fromInclusive, int count)
         {
-            return ReadData(fromInclusive, count);
+            long firstItemIdx = this.IndexToLong(fromInclusive);
+            int bufCount = Math.Min((Count - firstItemIdx).ToIntCountChecked(), count);
+            var buffer = new ArraySegment<T>(new T[bufCount], 0, bufCount);
+
+            PerformRead(firstItemIdx, buffer);
+
+            return buffer.Array;
         }
 
         void IBinUniformTimeseriesFile.GenericWriteData(UtcDateTime firstItemIndex, Array buffer, int offset, int count)
@@ -129,7 +144,7 @@ namespace NYurik.FastBinTimeseries
 
         public void TruncateFile(UtcDateTime newFirstUnavailableTimestamp)
         {
-            PerformTruncateFile(IndexToLong(newFirstUnavailableTimestamp));
+            PerformTruncateFile(this.IndexToLong(newFirstUnavailableTimestamp));
         }
 
         #endregion
@@ -137,42 +152,35 @@ namespace NYurik.FastBinTimeseries
         private static readonly Version CurrentVersion = new Version(1, 1);
         private static readonly Version Ver10 = new Version(1, 0);
 
-        protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
-        {
-            if (version == CurrentVersion || version == Ver10)
-            {
-                ItemTimeSpan = TimeSpan.FromTicks(stream.ReadInt64());
+        #region IBinaryFile<T> Members
 
-                // in 1.0, DateTime was serialized as binary instead of UtcDateTime.Ticks
-                FirstFileTS =
-                    version == CurrentVersion
-                        ? new UtcDateTime(stream.ReadInt64())
-                        : new UtcDateTime(DateTime.FromBinary(stream.ReadInt64()));
-            }
-            else
-                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
+        public void ReadData(long firstItemIdx, ArraySegment<T> buffer)
+        {
+            PerformRead(firstItemIdx, buffer);
         }
 
-        protected override Version WriteCustomHeader(BinaryWriter stream)
-        {
-            stream.Write(ItemTimeSpan.Ticks);
-            stream.Write(FirstFileTS.Ticks);
+        #endregion
 
-            return CurrentVersion;
+        #region IStoredUniformTimeseries<T> Members
+
+        public ITimeSeries<T> GetTimeSeries(long firstItemIdx, int count)
+        {
+            throw new NotImplementedException();
         }
 
-        public override string ToString()
+        public int ReadData(UtcDateTime fromInclusive, ArraySegment<T> buffer)
         {
-            return string.Format("{0}, firstTS={1}, slice={2}", base.ToString(), FirstFileTS, ItemTimeSpan);
+            long firstItemIdx = this.IndexToLong(fromInclusive);
+            int maxCount = (Count - firstItemIdx).ToIntCountChecked();
+            if (buffer.Count > maxCount)
+                buffer = new ArraySegment<T>(buffer.Array, buffer.Offset, maxCount);
+
+            PerformRead(firstItemIdx, buffer);
+
+            return buffer.Count;
         }
 
-        private UtcDateTime ValidateIndex(UtcDateTime timestamp)
-        {
-            if (timestamp.Ticks%ItemTimeSpan.Ticks != 0)
-                throw new IOException(
-                    String.Format("The timestamp {0} must be aligned by the time slice {1}", timestamp, ItemTimeSpan));
-            return timestamp;
-        }
+        #endregion
 
         /// <summary>
         /// Read data starting at <paramref name="fromInclusive"/>, up to, but not including <paramref name="toExclusive"/>.
@@ -182,8 +190,8 @@ namespace NYurik.FastBinTimeseries
         {
             if (buffer.Array == null) throw new ArgumentNullException("buffer");
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-            PerformRead(rng.First, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Second)));
-            return rng.Second;
+            PerformRead(rng.Item1, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)));
+            return rng.Item2;
         }
 
         /// <summary>
@@ -192,33 +200,10 @@ namespace NYurik.FastBinTimeseries
         public T[] ReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive)
         {
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-            var buffer = new T[rng.Second];
+            var buffer = new T[rng.Item2];
 
-            PerformRead(rng.First, new ArraySegment<T>(buffer));
+            PerformRead(rng.Item1, new ArraySegment<T>(buffer));
 
-            return buffer;
-        }
-
-        /// <summary>
-        /// Read items starting at <paramref name="fromInclusive"/>.
-        /// </summary>
-        /// <param name="fromInclusive">Index of the item to start from.</param>
-        /// <param name="buffer">Array of values to be written into a file.</param>
-        public void ReadData(UtcDateTime fromInclusive, ArraySegment<T> buffer)
-        {
-            PerformRead(IndexToLong(fromInclusive), buffer);
-        }
-
-        /// <summary>
-        /// Read <paramref name="count"/> items starting at <paramref name="fromInclusive"/>.
-        /// </summary>
-        /// <param name="fromInclusive">Index of the item to start from.</param>
-        /// <param name="count">The number of items to be read.</param>
-        /// <returns>New array of elements</returns>
-        public T[] ReadData(UtcDateTime fromInclusive, int count)
-        {
-            var buffer = new T[count];
-            PerformRead(IndexToLong(fromInclusive), new ArraySegment<T>(buffer));
             return buffer;
         }
 
@@ -233,17 +218,41 @@ namespace NYurik.FastBinTimeseries
 
             if (!CanWrite) throw new InvalidOperationException("The file was opened as readonly");
 
-            if (firstItemIndex < FirstFileTS)
+            if (firstItemIndex < FirstTimestamp)
                 throw new ArgumentOutOfRangeException("firstItemIndex", firstItemIndex,
-                                                      "Must be >= FirstFileTS (" + FirstFileTS + ")");
-            if (firstItemIndex > FirstUnavailableTS)
+                                                      "Must be >= FirstTimestamp (" + FirstTimestamp + ")");
+            if (firstItemIndex > FirstUnavailableTimestamp)
                 throw new ArgumentOutOfRangeException("firstItemIndex", firstItemIndex,
-                                                      "Must be <= FirstUnavailableTS (" +
-                                                      FirstUnavailableTS + ")");
+                                                      "Must be <= FirstUnavailableTimestamp (" +
+                                                      FirstUnavailableTimestamp + ")");
 
-            long itemLong = IndexToLong(firstItemIndex);
+            long itemLong = this.IndexToLong(firstItemIndex);
 
             PerformWrite(itemLong, buffer);
+        }
+
+        protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
+        {
+            if (version == CurrentVersion || version == Ver10)
+            {
+                ItemTimeSpan = TimeSpan.FromTicks(stream.ReadInt64());
+
+                // in 1.0, DateTime was serialized as binary instead of UtcDateTime.Ticks
+                FirstTimestamp =
+                    version == CurrentVersion
+                        ? new UtcDateTime(stream.ReadInt64())
+                        : new UtcDateTime(DateTime.FromBinary(stream.ReadInt64()));
+            }
+            else
+                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
+        }
+
+        protected override Version WriteCustomHeader(BinaryWriter stream)
+        {
+            stream.Write(ItemTimeSpan.Ticks);
+            stream.Write(FirstTimestamp.Ticks);
+
+            return CurrentVersion;
         }
 
         /// <summary>
@@ -254,13 +263,23 @@ namespace NYurik.FastBinTimeseries
             if (fromInclusive.CompareTo(toExclusive) > 0)
                 throw new ArgumentOutOfRangeException("fromInclusive", "'from' must be <= 'to'");
 
-            long firstIndexIncl = IndexToLong(fromInclusive);
-            return Tuple.Create(firstIndexIncl, (IndexToLong(toExclusive) - firstIndexIncl).ToInt32Checked());
+            long firstIndexIncl = this.IndexToLong(fromInclusive);
+            return Tuple.Create(firstIndexIncl, (this.IndexToLong(toExclusive) - firstIndexIncl).ToIntCountChecked());
         }
 
-        protected long IndexToLong(UtcDateTime timestamp)
+        public override string ToString()
         {
-            return (ValidateIndex(timestamp).Ticks - FirstFileTS.Ticks)/ItemTimeSpan.Ticks;
+            return string.Format("{0}, firstTS={1}, slice={2}", base.ToString(), FirstTimestamp, ItemTimeSpan);
+        }
+
+        public long BinarySearch(UtcDateTime timestamp)
+        {
+            throw new NotImplementedException();
+        }
+
+        ITimeSeries IStoredTimeSeries.GetTimeSeries(long firstItemIdx, int count)
+        {
+            return GetTimeSeries(firstItemIdx, count);
         }
     }
 }

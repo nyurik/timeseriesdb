@@ -149,17 +149,5 @@ namespace NYurik.FastBinTimeseries
             writer.Write(ver.Build);
             writer.Write(ver.Revision);
         }
-
-        public static int ToInt32Checked(this long itemsCountLng)
-        {
-            if (itemsCountLng < 0)
-                throw new ArgumentOutOfRangeException("itemsCountLng", itemsCountLng, "<0");
-            if (itemsCountLng > Int32.MaxValue)
-                throw new ArgumentException(
-                    String.Format(
-                        "Attempted to process {0} items at once, which is over the maximum of {1}.",
-                        itemsCountLng, Int32.MaxValue));
-            return (int) itemsCountLng;
-        }
     }
 }

@@ -3,7 +3,7 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
-    public interface IBinTimeseriesFile
+    public interface IBinTimeseriesFile : IBinaryFile
     {
         /// <summary>
         /// Specifies which field in the item type to use as a timestamp.
@@ -11,14 +11,10 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         FieldInfo TimestampFieldInfo { get; set; }
 
-        /// <summary>
-        /// Returns null for empty file, or the timestamp of the last element
-        /// </summary>
+        /// <summary> Returns null for empty file, or the timestamp of the first element </summary>
         UtcDateTime? FirstFileTS { get; }
 
-        /// <summary>
-        /// Returns null for empty file, or the timestamp of the last element
-        /// </summary>
+        /// <summary> Returns null for empty file, or the timestamp of the last element </summary>
         UtcDateTime? LastFileTS { get; }
 
         /// <summary>
@@ -53,15 +49,11 @@ namespace NYurik.FastBinTimeseries
         /// a negative number which is the bitwise complement of (the index of the last element plus 1).</returns>
         long BinarySearch(UtcDateTime timestamp, bool findFirst);
 
-        /// <summary>
-        /// Truncate existing file to the new date.
-        /// </summary>
+        /// <summary> Truncate existing file to the new date. </summary>
         /// <param name="lastTimestampToPreserve">After truncation, the file will have up to and including this timestamp</param>
         void TruncateFile(UtcDateTime lastTimestampToPreserve);
 
-        /// <summary>
-        /// Truncate existing file to the new item count.
-        /// </summary>
+        /// <summary> Truncate existing file to the new item count. </summary>
         void TruncateFile(long newCount);
     }
 }

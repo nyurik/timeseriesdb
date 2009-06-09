@@ -15,13 +15,13 @@ namespace NYurik.FastBinTimeseries
         internal const BindingFlags AllInstanceMembers =
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        private static DynamicCodeFactory s_instance;
+        private static DynamicCodeFactory _instance;
 
-        private readonly SynchronizedDictionary<Type, BinSerializerInfo> _serializers =
-            new SynchronizedDictionary<Type, BinSerializerInfo>();
+        private readonly DynamicSyncDictionary<Type, BinSerializerInfo> _serializers =
+            new DynamicSyncDictionary<Type, BinSerializerInfo>(CreateDynamicSerializerType);
 
-        private readonly SynchronizedDictionary<FieldInfo, Delegate> _tsAccessorExpr =
-            new SynchronizedDictionary<FieldInfo, Delegate>();
+        private readonly DynamicSyncDictionary<FieldInfo, Delegate> _tsAccessorExpr =
+            new DynamicSyncDictionary<FieldInfo, Delegate>(null);
 
         private DynamicCodeFactory()
         {
@@ -32,11 +32,11 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 // todo: switch to LazyInit<> in .Net 4.0
-                if (s_instance == null)
+                if (_instance == null)
                     lock (typeof (DynamicCodeFactory))
-                        if (s_instance == null)
-                            s_instance = new DynamicCodeFactory();
-                return s_instance;
+                        if (_instance == null)
+                            _instance = new DynamicCodeFactory();
+                return _instance;
             }
         }
 
@@ -116,7 +116,7 @@ namespace NYurik.FastBinTimeseries
 
         internal BinSerializerInfo CreateSerializer<T>()
         {
-            return _serializers.GetCreateValue(typeof (T), CreateDynamicSerializerType);
+            return _serializers.GetCreateValue(typeof (T));
         }
 
         private static BinSerializerInfo CreateDynamicSerializerType(Type itemType)
@@ -128,16 +128,16 @@ namespace NYurik.FastBinTimeseries
 
             // Create the abstract method overrides
             return new BinSerializerInfo(
-                (int) CreateSizeOfMethodIL(itemType, ifType.Module).Invoke(null, null),
-                CreateSerializerMethodIL(
+                (int) CreateSizeOfMethod(itemType, ifType.Module).Invoke(null, null),
+                CreateSerializerMethod(
                     itemType, ifType, "DynProcessFileStream", "ProcessFileStreamPtr", typeof (FileStream)),
-                CreateSerializerMethodIL(
+                CreateSerializerMethod(
                     itemType, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr)),
-                CreateMemComparerMethodIL(itemType, ifType)
+                CreateMemComparerMethod(itemType, ifType)
                 );
         }
 
-        private static DynamicMethod CreateSizeOfMethodIL(Type itemType, Module module)
+        private static DynamicMethod CreateSizeOfMethod(Type itemType, Module module)
         {
             var method = new DynamicMethod("SizeOf", typeof (int), null, module, true);
             ILGenerator emit = method.GetILGenerator();
@@ -149,7 +149,7 @@ namespace NYurik.FastBinTimeseries
             return method;
         }
 
-        private static DynamicMethod CreateSerializerMethodIL(Type itemType, Type baseType, string methodName,
+        private static DynamicMethod CreateSerializerMethod(Type itemType, Type baseType, string methodName,
                                                               string methodToCallName, Type firstParamType)
         {
             MethodInfo methodToCall = GetMethodInfo(baseType, methodToCallName);
@@ -196,7 +196,7 @@ namespace NYurik.FastBinTimeseries
             return method;
         }
 
-        private static DynamicMethod CreateMemComparerMethodIL(Type itemType, Type baseType)
+        private static DynamicMethod CreateMemComparerMethod(Type itemType, Type baseType)
         {
             MethodInfo methodToCall = GetMethodInfo(baseType, "CompareMemoryPtr");
 
@@ -231,7 +231,7 @@ namespace NYurik.FastBinTimeseries
             // 3 - void* bufPtr2
             // 4 - int offset2
             // 5 - int count
-            Label L_0022 = emit.DefineLabel();
+            Label l0022 = emit.DefineLabel();
             emit
                 .ldarg_1() //           L_0000: ldarg.1 
                 .ldc_i4_0() //          L_0001: ldc.i4.0 
@@ -251,8 +251,8 @@ namespace NYurik.FastBinTimeseries
                 .ldarg_s(5) //          L_0018: ldarg.s count
                 .call(methodToCall) //  L_001a: call instance ... (our method)
                 .stloc_2() //           L_001f: stloc.2 
-                .leave_s(L_0022) //     L_0020: leave.s L_0022
-                .MarkLabelExt(L_0022)
+                .leave_s(l0022) //      L_0020: leave.s L_0022
+                .MarkLabelExt(l0022)
                 .ldloc_2() //           L_0022: ldloc.2 
                 .ret() //               L_0023: ret 
                 ;

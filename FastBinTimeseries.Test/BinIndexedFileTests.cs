@@ -19,7 +19,7 @@ namespace NYurik.FastBinTimeseries.Test
         {
             var buffer = new T[count];
             f.ReadData(firstItemIndex, new ArraySegment<T>(buffer));
-            TestUtils.AreEqual<T>(expected, buffer);
+            TestUtils.AreEqual(expected, buffer);
         }
 
         private void EmptyFile<T>(int expectedItemSize)
@@ -54,7 +54,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                 using (BinaryFile file = BinaryFile.Open(BinFileName, false))
                 {
-                    Assert.IsInstanceOfType(typeof (BinIndexedFile<T>), file);
+                    Assert.IsInstanceOf<BinIndexedFile<T>>(file);
                     var f = (BinIndexedFile<T>) file;
 
                     Assert.AreEqual(fileVersion, f.FileVersion);
@@ -116,7 +116,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                 using (BinaryFile file = BinaryFile.Open(BinFileName, true))
                 {
-                    Assert.IsInstanceOfType(typeof (BinIndexedFile<T>), file);
+                    Assert.IsInstanceOf<BinIndexedFile<T>>(file);
                     var f = (BinIndexedFile<T>) file;
                     Assert.AreEqual(true, f.CanWrite);
                     Assert.AreEqual(1, f.Count);
@@ -187,35 +187,36 @@ namespace NYurik.FastBinTimeseries.Test
             using (var f = new BinIndexedFile<T>(BinFileName))
             {
                 f.InitializeNewFile();
-                f.EnableMemoryMappedFileAccess = enableMemoryMappedAccess;
+                f.EnableMemMappedAccessOnRead = enableMemoryMappedAccess;
+                f.EnableMemMappedAccessOnWrite = enableMemoryMappedAccess;
 
                 int itemsPerPage = pageSize/Marshal.SizeOf(typeof (T));
                 int headerSizeAsItemCount = f.HeaderSize/f.ItemSize;
-                int items1stPg = (int) TestUtils.RoundUpToMultiple(headerSizeAsItemCount, itemsPerPage) -
+                int items1StPg = (int) TestUtils.RoundUpToMultiple(headerSizeAsItemCount, itemsPerPage) -
                                  headerSizeAsItemCount;
 
-                if (items1stPg == 0)
-                    items1stPg = itemsPerPage;
+                if (items1StPg == 0)
+                    items1StPg = itemsPerPage;
 
-                T[] dataMinusOne = TestUtils.GenerateData(converter, items1stPg - 1, 0);
-                T[] dataZero = TestUtils.GenerateData(converter, items1stPg, 0);
-                T[] dataPlusOne = TestUtils.GenerateData(converter, items1stPg + 1, 0);
+                T[] dataMinusOne = TestUtils.GenerateData(converter, items1StPg - 1, 0);
+                T[] dataZero = TestUtils.GenerateData(converter, items1StPg, 0);
+                T[] dataPlusOne = TestUtils.GenerateData(converter, items1StPg + 1, 0);
 
                 f.WriteData(0, new ArraySegment<T>(dataMinusOne));
-                Assert.AreEqual(f.HeaderSize + (items1stPg - 1)*f.ItemSize, new FileInfo(BinFileName).Length);
+                Assert.AreEqual(f.HeaderSize + (items1StPg - 1)*f.ItemSize, new FileInfo(BinFileName).Length);
                 ReadAndAssert(dataMinusOne, f, 0, dataMinusOne.Length);
 
                 f.WriteData(0, new ArraySegment<T>(dataZero));
-                Assert.AreEqual(f.HeaderSize + items1stPg*f.ItemSize, new FileInfo(BinFileName).Length);
+                Assert.AreEqual(f.HeaderSize + items1StPg*f.ItemSize, new FileInfo(BinFileName).Length);
                 ReadAndAssert(dataZero, f, 0, dataZero.Length);
 
                 f.WriteData(0, new ArraySegment<T>(dataPlusOne));
-                Assert.AreEqual(f.HeaderSize + (items1stPg + 1)*f.ItemSize, new FileInfo(BinFileName).Length);
+                Assert.AreEqual(f.HeaderSize + (items1StPg + 1)*f.ItemSize, new FileInfo(BinFileName).Length);
                 ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
 
-                ReadAndAssert(TestUtils.GenerateData(converter, 1, items1stPg - 1), f, items1stPg - 1, 1);
-                ReadAndAssert(TestUtils.GenerateData(converter, 1, items1stPg), f, items1stPg, 1);
-                ReadAndAssert(TestUtils.GenerateData(converter, 2, items1stPg - 1), f, items1stPg - 1, 2);
+                ReadAndAssert(TestUtils.GenerateData(converter, 1, items1StPg - 1), f, items1StPg - 1, 1);
+                ReadAndAssert(TestUtils.GenerateData(converter, 1, items1StPg), f, items1StPg, 1);
+                ReadAndAssert(TestUtils.GenerateData(converter, 2, items1StPg - 1), f, items1StPg - 1, 2);
             }
         }
 
@@ -258,7 +259,7 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         [Test]
-        public void PageCheckMMF()
+        public void PageCheckMmf()
         {
             PageBorderOperations<byte>(TestUtils.NewByte, true);
             PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, true);

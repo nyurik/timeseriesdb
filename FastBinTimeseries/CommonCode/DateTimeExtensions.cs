@@ -4,6 +4,10 @@ namespace NYurik.FastBinTimeseries.CommonCode
 {
     public static class DateTimeExtensions
     {
+        private const string FormatDateOnly = "yyyy-MM-dd";
+        private const string FormatDateTime = "yyyy-MM-dd HH:mm:ss";
+        private const string FormatDateTimeMs = "yyyy-MM-dd HH:mm:ss.ffff";
+
         /// <summary>
         /// Convert from unspecified kind as stored in database to UTC, assuming that original value was UTC
         /// </summary>
@@ -30,9 +34,9 @@ namespace NYurik.FastBinTimeseries.CommonCode
         /// Calls <see cref="DateTime.ToUniversalTime"/> on the value, and converts
         /// to <see cref="UtcDateTime"/>
         /// </summary>
-        public static UtcDateTime ToUtc(this DateTime date)
+        public static UtcDateTime ToUtc(this DateTime dateTime)
         {
-            return (UtcDateTime) date.Date.ToUniversalTime();
+            return (UtcDateTime) dateTime.ToUniversalTime();
         }
 
         /// <summary>
@@ -44,7 +48,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
             return new TimeSpan(Math.Abs(first.Ticks - second.Ticks));
         }
 
-        public static TimeSpan Multiple(this TimeSpan timeSpan, long count)
+        public static TimeSpan Multiply(this TimeSpan timeSpan, long count)
         {
             return TimeSpan.FromTicks(timeSpan.Ticks*count);
         }
@@ -61,6 +65,43 @@ namespace NYurik.FastBinTimeseries.CommonCode
                 throw new ArgumentException(
                     String.Format("Dividend '{0}' may not be evenly divided by the divisor '{1}'", dividend, divisor));
             return dividend.Ticks/divisor.Ticks;
+        }
+
+        /// <summary>
+        /// Converts DateTime to string
+        /// Includes time if the value is not at midnight, includes milliseconds if not 0
+        /// </summary>
+        public static string ToStringAuto(this DateTime dateTime)
+        {
+            if (dateTime == dateTime.Date)
+                return dateTime.ToString(FormatDateOnly);
+            if (dateTime.Millisecond == 0)
+                return dateTime.ToString(FormatDateTime);
+            return dateTime.ToString(FormatDateTimeMs);
+        }
+
+        /// <summary>
+        /// Converts UtcDateTime to string
+        /// Includes time if the value is not at midnight, includes milliseconds if not 0
+        /// </summary>
+        public static string ToStringAuto(this UtcDateTime dateTime)
+        {
+            if (dateTime == dateTime.Date)
+                return dateTime.ToString(FormatDateOnly);
+            if (dateTime.Millisecond == 0)
+                return dateTime.ToString(FormatDateTime);
+            return dateTime.ToString(FormatDateTimeMs);
+        }
+
+        /// <summary>
+        /// Converts UtcDateTime to local string
+        /// Includes time if the value is not at midnight, includes milliseconds if not 0
+        /// </summary>
+        public static string ToStringAutoLocal(this UtcDateTime dateTime)
+        {
+            return dateTime == dateTime.Date
+                       ? dateTime.ToString(FormatDateOnly)
+                       : dateTime.ToLocalTime().ToStringAuto();
         }
     }
 }

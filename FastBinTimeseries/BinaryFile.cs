@@ -3,7 +3,7 @@ using System.IO;
 
 namespace NYurik.FastBinTimeseries
 {
-    public abstract class BinaryFile<T> : BinaryFile
+    public abstract class BinaryFile<T> : BinaryFile,  IBinaryFile
     {
         private IBinSerializer<T> _serializer;
 
@@ -46,7 +46,8 @@ namespace NYurik.FastBinTimeseries
 
                 _serializer = value;
                 m_itemSize = itemSize;
-                EnableMemoryMappedFileAccess = value.SupportsMemoryMappedFiles;
+                EnableMemMappedAccessOnRead = value.SupportsMemoryMappedFiles;
+                EnableMemMappedAccessOnWrite = value.SupportsMemoryMappedFiles;
             }
         }
 
@@ -58,6 +59,21 @@ namespace NYurik.FastBinTimeseries
         public override sealed Type ItemType
         {
             get { return typeof (T); }
+        }
+
+        Array IStoredSeries.GenericReadData(long firstItemIdx, int count)
+        {
+            if (firstItemIdx < 0 || firstItemIdx > Count)
+                throw new ArgumentOutOfRangeException(
+                    "firstItemIdx", firstItemIdx, string.Format("Accepted range [0:{0}]", Count));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException("count", count, "Must be non-negative");
+
+            var result = new T[(int)Math.Min(Count - firstItemIdx, count)];
+
+            PerformRead(firstItemIdx, new ArraySegment<T>(result));
+
+            return result;
         }
 
         protected internal override sealed void SetSerializer(IBinSerializer nonGenericSerializer)
@@ -90,13 +106,17 @@ namespace NYurik.FastBinTimeseries
             if (buffer.Count == 0)
                 return;
 
-            bool useMemMapping = EnableMemoryMappedFileAccess
+            bool useMemMapping = (
+                                     (isWriting && EnableMemMappedAccessOnWrite)
+                                     ||
+                                     (!isWriting && EnableMemMappedAccessOnRead)
+                                 )
                                  && ItemIdxToOffset(buffer.Count) > MinReqSizeToUseMapView;
 
             if (useMemMapping)
-                ProcessFileMMF(firstItemIdx, buffer, isWriting);
+                ProcessFileMmf(firstItemIdx, buffer, isWriting);
             else
-                ProcessFileNoMMF(firstItemIdx, buffer, isWriting);
+                ProcessFileNoMmf(firstItemIdx, buffer, isWriting);
 
             if (isWriting)
             {
@@ -110,7 +130,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// Access file using FileStream object
-        private void ProcessFileNoMMF(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
+        private void ProcessFileNoMmf(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             long fileOffset = ItemIdxToOffset(firstItemIdx);
 
@@ -128,7 +148,7 @@ namespace NYurik.FastBinTimeseries
                         buffer.Count, fileOffset, expectedStreamPos, FileStream.Position));
         }
 
-        private void ProcessFileMMF(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
+        private void ProcessFileMmf(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             SafeMapHandle hMap = null;
             try
