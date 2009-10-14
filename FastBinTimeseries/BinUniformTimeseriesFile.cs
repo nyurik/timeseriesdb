@@ -28,7 +28,7 @@ namespace NYurik.FastBinTimeseries
     /// one <see cref="ItemTimeSpan"/> from each other.
     /// </summary>
     public class BinUniformTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinUniformTimeseriesFile,
-                                               IStoredUniformTimeseries<T>
+                                               IStoredUniformTimeseries<T>, IHistFeedInt<T>
     {
         #region Constructors
 
@@ -267,9 +267,22 @@ namespace NYurik.FastBinTimeseries
             return Tuple.Create(firstIndexIncl, (this.IndexToLong(toExclusive) - firstIndexIncl).ToIntCountChecked());
         }
 
+        public ITimeSeries<T> GetTimeSeries(UtcDateTime start, UtcDateTime end)
+        {
+            AdjustRangeToExistingData(ref start, ref end);
+
+            var data = ReadData(start, end);
+            return new UniformTimeSeries<T>(start, ItemTimeSpan, data);
+        }
+
         public override string ToString()
         {
             return string.Format("{0}, firstTS={1}, slice={2}", base.ToString(), FirstTimestamp, ItemTimeSpan);
+        }
+
+        ITimeSeries IHistFeedInt.GetTimeSeries(UtcDateTime start, UtcDateTime end)
+        {
+            return GetTimeSeries(start, end);
         }
 
         public long BinarySearch(UtcDateTime timestamp)

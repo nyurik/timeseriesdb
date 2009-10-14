@@ -7,15 +7,15 @@ namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile : IDisposable
     {
-        protected const int BytesInHeaderSize = sizeof (int);
-        protected const int MaxHeaderSize = 4*1024*1024;
-        protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB
+        protected const int BytesInHeaderSize = sizeof(int);
+        protected const int MaxHeaderSize = 4 * 1024 * 1024;
+        protected const int MinReqSizeToUseMapView = 4 * 1024; // 4 KB
 
         protected static readonly Version BaseVersion10 = new Version(1, 0);
         protected static readonly Version BaseVersion11 = new Version(1, 1);
 
         private static readonly Version VersionMaxValue = new Version(int.MaxValue, int.MaxValue, int.MaxValue,
-                                                                     int.MaxValue);
+                                                                      int.MaxValue);
 
         private Version _baseVersion;
         private bool _canWrite;
@@ -52,7 +52,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary> All memory mapping operations must align to this value (not the dwPageSize) </summary>
         public static int MinPageSize
         {
-            get { return (int) NativeWinApis.SystemInfo.dwAllocationGranularity; }
+            get { return (int)NativeWinApis.SystemInfo.dwAllocationGranularity; }
         }
 
         /// <summary> Maximum number of bytes to read at once </summary>
@@ -63,14 +63,14 @@ namespace NYurik.FastBinTimeseries
                 switch (NativeWinApis.SystemInfo.ProcessorInfo.wProcessorArchitecture)
                 {
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_INTEL:
-                        return 4*1024*1024;
+                        return 4 * 1024 * 1024;
 
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_AMD64:
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_IA64:
-                        return 16*1024*1024;
+                        return 16 * 1024 * 1024;
 
                     default:
-                        return 4*1024*1024;
+                        return 4 * 1024 * 1024;
                 }
             }
         }
@@ -179,7 +179,7 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnInitialized();
                 if (value == null) throw new ArgumentNullException("value");
                 if (value != BaseVersion11 && value != BaseVersion10)
-                    FastBinFileUtils.ThrowUnknownVersion(value, typeof (BinaryFile));
+                    FastBinFileUtils.ThrowUnknownVersion(value, typeof(BinaryFile));
                 _baseVersion = value;
             }
         }
@@ -246,7 +246,7 @@ namespace NYurik.FastBinTimeseries
 
         public void Close()
         {
-            ((IDisposable) this).Dispose();
+            ((IDisposable)this).Dispose();
         }
 
         void IDisposable.Dispose()
@@ -295,7 +295,7 @@ namespace NYurik.FastBinTimeseries
                     {
                         stream.Dispose();
                     }
-                        // ReSharper disable EmptyGeneralCatchClause
+                    // ReSharper disable EmptyGeneralCatchClause
                     catch
                     {
                         // Silent fail in order to report the original exception
@@ -337,7 +337,7 @@ namespace NYurik.FastBinTimeseries
                 classType = TypeUtils.GetTypeFromAnyAssemblyVersion(classTypeName);
             if (classType == null)
                 throw new InvalidOperationException("Unable to find class type " + classTypeName);
-            var inst = (BinaryFile) Activator.CreateInstance(classType, true);
+            var inst = (BinaryFile)Activator.CreateInstance(classType, true);
 
             inst.HeaderSize = hdrSize;
             inst.BaseVersion = baseVersion;
@@ -353,7 +353,7 @@ namespace NYurik.FastBinTimeseries
                 throw new InvalidOperationException("Unable to find serializer type " + serializerTypeName);
 
             inst._canWrite = stream.CanWrite;
-            var serializer = (IBinSerializer) Activator.CreateInstance(serializerType);
+            var serializer = (IBinSerializer)Activator.CreateInstance(serializerType);
             inst.SetSerializer(serializer);
 
             inst.EnableMemMappedAccessOnRead = serializer.SupportsMemoryMappedFiles;
@@ -481,13 +481,13 @@ namespace NYurik.FastBinTimeseries
         /// <summary> Size of the file header expressed as a number of items </summary>
         protected int CalculateHeaderSizeAsItemCount()
         {
-            return _headerSize/m_itemSize;
+            return _headerSize / m_itemSize;
         }
 
         /// <summary> Calculates the number of items that would make up the given file size </summary>
         protected long CalculateItemCountFromFilePosition(long position)
         {
-            long items = position/m_itemSize;
+            long items = position / m_itemSize;
             items -= CalculateHeaderSizeAsItemCount();
 
             if (position != ItemIdxToOffset(items))
@@ -503,7 +503,7 @@ namespace NYurik.FastBinTimeseries
         protected long ItemIdxToOffset(long itemIdx)
         {
             long adjIndex = itemIdx + CalculateHeaderSizeAsItemCount();
-            return adjIndex*m_itemSize;
+            return adjIndex * m_itemSize;
         }
 
         public override string ToString()
@@ -561,7 +561,7 @@ namespace NYurik.FastBinTimeseries
             _serializerVersion = WriteHeaderWithVersion(memWriter, NonGenericSerializer.WriteCustomHeader);
 
             // Header size must be dividable by the item size
-            var headerSize = (int) FastBinFileUtils.RoundUpToMultiple(memWriter.BaseStream.Position, m_itemSize);
+            var headerSize = (int)FastBinFileUtils.RoundUpToMultiple(memWriter.BaseStream.Position, m_itemSize);
 
             // Override the header size value at the first position of the header
             memWriter.Seek(0, SeekOrigin.Begin);
@@ -625,5 +625,18 @@ namespace NYurik.FastBinTimeseries
                         "Internal error: the new file should have had {0} items, but was calculated to have {1}",
                         newCount, m_count));
         }
+
+        /// <summary>
+        /// Calls a factory method without explicitly specifying the type of the sub-item.
+        /// </summary>
+        public abstract TDst CreateWrappedObject<TDst>(IWrapperFactory factory);
+    }
+
+    /// <summary>
+    /// This interface is used to easily create wrapper objects without referencing the generic subtype
+    /// </summary>
+    public interface IWrapperFactory
+    {
+        TDst Create<TSrc, TDst, TSubType>(TSrc source);
     }
 }

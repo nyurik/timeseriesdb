@@ -37,7 +37,8 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Object representing a binary-serialized timeseries file.
     /// </summary>
-    public class BinTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinTimeseriesFile, IStoredTimeSeries<T>
+    public class BinTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinTimeseriesFile, IStoredTimeSeries<T>,
+                                        IHistFeedInt<T>
     {
         private static readonly Version CurrentVersion = new Version(1, 1);
 
@@ -95,12 +96,12 @@ namespace NYurik.FastBinTimeseries
                     if (fi.ExtractSingleAttribute<TimestampAttribute>() != null)
                     {
                         if (foundTsAttribute)
-                        throw new InvalidOperationException(
+                            throw new InvalidOperationException(
                                 "More than one field has an TimestampAttribute attached in type " +
-                            itemType.FullName);
+                                itemType.FullName);
                         foundTsAttribute = true;
-                    result = fi;
-                }
+                        result = fi;
+                    }
                     else if (!foundTsAttribute)
                     {
                         if (result != null)
@@ -223,16 +224,6 @@ namespace NYurik.FastBinTimeseries
             return BinarySearch(timestamp, true);
         }
 
-        public ITimeSeries<T> GetTimeSeries(long firstItemIdx, int count)
-        {
-            throw new NotImplementedException();
-        }
-
-        ITimeSeries IStoredTimeSeries.GetTimeSeries(long firstItemIdx, int count)
-        {
-            return GetTimeSeries(firstItemIdx, count);
-        }
-
         public long BinarySearch(UtcDateTime timestamp, bool findFirst)
         {
             long start = 0L;
@@ -314,7 +305,32 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        #region IBinTimeseriesFile<T> Members
+        #region IHistFeed<T> Members
+
+        public ITimeSeries<T> GetTimeSeries(UtcDateTime start, UtcDateTime end)
+        {
+            T[] result = ReadData(start, end, int.MaxValue);
+            return new MergedTimeSeries<T>(result, TimestampAccessor);
+        }
+
+        ITimeSeries IHistFeedInt.GetTimeSeries(UtcDateTime start, UtcDateTime end)
+        {
+            return GetTimeSeries(start, end);
+        }
+
+        #endregion
+
+        #region IStoredTimeSeries<T> Members
+
+        public ITimeSeries<T> GetTimeSeries(long firstItemIdx, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        ITimeSeries IStoredTimeSeries.GetTimeSeries(long firstItemIdx, int count)
+        {
+            return GetTimeSeries(firstItemIdx, count);
+        }
 
         public int ReadData(UtcDateTime fromInclusive, ArraySegment<T> buffer)
         {

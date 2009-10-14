@@ -31,7 +31,7 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                // todo: switch to LazyInit<> in .Net 4.0
+                // todo: NET4 switch to Lazy<>
                 if (_instance == null)
                     lock (typeof (DynamicCodeFactory))
                         if (_instance == null)

@@ -3,10 +3,24 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
+    public interface IHistFeedInt
+    {
+        /// <summary> Returns items such, that  start &lt;= timestamp &lt; end </summary>
+        ITimeSeries GetTimeSeries(UtcDateTime start, UtcDateTime end);
+
+        Type ItemType { get; }
+    }
+
+    public interface IHistFeedInt<T> : IHistFeedInt
+    {
+        /// <summary> Returns items such, that  start &lt;= timestamp &lt; end </summary>
+        new ITimeSeries<T> GetTimeSeries(UtcDateTime start, UtcDateTime end);
+    }
+
     public interface IStoredSeries : IDisposable
     {
         /// <summary> Total number of items in the file </summary>
-        long Count { get; }
+        long GetItemCount();
 
         /// <summary> Type of the items stored in this file </summary>
         Type ItemType { get; }
@@ -55,10 +69,6 @@ namespace NYurik.FastBinTimeseries
         int ReadData(UtcDateTime fromInclusive, ArraySegment<T> buffer);
     }
 
-    public interface IStoredUniformTimeseries<T> : IStoredTimeSeries<T>, IStoredUniformTimeseries
-    {
-    }
-
     public interface IStoredUniformTimeseries : IStoredSeries
     {
         /// <summary>
@@ -91,5 +101,9 @@ namespace NYurik.FastBinTimeseries
         /// <param name="fromInclusive">Index of the item to start from.</param>
         /// <param name="count">The number of items to be read.</param>
         Array GenericReadData(UtcDateTime fromInclusive, int count);
+    }
+
+    public interface IStoredUniformTimeseries<T> : IStoredTimeSeries<T>, IStoredUniformTimeseries
+    {
     }
 }

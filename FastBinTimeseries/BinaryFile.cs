@@ -56,6 +56,11 @@ namespace NYurik.FastBinTimeseries
             get { return Serializer; }
         }
 
+        public long GetItemCount()
+        {
+            return Count;
+        }
+
         public override sealed Type ItemType
         {
             get { return typeof (T); }
@@ -210,6 +215,11 @@ namespace NYurik.FastBinTimeseries
                 if (hMap != null)
                     hMap.Dispose();
             }
+        }
+
+        public override TDst CreateWrappedObject<TDst>(IWrapperFactory factory)
+        {
+            return factory.Create<BinaryFile<T>, TDst, T>(this);
         }
     }
 }
