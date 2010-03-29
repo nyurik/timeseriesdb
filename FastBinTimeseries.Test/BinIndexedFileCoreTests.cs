@@ -165,9 +165,11 @@ namespace NYurik.FastBinTimeseries.Test
                 {
                 }
 
-                File.Delete(fileName);
-
-                f.InitializeNewFile();
+                if (RunMode == Mode.OneTime)
+                {
+                    File.Delete(fileName);
+                    f.InitializeNewFile();
+                }
             }
         }
     }
