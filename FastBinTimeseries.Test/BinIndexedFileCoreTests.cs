@@ -9,7 +9,7 @@ namespace NYurik.FastBinTimeseries.Test
     {
         private const string TagString = "Test123";
 
-        private static void AfterInitValidation(BinaryFile<byte> f, bool canWrite)
+        private static void AfterInitValidation(BinaryFile<byte> f, bool canWrite, string fileName)
         {
             // assignment tests
             AssertInvalidOperationException(f, i => i.Tag = "a");
@@ -22,7 +22,7 @@ namespace NYurik.FastBinTimeseries.Test
             Assert.AreEqual(1, f.ItemSize);
             Assert.AreEqual(canWrite, f.CanWrite);
             Assert.AreEqual(TagString, f.Tag);
-            Assert.AreEqual(BinFileName, f.FileName);
+            Assert.AreEqual(fileName, f.FileName);
         }
 
         private static void AssertInvalidOperationException<T>(BinaryFile<T> f, Func<BinaryFile<T>, object> operation)
@@ -44,14 +44,14 @@ namespace NYurik.FastBinTimeseries.Test
             var buf1 = new byte[bufSize];
             var buf2 = new byte[bufSize];
 
-            var buf1all = new ArraySegment<byte>(buf1);
-            var buf2all = new ArraySegment<byte>(buf2);
+            var buf1All = new ArraySegment<byte>(buf1);
+            var buf2All = new ArraySegment<byte>(buf2);
 
-            TestUtils.AreEqual(buf1all, buf2all, "compare zeroes");
+            TestUtils.AreEqual(buf1All, buf2All, "compare zeroes");
 
             for (int i = 0; i < bufSize; i++) buf2[i] = buf1[i] = (byte) (i & 0xFF);
 
-            TestUtils.AreEqual(buf1all, buf2all, "compare byte 0,1,2,3,...,255,0,...");
+            TestUtils.AreEqual(buf1All, buf2All, "compare byte 0,1,2,3,...,255,0,...");
             TestUtils.AreNotEqual(new ArraySegment<byte>(buf1, 255, bufSize - 255),
                                   new ArraySegment<byte>(buf2, 0, bufSize - 255));
             TestUtils.AreEqual(new ArraySegment<byte>(buf1, 256, bufSize - 256),
@@ -66,89 +66,95 @@ namespace NYurik.FastBinTimeseries.Test
             for (int i = 0; i < 1000; i++)
             {
                 buf1[i]++;
-                TestUtils.AreNotEqual(buf1all, buf2all);
+                TestUtils.AreNotEqual(buf1All, buf2All);
                 buf1[i]--;
             }
-            TestUtils.AreEqual(buf1all, buf2all);
+            TestUtils.AreEqual(buf1All, buf2All);
             for (int i = 0; i < 1000; i++)
             {
                 buf1[bufSize - i - 1]++;
-                TestUtils.AreNotEqual(buf1all, buf2all);
+                TestUtils.AreNotEqual(buf1All, buf2All);
                 buf1[bufSize - i - 1]--;
             }
-            TestUtils.AreEqual(buf1all, buf2all);
+            TestUtils.AreEqual(buf1All, buf2All);
         }
 
         [Test]
         public void BasicFunctionality()
         {
-            BinIndexedFile<byte> temp;
-            using (var f = new BinIndexedFile<byte>(BinFileName))
+            var fileName = GetBinFileName();
+            if (RunMode != Mode.Verify)
             {
-                temp = f;
-                AssertInvalidOperationException(f, i => i.Count);
-                AssertInvalidOperationException(f, i => i.BaseVersion);
-                AssertInvalidOperationException(f, i => i.FileVersion);
-                AssertInvalidOperationException(f, i => i.SerializerVersion);
-                AssertInvalidOperationException(f, i => i.HeaderSize);
-                AssertInvalidOperationException(f, i => i.IsEmpty);
-                AssertInvalidOperationException(f, i => i.ItemSize);
+                BinIndexedFile<byte> temp;
+                using (var f = new BinIndexedFile<byte>(fileName))
+                {
+                    temp = f;
+                    AssertInvalidOperationException(f, i => i.Count);
+                    AssertInvalidOperationException(f, i => i.BaseVersion);
+                    AssertInvalidOperationException(f, i => i.FileVersion);
+                    AssertInvalidOperationException(f, i => i.SerializerVersion);
+                    AssertInvalidOperationException(f, i => i.HeaderSize);
+                    AssertInvalidOperationException(f, i => i.IsEmpty);
+                    AssertInvalidOperationException(f, i => i.ItemSize);
 
-                Assert.IsTrue(f.CanWrite);
-                Assert.IsFalse(f.IsInitialized);
-                Assert.IsFalse(f.IsDisposed);
-                Assert.IsFalse(f.IsOpen);
-                Assert.AreEqual(BinFileName, f.FileName);
-                Assert.AreEqual("", f.Tag);
-                f.Tag = TagString;
+                    Assert.IsTrue(f.CanWrite);
+                    Assert.IsFalse(f.IsInitialized);
+                    Assert.IsFalse(f.IsDisposed);
+                    Assert.IsFalse(f.IsOpen);
+                    Assert.AreEqual(fileName, f.FileName);
+                    Assert.AreEqual("", f.Tag);
+                    f.Tag = TagString;
 
-                f.InitializeNewFile();
+                    f.InitializeNewFile();
 
-                Assert.IsTrue(f.IsInitialized);
-                Assert.IsFalse(f.IsDisposed);
-                Assert.IsTrue(f.IsOpen);
-                Assert.AreEqual(BinFileName, f.FileName);
+                    Assert.IsTrue(f.IsInitialized);
+                    Assert.IsFalse(f.IsDisposed);
+                    Assert.IsTrue(f.IsOpen);
+                    Assert.AreEqual(fileName, f.FileName);
 
-                AssertInvalidOperationException(
-                    f, i =>
-                           {
-                               i.InitializeNewFile();
-                               return null;
-                           });
+                    AssertInvalidOperationException(
+                        f, i =>
+                               {
+                                   i.InitializeNewFile();
+                                   return null;
+                               });
 
-                AfterInitValidation(f, true);
+                    AfterInitValidation(f, true, fileName);
+                }
+
+
+                // allowed
+                temp.Close();
+                ((IDisposable) temp).Dispose();
+                AssertInvalidOperationException(temp, i => i.Tag);
+
+                Assert.IsTrue(temp.IsInitialized);
+                Assert.IsTrue(temp.IsDisposed);
+                Assert.IsFalse(temp.IsOpen);
+                Assert.AreEqual(fileName, temp.FileName);
+
+
+                using (var file = (BinIndexedFile<byte>) BinaryFile.Open(fileName, true))
+                {
+                    AfterInitValidation(file, true, fileName);
+                    file.Close();
+                    AssertInvalidOperationException(file, i => i.Tag);
+
+                    Assert.IsTrue(file.IsInitialized);
+                    Assert.IsTrue(file.IsDisposed);
+                    Assert.IsFalse(file.IsOpen);
+                    Assert.AreEqual(fileName, file.FileName);
+                }
             }
 
-            // allowed
-            temp.Close();
-            ((IDisposable) temp).Dispose();
-            AssertInvalidOperationException(temp, i => i.Tag);
-
-            Assert.IsTrue(temp.IsInitialized);
-            Assert.IsTrue(temp.IsDisposed);
-            Assert.IsFalse(temp.IsOpen);
-            Assert.AreEqual(BinFileName, temp.FileName);
-
-            using (var file = (BinIndexedFile<byte>) BinaryFile.Open(BinFileName, true))
+            using (var file = (BinIndexedFile<byte>)BinaryFile.Open(fileName, false))
             {
-                AfterInitValidation(file, true);
-                file.Close();
-                AssertInvalidOperationException(file, i => i.Tag);
-
-                Assert.IsTrue(file.IsInitialized);
-                Assert.IsTrue(file.IsDisposed);
-                Assert.IsFalse(file.IsOpen);
-                Assert.AreEqual(BinFileName, file.FileName);
-            }
-
-            using (var file = (BinIndexedFile<byte>) BinaryFile.Open(BinFileName, false))
-            {
-                AfterInitValidation(file, false);
+                AfterInitValidation(file, false, fileName);
                 ((IDisposable) file).Dispose();
                 AssertInvalidOperationException(file, i => i.Tag);
             }
 
-            using (var f = new BinIndexedFile<byte>(BinFileName))
+            using (var f = new BinIndexedFile<byte>(fileName))
             {
                 try
                 {
@@ -159,7 +165,7 @@ namespace NYurik.FastBinTimeseries.Test
                 {
                 }
 
-                File.Delete(BinFileName);
+                File.Delete(fileName);
 
                 f.InitializeNewFile();
             }

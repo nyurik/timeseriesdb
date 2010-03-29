@@ -10,7 +10,8 @@ namespace NYurik.FastBinTimeseries.Test
         private void RunTest(int itemCount, bool uniqueTimestamps)
         {
             Cleanup();
-            using (var f = new BinTimeseriesFile<_DatetimeByte_SeqPk1>(BinFileName){UniqueTimestamps = uniqueTimestamps})
+            var fileName = GetBinFileName();
+            using (var f = new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName){UniqueTimestamps = uniqueTimestamps})
             {
                 f.InitializeNewFile();
 
@@ -58,7 +59,8 @@ namespace NYurik.FastBinTimeseries.Test
             _DatetimeByte_SeqPk1[] newData = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(
                 _DatetimeByte_SeqPk1.New, 10000, 0);
 
-            using (var f = new BinTimeseriesFile<_DatetimeByte_SeqPk1>(BinFileName) { UniqueTimestamps = false })
+            var fileName = GetBinFileName();
+            using (var f = new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) { UniqueTimestamps = false })
             {
                 f.InitializeNewFile();
 

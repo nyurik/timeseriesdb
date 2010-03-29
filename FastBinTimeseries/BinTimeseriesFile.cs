@@ -154,6 +154,22 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<T, UtcDateTime> TimestampAccessor { get; private set; }
 
+        /// <summary>
+        /// Enumerate all items one at a time using an internal buffer.
+        /// </summary>
+        /// <param name="from">The index of the first element to read. Inclusive if going forward, exclusive when going backwards</param>
+        /// <param name="enumerateInReverse">Set to true if you want to enumerate backwards, from last to first</param>
+        /// <param name="bufferSize">Size of the read buffer. If 0, the buffer will start small and grow with time</param>
+        /// <returns></returns>
+        public IEnumerable<ArraySegment<T>> StreamSegments(UtcDateTime from, bool enumerateInReverse, int bufferSize)
+        {
+            long index = FirstTimestampToIndex(from);
+            if (enumerateInReverse)
+                index--;
+
+            return PerformStreaming(index, enumerateInReverse, bufferSize);
+        }
+
         #region IBinaryFile<T> Members
 
         public void ReadData(long firstItemIdx, ArraySegment<T> buffer)
@@ -397,7 +413,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Read data starting at <paramref name="fromInclusive"/>, up to, 
         /// but not including <paramref name="toExclusive"/> into the <paramref name="buffer"/>.
-        /// No more than <paramref name="buffer.Count"/> items will be read.
+        /// No more than buffer.Count items will be read.
         /// </summary>
         /// <returns>The total number of items read.</returns>
         public int ReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive, ArraySegment<T> buffer)

@@ -7,9 +7,9 @@ namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile : IDisposable
     {
-        protected const int BytesInHeaderSize = sizeof(int);
-        protected const int MaxHeaderSize = 4 * 1024 * 1024;
-        protected const int MinReqSizeToUseMapView = 4 * 1024; // 4 KB
+        protected const int BytesInHeaderSize = sizeof (int);
+        protected const int MaxHeaderSize = 4*1024*1024;
+        protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB
 
         protected static readonly Version BaseVersion10 = new Version(1, 0);
         protected static readonly Version BaseVersion11 = new Version(1, 1);
@@ -52,25 +52,25 @@ namespace NYurik.FastBinTimeseries
         /// <summary> All memory mapping operations must align to this value (not the dwPageSize) </summary>
         public static int MinPageSize
         {
-            get { return (int)NativeWinApis.SystemInfo.dwAllocationGranularity; }
+            get { return (int) NativeWinApis.SystemInfo.dwAllocationGranularity; }
         }
 
         /// <summary> Maximum number of bytes to read at once </summary>
-        public static int MinLargePageSize
+        public static int MaxLargePageSize
         {
             get
             {
                 switch (NativeWinApis.SystemInfo.ProcessorInfo.wProcessorArchitecture)
                 {
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_INTEL:
-                        return 4 * 1024 * 1024;
+                        return 4*1024*1024;
 
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_AMD64:
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_IA64:
-                        return 16 * 1024 * 1024;
+                        return 16*1024*1024;
 
                     default:
-                        return 4 * 1024 * 1024;
+                        return 4*1024*1024;
                 }
             }
         }
@@ -83,8 +83,6 @@ namespace NYurik.FastBinTimeseries
                 return m_fileStream;
             }
         }
-
-        #region IBinaryFile Members
 
         public abstract IBinSerializer NonGenericSerializer { get; }
 
@@ -179,7 +177,7 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnInitialized();
                 if (value == null) throw new ArgumentNullException("value");
                 if (value != BaseVersion11 && value != BaseVersion10)
-                    FastBinFileUtils.ThrowUnknownVersion(value, typeof(BinaryFile));
+                    FastBinFileUtils.ThrowUnknownVersion(value, typeof (BinaryFile));
                 _baseVersion = value;
             }
         }
@@ -244,10 +242,7 @@ namespace NYurik.FastBinTimeseries
             get { return _isInitialized; }
         }
 
-        public void Close()
-        {
-            ((IDisposable)this).Dispose();
-        }
+        #region IDisposable Members
 
         void IDisposable.Dispose()
         {
@@ -256,6 +251,11 @@ namespace NYurik.FastBinTimeseries
         }
 
         #endregion
+
+        public void Close()
+        {
+            ((IDisposable) this).Dispose();
+        }
 
         /// <summary>
         /// Open existing binary timeseries file. A <see cref="FileNotFoundException"/> if the file does not exist.
@@ -295,7 +295,7 @@ namespace NYurik.FastBinTimeseries
                     {
                         stream.Dispose();
                     }
-                    // ReSharper disable EmptyGeneralCatchClause
+                        // ReSharper disable EmptyGeneralCatchClause
                     catch
                     {
                         // Silent fail in order to report the original exception
@@ -379,7 +379,6 @@ namespace NYurik.FastBinTimeseries
             serializer.ReadCustomHeader(memReader, inst._serializerVersion, typeMap);
 
             inst.m_count = inst.CalculateItemCountFromFilePosition(inst.m_fileStream.Length);
-
             inst._isInitialized = true;
 
             return inst;
@@ -481,13 +480,13 @@ namespace NYurik.FastBinTimeseries
         /// <summary> Size of the file header expressed as a number of items </summary>
         protected int CalculateHeaderSizeAsItemCount()
         {
-            return _headerSize / m_itemSize;
+            return _headerSize/m_itemSize;
         }
 
         /// <summary> Calculates the number of items that would make up the given file size </summary>
         protected long CalculateItemCountFromFilePosition(long position)
         {
-            long items = position / m_itemSize;
+            long items = position/m_itemSize;
             items -= CalculateHeaderSizeAsItemCount();
 
             if (position != ItemIdxToOffset(items))
@@ -503,7 +502,7 @@ namespace NYurik.FastBinTimeseries
         protected long ItemIdxToOffset(long itemIdx)
         {
             long adjIndex = itemIdx + CalculateHeaderSizeAsItemCount();
-            return adjIndex * m_itemSize;
+            return adjIndex*m_itemSize;
         }
 
         public override string ToString()

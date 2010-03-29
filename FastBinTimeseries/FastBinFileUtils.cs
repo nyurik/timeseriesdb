@@ -25,7 +25,7 @@ namespace NYurik.FastBinTimeseries
         /// Fast memory copying - copies in blocks of 32 bytes, using either int or long (on 64bit machines)
         /// Calling the native RtlMemoryMove was slower
         /// </summary>
-        public static unsafe void CopyMemory(byte* pDestination, byte* pSource, uint byteCount)
+        internal static unsafe void CopyMemory(byte* pDestination, byte* pSource, uint byteCount)
         {
             const int blockSize = 32;
             if (byteCount >= blockSize)
@@ -72,7 +72,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Fast memory comparison - compares in blocks of 32 bytes, using either int or long (on 64bit machines)
         /// </summary>
-        public static unsafe bool CompareMemory(byte* pSource1, byte* pSource2, uint byteCount)
+        internal static unsafe bool CompareMemory(byte* pSource1, byte* pSource2, uint byteCount)
         {
             const int blockSize = 32;
             if (byteCount >= blockSize)
@@ -128,7 +128,7 @@ namespace NYurik.FastBinTimeseries
             throw new ArgumentOutOfRangeException("version", version, "Unknown version for " + type.FullName);
         }
 
-        public static Version ReadVersion(BinaryReader reader)
+        public static Version ReadVersion(this BinaryReader reader)
         {
             int major = reader.ReadInt32();
             int minor = reader.ReadInt32();
@@ -142,7 +142,7 @@ namespace NYurik.FastBinTimeseries
                              : new Version(major, minor, build, revision);
         }
 
-        public static void WriteVersion(BinaryWriter writer, Version ver)
+        public static void WriteVersion(this BinaryWriter writer, Version ver)
         {
             writer.Write(ver.Major);
             writer.Write(ver.Minor);

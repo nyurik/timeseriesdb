@@ -93,6 +93,8 @@
     <Compile Include="BinUniformTimeseriesFile.cs" />
     <Compile Include="CombinedException.cs" />
     <Compile Include="CommonCode\DateTimeExtensions.cs" />
+    <Compile Include="CommonCode\ITimeSeries.cs" />
+    <Compile Include="CommonCode\MergedTimeSeries.cs" />
     <Compile Include="CommonCode\MiscUtilities.cs" />
     <Compile Include="CommonCode\TimeSeries.cs" />
     <Compile Include="FastBinFileUtils.cs" />

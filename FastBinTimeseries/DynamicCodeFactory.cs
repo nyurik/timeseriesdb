@@ -10,7 +10,7 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
-    public class DynamicCodeFactory
+    internal class DynamicCodeFactory
     {
         internal const BindingFlags AllInstanceMembers =
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;

@@ -3,37 +3,8 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
-    public interface ISeries
-    {
-        int Count { get; }
-        Type GetElementType();
-        object GetValueSlow(int index);
-    }
-
-    public interface ISeries<T> : ISeries
-    {
-        T this[int index] { get; }
-        T[] Values { get; }
-    }
-
-    public interface ITimeSeries : ISeries
-    {
-        TimeSpan ItemSpan { get; }
-        int BinarySearch(UtcDateTime timestamp);
-        UtcDateTime GetTimestamp(int index);
-    }
-
-    public interface ITimeSeries<T> : ITimeSeries, ISeries<T>
-    {
-    }
-
-    public interface INonUniformTimeSeries : ISeries
-    {
-        UtcDateTime[] Timestamps { get; }
-    }
-
     [Serializable]
-    public class TimeSeries<T> : ITimeSeries<T>, INonUniformTimeSeries
+    public class TimeSeries<T> : ITimeSeries<T>
     {
         private readonly UtcDateTime[] _timestamps;
         private readonly T[] _values;
@@ -59,16 +30,16 @@ namespace NYurik.FastBinTimeseries
             get { return _timestamps; }
         }
 
+        public T[] Values
+        {
+            get { return _values; }
+        }
+
         #region ITimeSeries<T> Members
 
         public T this[int index]
         {
             get { return _values[index]; }
-        }
-
-        public T[] Values
-        {
-            get { return _values; }
         }
 
         public Type GetElementType()
@@ -84,11 +55,6 @@ namespace NYurik.FastBinTimeseries
         public int Count
         {
             get { return _values.Length; }
-        }
-
-        public TimeSpan ItemSpan
-        {
-            get { return TimeSpan.Zero; }
         }
 
         public int BinarySearch(UtcDateTime timestamp)
@@ -131,6 +97,11 @@ namespace NYurik.FastBinTimeseries
         public UtcDateTime FirstTimestamp
         {
             get { return _firstTimestamp; }
+        }
+
+        public T[] Values
+        {
+            get { return _values; }
         }
 
         #region ITimeSeries<T> Members
@@ -180,11 +151,6 @@ namespace NYurik.FastBinTimeseries
         public T this[int index]
         {
             get { return _values[index]; }
-        }
-
-        public T[] Values
-        {
-            get { return _values; }
         }
 
         #endregion

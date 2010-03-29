@@ -112,8 +112,10 @@ namespace NYurik.FastBinTimeseries
                 toExclusive = new UtcDateTime(
                     FastBinFileUtils.RoundUpToMultiple(toExclusive.Ticks, ItemTimeSpan.Ticks));
 
-            if (fromInclusive >= FirstUnavailableTimestamp || toExclusive <= FirstTimestamp)
-                return 0;
+            if (fromInclusive >= FirstUnavailableTimestamp)
+                fromInclusive = toExclusive = FirstUnavailableTimestamp;
+            if (toExclusive <= FirstTimestamp)
+                fromInclusive = toExclusive = FirstTimestamp;
 
             long len = this.IndexToLong(toExclusive) - this.IndexToLong(fromInclusive);
             if (len > int.MaxValue)

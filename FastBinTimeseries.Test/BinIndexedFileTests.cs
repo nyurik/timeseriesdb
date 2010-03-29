@@ -32,7 +32,8 @@ namespace NYurik.FastBinTimeseries.Test
                 int hdrSize;
                 Version fileVersion, baseVersion, serializerVersion;
 
-                using (var f = new BinIndexedFile<T>(BinFileName))
+                var fileName = GetBinFileName();
+                using (var f = new BinIndexedFile<T>(fileName))
                 {
                     f.InitializeNewFile();
                     fileVersion = f.FileVersion;
@@ -52,7 +53,7 @@ namespace NYurik.FastBinTimeseries.Test
                     Assert.IsTrue(f.IsEmpty);
                 }
 
-                using (BinaryFile file = BinaryFile.Open(BinFileName, false))
+                using (BinaryFile file = BinaryFile.Open(fileName, false))
                 {
                     Assert.IsInstanceOf<BinIndexedFile<T>>(file);
                     var f = (BinIndexedFile<T>) file;
@@ -102,7 +103,8 @@ namespace NYurik.FastBinTimeseries.Test
                 T[] data1 = TestUtils.GenerateData(converter, 2, 20);
                 T[] data2 = TestUtils.GenerateData(converter, 3, 30);
 
-                using (var f = new BinIndexedFile<T>(BinFileName))
+                var fileName = GetBinFileName();
+                using (var f = new BinIndexedFile<T>(fileName))
                 {
                     f.InitializeNewFile();
                     f.WriteData(0, new ArraySegment<T>(data0));
@@ -114,7 +116,7 @@ namespace NYurik.FastBinTimeseries.Test
                     ReadAndAssert(data0, f, 0, f.Count);
                 }
 
-                using (BinaryFile file = BinaryFile.Open(BinFileName, true))
+                using (BinaryFile file = BinaryFile.Open(fileName, true))
                 {
                     Assert.IsInstanceOf<BinIndexedFile<T>>(file);
                     var f = (BinIndexedFile<T>) file;
@@ -159,16 +161,16 @@ namespace NYurik.FastBinTimeseries.Test
                     PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
 
                 PageBorderOperations(converter, enableMemoryMappedAccess,
-                                     BinaryFile.MinLargePageSize - BinaryFile.MinPageSize);
-                PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinLargePageSize);
+                                     BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
+                PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MaxLargePageSize);
                 PageBorderOperations(converter, enableMemoryMappedAccess,
-                                     BinaryFile.MinLargePageSize + BinaryFile.MinPageSize);
+                                     BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
 
                 PageBorderOperations(converter, enableMemoryMappedAccess,
-                                     2*BinaryFile.MinLargePageSize - BinaryFile.MinPageSize);
-                PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MinLargePageSize);
+                                     2*BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
+                PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MaxLargePageSize);
                 PageBorderOperations(converter, enableMemoryMappedAccess,
-                                     2*BinaryFile.MinLargePageSize + BinaryFile.MinPageSize);
+                                     2*BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
 
                 TestStop<T>(testName, sw);
             }
@@ -184,7 +186,8 @@ namespace NYurik.FastBinTimeseries.Test
         {
             Cleanup();
 
-            using (var f = new BinIndexedFile<T>(BinFileName))
+            var fileName = GetBinFileName();
+            using (var f = new BinIndexedFile<T>(fileName))
             {
                 f.InitializeNewFile();
                 f.EnableMemMappedAccessOnRead = enableMemoryMappedAccess;
@@ -203,15 +206,15 @@ namespace NYurik.FastBinTimeseries.Test
                 T[] dataPlusOne = TestUtils.GenerateData(converter, items1StPg + 1, 0);
 
                 f.WriteData(0, new ArraySegment<T>(dataMinusOne));
-                Assert.AreEqual(f.HeaderSize + (items1StPg - 1)*f.ItemSize, new FileInfo(BinFileName).Length);
+                Assert.AreEqual(f.HeaderSize + (items1StPg - 1)*f.ItemSize, new FileInfo(fileName).Length);
                 ReadAndAssert(dataMinusOne, f, 0, dataMinusOne.Length);
 
                 f.WriteData(0, new ArraySegment<T>(dataZero));
-                Assert.AreEqual(f.HeaderSize + items1StPg*f.ItemSize, new FileInfo(BinFileName).Length);
+                Assert.AreEqual(f.HeaderSize + items1StPg*f.ItemSize, new FileInfo(fileName).Length);
                 ReadAndAssert(dataZero, f, 0, dataZero.Length);
 
                 f.WriteData(0, new ArraySegment<T>(dataPlusOne));
-                Assert.AreEqual(f.HeaderSize + (items1StPg + 1)*f.ItemSize, new FileInfo(BinFileName).Length);
+                Assert.AreEqual(f.HeaderSize + (items1StPg + 1)*f.ItemSize, new FileInfo(fileName).Length);
                 ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
 
                 ReadAndAssert(TestUtils.GenerateData(converter, 1, items1StPg - 1), f, items1StPg - 1, 1);

@@ -40,15 +40,6 @@ namespace NYurik.FastBinTimeseries
                                  typeof (UnsafeMemCompareDelegate<>).MakeGenericType(typeof (T)), this);
         }
 
-        // todo: delete!
-//        private unsafe bool Foo(byte[] buffer1, int offset1, byte[] buffer2, int offset2, int count)
-//        {
-//            fixed (byte* p1 = &buffer1[0])
-//            fixed (byte* p2 = &buffer2[0])
-//                return CompareMemoryPtr(p1, offset1, p2, offset2, count);
-//        }
-//
-
         #region IBinSerializer<T> Members
 
         public int TypeSize
@@ -63,11 +54,13 @@ namespace NYurik.FastBinTimeseries
 
         public void ProcessFileStream(FileStream fileStream, ArraySegment<T> buffer, bool isWriting)
         {
+            if (fileStream == null) throw new ArgumentNullException("fileStream");
             _processFileStream(fileStream, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
         public void ProcessMemoryMap(IntPtr memMapPtr, ArraySegment<T> buffer, bool isWriting)
         {
+            if (memMapPtr == IntPtr.Zero) throw new ArgumentNullException("memMapPtr");
             _processMemoryMap(memMapPtr, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 

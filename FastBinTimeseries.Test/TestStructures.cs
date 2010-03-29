@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using NYurik.FastBinTimeseries.CommonCode;
 
+// ReSharper disable InconsistentNaming
 namespace NYurik.FastBinTimeseries.Test
 {
     public struct _3Byte_noAttr : IEquatable<_3Byte_noAttr>

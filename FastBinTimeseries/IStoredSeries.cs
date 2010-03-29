@@ -78,7 +78,7 @@ namespace NYurik.FastBinTimeseries
 
         /// <summary>
         /// Represents the timestamp of the first value beyond the end of the existing data.
-        /// (<see cref="IStoredSeries.Count"/> as a timestamp)
+        /// (<see cref="IStoredSeries.GetItemCount"/> as a timestamp)
         /// </summary>
         UtcDateTime FirstUnavailableTimestamp { get; }
 

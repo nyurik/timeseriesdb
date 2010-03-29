@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace NYurik.FastBinTimeseries
 {
-    public abstract class BinaryFile<T> : BinaryFile,  IBinaryFile
+    public abstract class BinaryFile<T> : BinaryFile, IBinaryFile
     {
         private IBinSerializer<T> _serializer;
 
@@ -51,12 +52,14 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+        #region IBinaryFile Members
+
         public override sealed IBinSerializer NonGenericSerializer
         {
             get { return Serializer; }
         }
 
-        public long GetItemCount()
+        long IStoredSeries.GetItemCount()
         {
             return Count;
         }
@@ -74,13 +77,16 @@ namespace NYurik.FastBinTimeseries
             if (count < 0)
                 throw new ArgumentOutOfRangeException("count", count, "Must be non-negative");
 
-            var result = new T[(int)Math.Min(Count - firstItemIdx, count)];
+            var result = new T[(int) Math.Min(Count - firstItemIdx, count)];
 
             PerformRead(firstItemIdx, new ArraySegment<T>(result));
 
             return result;
         }
 
+        #endregion
+
+        /// <summary> Used by <see cref="BinaryFile.Open(FileStream,IDictionary{string,Type})"/> when opening an existing file </summary>
         protected internal override sealed void SetSerializer(IBinSerializer nonGenericSerializer)
         {
             _serializer = (IBinSerializer<T>) nonGenericSerializer;
@@ -180,9 +186,9 @@ namespace NYurik.FastBinTimeseries
 
                         long mapViewSize = offsetToStopAt - mapViewFileOffset;
                         long itemsToProcessThisRun = idxToStopAt - idxCurrent;
-                        if (mapViewSize > MinLargePageSize)
+                        if (mapViewSize > MaxLargePageSize)
                         {
-                            mapViewSize = MinLargePageSize;
+                            mapViewSize = MaxLargePageSize;
                             itemsToProcessThisRun = (mapViewFileOffset + mapViewSize)/ItemSize - idxCurrent -
                                                     CalculateHeaderSizeAsItemCount();
                         }
@@ -220,6 +226,70 @@ namespace NYurik.FastBinTimeseries
         public override TDst CreateWrappedObject<TDst>(IWrapperFactory factory)
         {
             return factory.Create<BinaryFile<T>, TDst, T>(this);
+        }
+
+        /// <summary>
+        /// Enumerate items by block either in order or in reverse order, begining at the <paramref name="firstItemIdx"/>.
+        /// </summary>
+        /// <param name="firstItemIdx">The index of the first block to read (both forward and backward). Invalid values will be adjusted to existing data.</param>
+        /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
+        /// <param name="bufferSize">The size of the internal buffer to read data. Set to 0 to make internal buffer autogrow with time</param>
+        protected IEnumerable<ArraySegment<T>> PerformStreaming(long firstItemIdx, bool enumerateInReverse,
+                                                                int bufferSize)
+        {
+            if (bufferSize < 0)
+                throw new ArgumentOutOfRangeException("bufferSize", bufferSize, "Must be >= 0");
+
+            long idx;
+            if (enumerateInReverse)
+            {
+                idx = Math.Min(firstItemIdx, Count - 1);
+                if (idx < 0)
+                    yield break;
+            }
+            else
+            {
+                idx = Math.Max(firstItemIdx, 0);
+                if (idx >= Count)
+                    yield break;
+            }
+
+            bool autogrow = bufferSize == 0;
+            var buffer = new T[autogrow ? 16*MinPageSize/ItemSize : bufferSize];
+            int iterations = 0;
+
+            while (true)
+            {
+                long itemsLeft = enumerateInReverse ? idx + 1 : Count - idx;
+
+                if (itemsLeft <= 0)
+                    yield break;
+
+                if (autogrow && iterations > 10)
+                {
+                    // switch to larger blocks
+                    buffer = new T[Math.Min(MaxLargePageSize/ItemSize, itemsLeft)];
+                    autogrow = false;
+                }
+
+                var readSize = (int) Math.Min(itemsLeft, buffer.Length);
+                var block = new ArraySegment<T>(buffer, 0, readSize);
+
+                if (enumerateInReverse)
+                {
+                    PerformRead(idx - readSize + 1, block);
+                    yield return block;
+                    idx = idx - readSize;
+                }
+                else
+                {
+                    PerformRead(idx, block);
+                    yield return block;
+                    idx = idx + readSize;
+                }
+
+                iterations++;
+            }
         }
     }
 }

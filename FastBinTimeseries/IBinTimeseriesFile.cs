@@ -33,7 +33,6 @@ namespace NYurik.FastBinTimeseries
         /// a negative number which is the bitwise complement of the index of the first element that is larger than value. 
         /// If value is not found and value is greater than any of the elements in array, 
         /// a negative number which is the bitwise complement of (the index of the last element plus 1).</returns>
-        /// <summary>
         long BinarySearch(UtcDateTime timestamp);
 
         /// <summary>

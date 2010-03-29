@@ -24,6 +24,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -42,18 +43,6 @@
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="CustomizedMSEnterpriseLib.Caching, Version=2.99.0.0, Culture=neutral, PublicKeyToken=2cb2230e8482cb34, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\svn2\CommonLib\MSEnterpriseLibJan2006.OurKey\CustomizedMSEnterpriseLib.Caching.dll</HintPath>
-    </Reference>
-    <Reference Include="CustomizedMSEnterpriseLib.Common, Version=2.99.0.0, Culture=neutral, PublicKeyToken=2cb2230e8482cb34, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\svn2\CommonLib\MSEnterpriseLibJan2006.OurKey\CustomizedMSEnterpriseLib.Common.dll</HintPath>
-    </Reference>
-    <Reference Include="CustomizedMSEnterpriseLib.ObjectBuilder, Version=1.99.51205.0, Culture=neutral, PublicKeyToken=2cb2230e8482cb34, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\svn2\CommonLib\MSEnterpriseLibJan2006.OurKey\CustomizedMSEnterpriseLib.ObjectBuilder.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

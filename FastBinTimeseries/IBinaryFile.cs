@@ -50,7 +50,7 @@ namespace NYurik.FastBinTimeseries
     public interface IBinaryFile<T> : IBinaryFile
     {
         /// <summary>
-        /// Read data starting at <paramref name="firstItemIdx"/> to fill up the <param name="buffer"/>.
+        /// Read data starting at <paramref name="firstItemIdx"/> to fill up the <paramref name="buffer"/>.
         /// </summary>
         void ReadData(long firstItemIdx, ArraySegment<T> buffer);
     }

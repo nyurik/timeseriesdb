@@ -21,7 +21,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
         /// </summary>
-        /// <param name="fileName">A relative or absolute path for the file to create.</param>
+        /// <param name="fileName">A relative or absolute path for the file to create.
         ///   If less than a day, the day must be evenly divisible by this value</param>
         public BinIndexedFile(string fileName)
             : base(fileName)
@@ -33,7 +33,7 @@ namespace NYurik.FastBinTimeseries
         private static readonly Version CurrentVersion = new Version(1, 0);
 
         /// <summary>
-        /// Read <paramref name="count"/> items starting at <paramref name="firstItemIndex"/>.
+        /// Read enough items to fill the <paramref name="buffer"/>, starting at <paramref name="firstItemIndex"/>.
         /// </summary>
         /// <param name="firstItemIndex">Index of the item to start from.</param>
         /// <param name="buffer">Array of values to be written into a file.</param>
@@ -50,6 +50,17 @@ namespace NYurik.FastBinTimeseries
         public void WriteData(long firstItemIndex, ArraySegment<T> buffer)
         {
             PerformWrite(firstItemIndex, buffer);
+        }
+
+        /// <summary>
+        /// Enumerate items by block either in order or in reverse order, begining at the <paramref name="firstItemIdx"/>.
+        /// </summary>
+        /// <param name="firstItemIdx">The index of the first block to read (both forward and backward). Invalid values will be adjusted to existing data.</param>
+        /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
+        /// <param name="bufferSize">The size of the internal buffer to read data. Set to 0 to make internal buffer autogrow with time</param>
+        public IEnumerable<ArraySegment<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse, int bufferSize)
+        {
+            return PerformStreaming(firstItemIdx, enumerateInReverse, bufferSize);
         }
 
         protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
