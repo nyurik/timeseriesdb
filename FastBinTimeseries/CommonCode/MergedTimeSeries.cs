@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using NYurik.FastBinTimeseries.CommonCode;
 
-namespace NYurik.FastBinTimeseries
+namespace NYurik.FastBinTimeseries.CommonCode
 {
     [Serializable]
     public class MergedTimeSeries<T> : ITimeSeries<T>

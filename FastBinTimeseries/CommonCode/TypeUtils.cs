@@ -30,26 +30,56 @@ namespace NYurik.FastBinTimeseries.CommonCode
             {
                 // Attach our custom assembly name resolver, attempt to resolve again, and detach it
                 AppDomain.CurrentDomain.AssemblyResolve += assemblyResolve;
-                s_isGetTypeRunningOnThisThread = true;
+                _isGetTypeRunningOnThisThread = true;
                 return Type.GetType(typeName);
             }
             finally
             {
-                s_isGetTypeRunningOnThisThread = false;
+                _isGetTypeRunningOnThisThread = false;
                 AppDomain.CurrentDomain.AssemblyResolve -= assemblyResolve;
             }
         }
 
+        /// <summary>
+        /// Get a single attribute (or null) of a given type attached to a value.
+        /// The value might be a <see cref="Type"/> object or Property/Method/... info acquired through reflection.
+        /// An exception is thrown if more than one attribute of a given type was found.
+        /// </summary>
+        /// <typeparam name="TAttr">Type of the attribute to get</typeparam>
+        /// <param name="customAttrProvider">Enum value</param>
+        /// <returns>An attribute object or null if not found</returns>
+        public static TAttr ExtractSingleAttribute<TAttr>(this ICustomAttributeProvider customAttrProvider)
+            where TAttr : Attribute
+        {
+            object[] attributes = customAttrProvider.GetCustomAttributes<TAttr>(true);
+            if (attributes.Length > 0)
+            {
+                if (attributes.Length > 1)
+                    throw new ArgumentException(
+                        String.Format("Found {0} (>1) attributes {1} detected for {2}", attributes.Length,
+                                      typeof (TAttr).Name, customAttrProvider));
+                return (TAttr) attributes[0];
+            }
+            return null;
+        }
+
+        public static TAttribute[] GetCustomAttributes<TAttribute>(this ICustomAttributeProvider type, bool inherit)
+            where TAttribute : Attribute
+        {
+            return Array.ConvertAll(
+                type.GetCustomAttributes(typeof (TAttribute), inherit), i => (TAttribute) i);
+        }
+
         #region Helper methods
 
-        [ThreadStatic] private static bool s_isGetTypeRunningOnThisThread;
+        [ThreadStatic] private static bool _isGetTypeRunningOnThisThread;
 
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
         {
             Assembly assembly = null;
 
             // Only process events from the thread that started it, not any other thread
-            if (s_isGetTypeRunningOnThisThread)
+            if (_isGetTypeRunningOnThisThread)
             {
                 // Extract assembly name, and checking it's the same as args.Name to prevent an infinite loop
                 var an = new AssemblyName(args.Name);

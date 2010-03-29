@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -13,9 +12,6 @@ namespace NYurik.FastBinTimeseries
 
         protected static readonly Version BaseVersion10 = new Version(1, 0);
         protected static readonly Version BaseVersion11 = new Version(1, 1);
-
-        private static readonly Version VersionMaxValue = new Version(int.MaxValue, int.MaxValue, int.MaxValue,
-                                                                      int.MaxValue);
 
         private Version _baseVersion;
         private bool _canWrite;
@@ -329,31 +325,18 @@ namespace NYurik.FastBinTimeseries
                 new MemoryStream(ReadIntoNewBuffer(stream, hdrSize - BytesInHeaderSize), false));
 
             // Instantiate BinaryFile-inherited class this file was created with
-            Version baseVersion = FastBinFileUtils.ReadVersion(memReader);
+            Version baseVersion = memReader.ReadVersion();
 
-            string classTypeName = memReader.ReadString();
-            Type classType;
-            if (typeMap == null || !typeMap.TryGetValue(classTypeName, out classType))
-                classType = TypeUtils.GetTypeFromAnyAssemblyVersion(classTypeName);
-            if (classType == null)
-                throw new InvalidOperationException("Unable to find class type " + classTypeName);
-            var inst = (BinaryFile)Activator.CreateInstance(classType, true);
-
+            var inst = memReader.ReadTypeAndInstantiate<BinaryFile>(typeMap, true);
             inst.HeaderSize = hdrSize;
             inst.BaseVersion = baseVersion;
             inst.m_fileStream = stream;
+            inst._canWrite = stream.CanWrite;
 
             // Read values in the same order as WriteHeader()
             // Serializer
-            string serializerTypeName = memReader.ReadString();
-            Type serializerType;
-            if (typeMap == null || !typeMap.TryGetValue(serializerTypeName, out serializerType))
-                serializerType = TypeUtils.GetTypeFromAnyAssemblyVersion(serializerTypeName);
-            if (serializerType == null)
-                throw new InvalidOperationException("Unable to find serializer type " + serializerTypeName);
+            var serializer = memReader.ReadTypeAndInstantiate<IBinSerializer>(typeMap, false);
 
-            inst._canWrite = stream.CanWrite;
-            var serializer = (IBinSerializer)Activator.CreateInstance(serializerType);
             inst.SetSerializer(serializer);
 
             inst.EnableMemMappedAccessOnRead = serializer.SupportsMemoryMappedFiles;
@@ -372,10 +355,10 @@ namespace NYurik.FastBinTimeseries
             if (inst._baseVersion > BaseVersion10)
                 inst.Tag = memReader.ReadString();
 
-            inst._fileVersion = FastBinFileUtils.ReadVersion(memReader);
+            inst._fileVersion = memReader.ReadVersion();
             inst.ReadCustomHeader(memReader, inst._fileVersion, typeMap);
 
-            inst._serializerVersion = FastBinFileUtils.ReadVersion(memReader);
+            inst._serializerVersion = memReader.ReadVersion();
             serializer.ReadCustomHeader(memReader, inst._serializerVersion, typeMap);
 
             inst.m_count = inst.CalculateItemCountFromFilePosition(inst.m_fileStream.Length);
@@ -523,7 +506,7 @@ namespace NYurik.FastBinTimeseries
         ///            ***  Header structure: ***
         /// int32   HeaderSize
         /// Version BinFile main version
-        /// string  BinaryFile...<...> type name
+        /// string  BinaryFile...&lt;...> type name
         /// string  Serializer type name
         /// int32   ItemSize
         /// string  User-provided tag (non-null)
@@ -543,7 +526,7 @@ namespace NYurik.FastBinTimeseries
 
             // Header size will be replaced by an actual length later
             memWriter.Write(0);
-            FastBinFileUtils.WriteVersion(memWriter, BaseVersion11);
+            memWriter.WriteVersion(BaseVersion11);
             BaseVersion = BaseVersion11;
 
             memWriter.Write(GetType().AssemblyQualifiedName);
@@ -556,11 +539,13 @@ namespace NYurik.FastBinTimeseries
             memWriter.Write(Tag);
 
             // Save versions and custom headers
-            _fileVersion = WriteHeaderWithVersion(memWriter, WriteCustomHeader);
-            _serializerVersion = WriteHeaderWithVersion(memWriter, NonGenericSerializer.WriteCustomHeader);
+            _fileVersion = memWriter.WriteHeaderWithVersion(WriteCustomHeader);
+            _serializerVersion = memWriter.WriteHeaderWithVersion(NonGenericSerializer.WriteCustomHeader);
 
             // Header size must be dividable by the item size
-            var headerSize = (int)FastBinFileUtils.RoundUpToMultiple(memWriter.BaseStream.Position, m_itemSize);
+            var headerSize = (int) FastBinFileUtils.RoundUpToMultiple(memWriter.BaseStream.Position, m_itemSize);
+            if (memStream.Capacity < headerSize)
+                memStream.Capacity = headerSize;
 
             // Override the header size value at the first position of the header
             memWriter.Seek(0, SeekOrigin.Begin);
@@ -572,26 +557,6 @@ namespace NYurik.FastBinTimeseries
                 throw new InvalidOperationException("Expected to be at the stream position 0");
             m_fileStream.Write(memStream.GetBuffer(), 0, headerSize);
             m_fileStream.Flush();
-        }
-
-        /// <summary> Write version plus custom header generated by the writeHeaderMethod into the stream </summary>
-        private static Version WriteHeaderWithVersion(BinaryWriter memWriter,
-                                                      Func<BinaryWriter, Version> writeHeaderMethod)
-        {
-            // Record original postition and write dummy version
-            long versionPos = memWriter.BaseStream.Position;
-            FastBinFileUtils.WriteVersion(memWriter, VersionMaxValue);
-
-            // Write real version and save final position
-            Version version = writeHeaderMethod(memWriter);
-            long latestPos = memWriter.BaseStream.Position;
-
-            // Seek back, rerecord the proper version instead of the dummy one, and move back to the end
-            memWriter.BaseStream.Seek(versionPos, SeekOrigin.Begin);
-            FastBinFileUtils.WriteVersion(memWriter, version);
-            memWriter.BaseStream.Seek(latestPos, SeekOrigin.Begin);
-
-            return version;
         }
 
         /// <summary> Override to read custom header info. Must match the <see cref="WriteCustomHeader"/>. </summary>

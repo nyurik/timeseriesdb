@@ -1,7 +1,6 @@
 using System;
-using NYurik.FastBinTimeseries.CommonCode;
 
-namespace NYurik.FastBinTimeseries
+namespace NYurik.FastBinTimeseries.CommonCode
 {
     [Serializable]
     public class TimeSeries<T> : ITimeSeries<T>

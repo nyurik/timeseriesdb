@@ -27,7 +27,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public static Mode RunMode
         {
-            get { return Mode.Verify; }
+            get { return Mode.Create; }
         }
 
         public static bool AllowCreate
