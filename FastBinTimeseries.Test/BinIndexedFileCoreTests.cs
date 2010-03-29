@@ -83,7 +83,7 @@ namespace NYurik.FastBinTimeseries.Test
         public void BasicFunctionality()
         {
             var fileName = GetBinFileName();
-            if (RunMode != Mode.Verify)
+            if (AllowCreate)
             {
                 BinIndexedFile<byte> temp;
                 using (var f = new BinIndexedFile<byte>(fileName))
@@ -134,7 +134,7 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(fileName, temp.FileName);
 
 
-                using (var file = (BinIndexedFile<byte>) BinaryFile.Open(fileName, true))
+                using (var file = (BinIndexedFile<byte>)BinaryFile.Open(fileName, AllowCreate))
                 {
                     AfterInitValidation(file, true, fileName);
                     file.Close();

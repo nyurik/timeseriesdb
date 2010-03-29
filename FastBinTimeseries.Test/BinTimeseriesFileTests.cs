@@ -9,15 +9,19 @@ namespace NYurik.FastBinTimeseries.Test
     {
         private void RunTest(int itemCount, bool uniqueTimestamps)
         {
-            Cleanup();
-            var fileName = GetBinFileName();
-            using (var f = new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName){UniqueTimestamps = uniqueTimestamps})
+            string fileName = GetBinFileName();
+            using (var f = 
+                AllowCreate
+                ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = uniqueTimestamps}
+                : (BinTimeseriesFile<_DatetimeByte_SeqPk1>)BinaryFile.Open(fileName, false))
             {
-                f.InitializeNewFile();
-
                 _DatetimeByte_SeqPk1[] newData = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New,
                                                                                               itemCount, 0);
-                f.AppendData(new ArraySegment<_DatetimeByte_SeqPk1>(newData));
+                if (AllowCreate)
+                {
+                    f.InitializeNewFile();
+                    f.AppendData(new ArraySegment<_DatetimeByte_SeqPk1>(newData));
+                }
 
                 _DatetimeByte_SeqPk1[] res = f.ReadData(UtcDateTime.MinValue, UtcDateTime.MaxValue, int.MaxValue);
                 TestUtils.AreEqual(newData, res);
@@ -32,6 +36,40 @@ namespace NYurik.FastBinTimeseries.Test
                         TestUtils.GenerateData<_DatetimeByte_SeqPk1>(
                             _DatetimeByte_SeqPk1.New, 1, itemCount - 1), res);
                 }
+            }
+        }
+
+        [Test, Ignore]
+        public void BasicFunctionality()
+        {
+            _DatetimeByte_SeqPk1[] newData = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(
+                _DatetimeByte_SeqPk1.New, 10000, 0);
+
+            string fileName = GetBinFileName();
+            using (var f = 
+                AllowCreate
+                ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = false}
+                : (BinTimeseriesFile<_DatetimeByte_SeqPk1>)BinaryFile.Open(fileName, false))
+            {
+                if (AllowCreate)
+                {
+                    f.InitializeNewFile();
+                    f.AppendData(new ArraySegment<_DatetimeByte_SeqPk1>(newData));
+                }
+
+                _DatetimeByte_SeqPk1[] res = f.ReadData(UtcDateTime.MinValue, UtcDateTime.MaxValue, int.MaxValue);
+                TestUtils.AreEqual(newData, res);
+
+//                if (itemCount > 0)
+//                {
+//                    res = f.ReadData(
+//                        _DatetimeByte_SeqPk1.New(itemCount - 1).a,
+//                        _DatetimeByte_SeqPk1.New(itemCount).a,
+//                        int.MaxValue);
+//                    TestUtils.AreEqual(
+//                        TestUtils.GenerateData<_DatetimeByte_SeqPk1>(
+//                            _DatetimeByte_SeqPk1.New, 1, itemCount - 1), res);
+//                }
             }
         }
 
@@ -51,35 +89,6 @@ namespace NYurik.FastBinTimeseries.Test
             RunTest(100, false);
             RunTest(1000, false);
             RunTest(10000, false);
-        }
-
-        [Test, Ignore]
-        public void BasicFunctionality()
-        {
-            _DatetimeByte_SeqPk1[] newData = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(
-                _DatetimeByte_SeqPk1.New, 10000, 0);
-
-            var fileName = GetBinFileName();
-            using (var f = new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) { UniqueTimestamps = false })
-            {
-                f.InitializeNewFile();
-
-                f.AppendData(new ArraySegment<_DatetimeByte_SeqPk1>(newData));
-
-                _DatetimeByte_SeqPk1[] res = f.ReadData(UtcDateTime.MinValue, UtcDateTime.MaxValue, int.MaxValue);
-                TestUtils.AreEqual(newData, res);
-
-//                if (itemCount > 0)
-//                {
-//                    res = f.ReadData(
-//                        _DatetimeByte_SeqPk1.New(itemCount - 1).a,
-//                        _DatetimeByte_SeqPk1.New(itemCount).a,
-//                        int.MaxValue);
-//                    TestUtils.AreEqual(
-//                        TestUtils.GenerateData<_DatetimeByte_SeqPk1>(
-//                            _DatetimeByte_SeqPk1.New, 1, itemCount - 1), res);
-//                }
-            }
         }
     }
 }

@@ -9,8 +9,6 @@ namespace NYurik.FastBinTimeseries.Test
 {
     public class TestsBase
     {
-        private readonly Stopwatch _stopwatch = new Stopwatch();
-
         #region Mode enum
 
         public enum Mode
@@ -25,16 +23,22 @@ namespace NYurik.FastBinTimeseries.Test
         private const string StoreDir = "Stored1";
 
         private readonly Dictionary<string, int> _files = new Dictionary<string, int>();
+        private readonly Stopwatch _stopwatch = new Stopwatch();
 
         public static Mode RunMode
         {
-            get { return Mode.Create; }
+            get { return Mode.Verify; }
+        }
+
+        public static bool AllowCreate
+        {
+            get { return RunMode != Mode.Verify; }
         }
 
         public string GetBinFileName()
         {
             var stackTrace = new StackTrace();
-            var frameInd = 1;
+            int frameInd = 1;
             MethodBase method;
             for (int i = frameInd; i < stackTrace.FrameCount; i++)
             {
@@ -68,6 +72,11 @@ namespace NYurik.FastBinTimeseries.Test
             else
                 _stopwatch.Start();
 
+            DeleteTempFiles();
+        }
+
+        protected void DeleteTempFiles()
+        {
             if (RunMode == Mode.OneTime)
             {
                 foreach (var i in _files)
