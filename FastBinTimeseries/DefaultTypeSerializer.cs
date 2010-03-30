@@ -12,11 +12,12 @@ namespace NYurik.FastBinTimeseries
 
     public class DefaultTypeSerializer<T> : IBinSerializer<T>
     {
-        private static readonly Version CurrentVersion = new Version(1, 0);
+        private static readonly Version Version10 = new Version(1, 0);
         private readonly UnsafeMemCompareDelegate<T> _compareArrays;
         private readonly UnsafeActionDelegate<FileStream, T> _processFileStream;
         private readonly UnsafeActionDelegate<IntPtr, T> _processMemoryMap;
         private readonly int _typeSize;
+        private Version _version = Version10;
 
         public DefaultTypeSerializer()
         {
@@ -41,6 +42,11 @@ namespace NYurik.FastBinTimeseries
         }
 
         #region IBinSerializer<T> Members
+
+        public Version Version
+        {
+            get { return _version; }
+        }
 
         public int TypeSize
         {
@@ -76,19 +82,19 @@ namespace NYurik.FastBinTimeseries
             return _compareArrays(buffer1.Array, buffer1.Offset, buffer2.Array, buffer2.Offset, buffer1.Count);
         }
 
-        public void ReadCustomHeader(BinaryReader reader, Version version, IDictionary<string, Type> typeMap)
+        public void Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            if (version == CurrentVersion)
-            {
-                // do nothing - in this version we do not validate the signature of the struct
-            }
-            else
-                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
+            Version ver = reader.ReadVersion();
+            if (ver != Version10)
+                throw FastBinFileUtils.GetUnknownVersionException(ver, GetType());
+            
+            _version = ver;
+            // do nothing - in this version we do not validate the signature of the struct
         }
 
-        public Version WriteCustomHeader(BinaryWriter writer)
+        public void WriteCustomHeader(BinaryWriter writer)
         {
-            return CurrentVersion;
+            writer.WriteVersion(_version);
 
             // in the next version - will record the type signature and compare it with T
             // var typeSignature = typeof(T).GenerateTypeSignature();

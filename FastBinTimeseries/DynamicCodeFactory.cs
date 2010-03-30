@@ -64,7 +64,7 @@ namespace NYurik.FastBinTimeseries
         /// Strings are not in that list, even though you can use them in structs. 
         /// Fixed-size arrays of unmanaged-types are allowed.
         /// </summary>
-        public static void ThrowIfNotUnmanagedType(Type type)
+        private static void ThrowIfNotUnmanagedType(Type type)
         {
             ThrowIfNotUnmanagedType(type, new Stack<Type>(4));
         }
@@ -268,7 +268,7 @@ namespace NYurik.FastBinTimeseries
         /// Create a delegate that extracts a timestamp from the struct of type T.
         /// A datetime field must be first in the struct.
         /// </summary>
-        internal Func<T, UtcDateTime> CreateTSAccessor<T>(FieldInfo fieldInfo)
+        internal Func<T, UtcDateTime> CreateTsAccessor<T>(FieldInfo fieldInfo)
         {
             return (Func<T, UtcDateTime>) _tsAccessorExpr.GetCreateValue(fieldInfo, CreateAccessor<T>);
         }

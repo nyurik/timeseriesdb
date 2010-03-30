@@ -31,9 +31,6 @@ namespace NYurik.FastBinTimeseries
         /// <summary> Was file open for writing </summary>
         bool CanWrite { get; }
 
-        /// <summary> The version of the serializer used to create this file </summary>
-        Version SerializerVersion { get; }
-
         /// <summary> The version of the binary file handler used to create this file </summary>
         Version FileVersion { get; }
 
@@ -49,6 +46,9 @@ namespace NYurik.FastBinTimeseries
 
     public interface IBinaryFile<T> : IBinaryFile
     {
+        /// <summary> Access to the instance of the current serializer </summary>
+        IBinSerializer<T> Serializer { get; }
+
         /// <summary>
         /// Read data starting at <paramref name="firstItemIdx"/> to fill up the <paramref name="buffer"/>.
         /// </summary>

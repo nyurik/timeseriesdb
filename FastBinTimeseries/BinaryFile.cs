@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile<T> : BinaryFile, IBinaryFile
     {
+        private const int MinReqSizeToUseMapView = 4 * 1024; // 4 KB
+
         private IBinSerializer<T> _serializer;
 
         /// <summary>
@@ -22,8 +25,26 @@ namespace NYurik.FastBinTimeseries
         protected BinaryFile(string fileName)
             : base(fileName)
         {
-            // Initialize default serializer
-            Serializer = new DefaultTypeSerializer<T>();
+            Type typeT = typeof (T);
+            BinarySerializerAttribute[] attr = typeT.GetCustomAttributes<BinarySerializerAttribute>(false);
+            if (attr.Length >= 1)
+            {
+                Type typeSer = attr[0].BinSerializerType;
+                if (typeSer.IsGenericTypeDefinition)
+                    typeSer = typeSer.MakeGenericType(typeT);
+
+                var ser = Activator.CreateInstance(typeSer) as IBinSerializer<T>;
+                if (ser == null)
+                    throw new ArgumentException(
+                        string.Format("Custom binary serializer for type {0} does not implement IBinSerializer<{0}>",
+                                      typeT.Name));
+                Serializer = ser;
+            }
+            else
+            {
+                // Initialize default serializer
+                Serializer = new DefaultTypeSerializer<T>();
+            }
         }
 
         public IBinSerializer<T> Serializer
@@ -86,8 +107,8 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        /// <summary> Used by <see cref="BinaryFile.Open(FileStream,IDictionary{string,Type})"/> when opening an existing file </summary>
-        protected internal override sealed void SetSerializer(IBinSerializer nonGenericSerializer)
+        /// <summary> Used by <see cref="BinaryFile.Open(FileStream,System.Collections.Generic.IDictionary{string,System.Type})"/> when opening an existing file </summary>
+        protected override sealed void SetSerializer(IBinSerializer nonGenericSerializer)
         {
             _serializer = (IBinSerializer<T>) nonGenericSerializer;
         }

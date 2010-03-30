@@ -9,6 +9,8 @@ namespace NYurik.FastBinTimeseries.Test
     [TestFixture]
     public class BinIndexedFileTests : TestsBase
     {
+        const bool EnableLongerTests = false;
+
         private static void WriteData<T>(BinIndexedFile<T> f, long firstItemIndex, T[] buffer)
         {
             f.WriteData(firstItemIndex, new ArraySegment<T>(buffer));
@@ -43,7 +45,7 @@ namespace NYurik.FastBinTimeseries.Test
                         Assert.IsNotNull(fileVersion);
                         baseVersion = f.BaseVersion;
                         Assert.IsNotNull(baseVersion);
-                        serializerVersion = f.SerializerVersion;
+                        serializerVersion = f.Serializer.Version;
                         Assert.IsNotNull(serializerVersion);
 
                         Assert.AreEqual(true, f.CanWrite);
@@ -65,13 +67,14 @@ namespace NYurik.FastBinTimeseries.Test
                 using (BinaryFile file = BinaryFile.Open(fileName, false))
                 {
                     Assert.IsInstanceOf<BinIndexedFile<T>>(file);
+                    Assert.AreEqual(typeof(T), file.ItemType);
                     var f = (BinIndexedFile<T>) file;
 
                     if (AllowCreate)
                     {
                         Assert.AreEqual(fileVersion, f.FileVersion);
                         Assert.AreEqual(baseVersion, f.BaseVersion);
-                        Assert.AreEqual(serializerVersion, f.SerializerVersion);
+                        Assert.AreEqual(serializerVersion, f.Serializer.Version);
                         Assert.AreEqual(hdrSize, f.HeaderSize);
                     }
 
@@ -169,7 +172,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
-        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess)
+        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess, bool enableLargePages)
             where T : IEquatable<T>
         {
             string testName = "PageBorderOperations_" + (enableMemoryMappedAccess ? "MMF" : "Stream");
@@ -186,11 +189,14 @@ namespace NYurik.FastBinTimeseries.Test
                 PageBorderOperations(converter, enableMemoryMappedAccess,
                                      BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
 
-                PageBorderOperations(converter, enableMemoryMappedAccess,
-                                     2*BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
-                PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MaxLargePageSize);
-                PageBorderOperations(converter, enableMemoryMappedAccess,
-                                     2*BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
+                if (enableLargePages)
+                {
+                    PageBorderOperations(converter, enableMemoryMappedAccess,
+                                         2*BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
+                    PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MaxLargePageSize);
+                    PageBorderOperations(converter, enableMemoryMappedAccess,
+                                         2*BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
+                }
 
                 TestStop<T>(testName, sw);
             }
@@ -294,31 +300,33 @@ namespace NYurik.FastBinTimeseries.Test
         [Test]
         public void PageCheckMmf()
         {
-            PageBorderOperations<byte>(TestUtils.NewByte, true);
-            PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, true);
-            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New, true);
-            PageBorderOperations<_IntBool_SeqPk1>(_IntBool_SeqPk1.New, true);
-            PageBorderOperations<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, true);
-            PageBorderOperations<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New, true);
-            PageBorderOperations<_LongBool_SeqPk1>(_LongBool_SeqPk1.New, true);
-            PageBorderOperations<_LongByte_SeqPk1>(_LongByte_SeqPk1.New, true);
-            PageBorderOperations<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New, true);
-            PageBorderOperations<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New, true);
+            const bool enableMemoryMappedAccess = true;
+            PageBorderOperations<byte>(TestUtils.NewByte, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_IntBool_SeqPk1>(_IntBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_LongBool_SeqPk1>(_LongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_LongByte_SeqPk1>(_LongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
         }
 
         [Test]
         public void PageCheckStream()
         {
-            PageBorderOperations<byte>(TestUtils.NewByte, false);
-            PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, false);
-            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New, false);
-            PageBorderOperations<_IntBool_SeqPk1>(_IntBool_SeqPk1.New, false);
-            PageBorderOperations<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, false);
-            PageBorderOperations<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New, false);
-            PageBorderOperations<_LongBool_SeqPk1>(_LongBool_SeqPk1.New, false);
-            PageBorderOperations<_LongByte_SeqPk1>(_LongByte_SeqPk1.New, false);
-            PageBorderOperations<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New, false);
-            PageBorderOperations<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New, false);
+            const bool enableMemoryMappedAccess = false;
+            PageBorderOperations<byte>(TestUtils.NewByte, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_IntBool_SeqPk1>(_IntBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_LongBool_SeqPk1>(_LongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_LongByte_SeqPk1>(_LongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
         }
 
         [Test]

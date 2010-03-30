@@ -30,7 +30,7 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        private static readonly Version CurrentVersion = new Version(1, 0);
+        private static readonly Version Version10 = new Version(1, 0);
 
         /// <summary>
         /// Read enough items to fill the <paramref name="buffer"/>, starting at <paramref name="firstItemIndex"/>.
@@ -63,15 +63,18 @@ namespace NYurik.FastBinTimeseries
             return PerformStreaming(firstItemIdx, enumerateInReverse, bufferSize);
         }
 
-        protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
+        protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            if (version != CurrentVersion)
-                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
+            var ver = reader.ReadVersion();
+            if (ver != Version10)
+                throw FastBinFileUtils.GetUnknownVersionException(ver, GetType());
+            return ver;
         }
 
-        protected override Version WriteCustomHeader(BinaryWriter stream)
+        protected override Version WriteCustomHeader(BinaryWriter writer)
         {
-            return CurrentVersion;
+            writer.WriteVersion(Version10);
+            return Version10;
         }
     }
 }

@@ -86,6 +86,7 @@
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
     <None Include="_ClassDiagram.cd" />
+    <Compile Include="BinarySerializerAttribute.cs" />
     <Compile Include="BinIndexedFile.cs" />
     <Compile Include="BinTimeseriesFile.cs">
       <SubType>Code</SubType>
@@ -96,6 +97,7 @@
     <Compile Include="CommonCode\ITimeSeries.cs" />
     <Compile Include="CommonCode\MergedTimeSeries.cs" />
     <Compile Include="CommonCode\TimeSeries.cs" />
+    <Compile Include="BinBlockSerializer.cs" />
     <Compile Include="FastBinFileUtils.cs" />
     <Compile Include="IBinaryFile.cs" />
     <Compile Include="IBinTimeseriesFile.cs" />

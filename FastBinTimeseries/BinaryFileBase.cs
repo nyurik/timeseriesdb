@@ -1,36 +1,41 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile : IDisposable
     {
-        protected const int BytesInHeaderSize = sizeof (int);
-        protected const int MaxHeaderSize = 4*1024*1024;
-        protected const int MinReqSizeToUseMapView = 4*1024; // 4 KB
+        private const int BytesInHeaderSize = sizeof (int);
+        private const int MaxHeaderSize = 4*1024*1024;
 
-        protected static readonly Version BaseVersion10 = new Version(1, 0);
-        protected static readonly Version BaseVersion11 = new Version(1, 1);
+        private static readonly Version BaseVersion10 = new Version(1, 0);
+        private static readonly Version BaseVersion11 = new Version(1, 1);
+        private static readonly Version BaseVersion12 = new Version(1, 2);
 
-        private Version _baseVersion;
+        private static readonly Version[] KnownVersions = {BaseVersion10, BaseVersion11, BaseVersion12};
+
+
+        /// <summary> Base version for new files by default </summary>
+        private Version _baseVersion = BaseVersion11;
+
         private bool _canWrite;
         private bool _enableMemMappedAccessOnRead;
         private bool _enableMemMappedAccessOnWrite;
         private string _fileName;
+        private FileStream _fileStream;
         private Version _fileVersion;
         private int _headerSize;
         private bool _isDisposed;
         private bool _isInitialized;
-        private Version _serializerVersion;
         private string _tag = "";
 
         #region Fields accessed from the derived BinaryFile<T> class
 
         // ReSharper disable InconsistentNaming
-        protected internal long m_count;
-        protected internal FileStream m_fileStream;
-        protected internal int m_itemSize;
+        internal long m_count;
+        internal int m_itemSize;
         // ReSharper restore InconsistentNaming
 
         #endregion
@@ -76,7 +81,7 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 ThrowOnNotInitialized();
-                return m_fileStream;
+                return _fileStream;
             }
         }
 
@@ -163,17 +168,13 @@ namespace NYurik.FastBinTimeseries
 
         public Version BaseVersion
         {
-            get
-            {
-                ThrowOnNotInitialized();
-                return _baseVersion;
-            }
-            protected internal set
+            get { return _baseVersion; }
+            set
             {
                 ThrowOnInitialized();
                 if (value == null) throw new ArgumentNullException("value");
-                if (value != BaseVersion11 && value != BaseVersion10)
-                    FastBinFileUtils.ThrowUnknownVersion(value, typeof (BinaryFile));
+                if (!KnownVersions.Contains(value))
+                    throw FastBinFileUtils.GetUnknownVersionException(value, GetType());
                 _baseVersion = value;
             }
         }
@@ -185,7 +186,7 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnNotInitialized();
                 return _headerSize;
             }
-            protected internal set
+            private set
             {
                 ThrowOnInitialized();
 
@@ -207,15 +208,6 @@ namespace NYurik.FastBinTimeseries
             {
                 ThrowOnDisposed();
                 return _canWrite;
-            }
-        }
-
-        public Version SerializerVersion
-        {
-            get
-            {
-                ThrowOnNotInitialized();
-                return _serializerVersion;
             }
         }
 
@@ -303,70 +295,6 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        /// <summary>
-        /// Open a binary file from a filestream, and start reading the file header.
-        /// This method must match the <see cref="BinaryFile.WriteHeader"/> method.
-        /// </summary>
-        /// <param name="stream">Stream from which to read the binary data</param>
-        /// <param name="typeMap">
-        /// An optional map that would override the type strings in the file with the given types.
-        /// </param>
-        public static BinaryFile Open(FileStream stream, IDictionary<string, Type> typeMap)
-        {
-            if (stream == null) throw new ArgumentNullException("stream");
-
-            stream.Seek(0, SeekOrigin.Begin);
-
-            // Get header size
-            int hdrSize = BitConverter.ToInt32(ReadIntoNewBuffer(stream, BytesInHeaderSize), 0);
-
-            // Read the rest of the header and create a memory reader so that we won't accidently go too far on string reads
-            var memReader = new BinaryReader(
-                new MemoryStream(ReadIntoNewBuffer(stream, hdrSize - BytesInHeaderSize), false));
-
-            // Instantiate BinaryFile-inherited class this file was created with
-            Version baseVersion = memReader.ReadVersion();
-
-            var inst = memReader.ReadTypeAndInstantiate<BinaryFile>(typeMap, true);
-            inst.HeaderSize = hdrSize;
-            inst.BaseVersion = baseVersion;
-            inst.m_fileStream = stream;
-            inst._canWrite = stream.CanWrite;
-
-            // Read values in the same order as WriteHeader()
-            // Serializer
-            var serializer = memReader.ReadTypeAndInstantiate<IBinSerializer>(typeMap, false);
-
-            inst.SetSerializer(serializer);
-
-            inst.EnableMemMappedAccessOnRead = serializer.SupportsMemoryMappedFiles;
-            inst.EnableMemMappedAccessOnWrite = serializer.SupportsMemoryMappedFiles;
-
-            // Make sure the item size has not changed
-            int serializerTypeSize = serializer.TypeSize;
-            int itemSize = memReader.ReadInt32();
-            if (itemSize != serializerTypeSize)
-                throw new InvalidOperationException(
-                    string.Format(
-                        "The file of type {0} was created with itemSize={1}, but now the itemSize={2}",
-                        inst.GetType().FullName, itemSize, inst.ItemSize));
-            inst.m_itemSize = serializerTypeSize;
-
-            if (inst._baseVersion > BaseVersion10)
-                inst.Tag = memReader.ReadString();
-
-            inst._fileVersion = memReader.ReadVersion();
-            inst.ReadCustomHeader(memReader, inst._fileVersion, typeMap);
-
-            inst._serializerVersion = memReader.ReadVersion();
-            serializer.ReadCustomHeader(memReader, inst._serializerVersion, typeMap);
-
-            inst.m_count = inst.CalculateItemCountFromFilePosition(inst.m_fileStream.Length);
-            inst._isInitialized = true;
-
-            return inst;
-        }
-
         /// <summary> This method must be called for all new files (object created with the constructor) before usage. </summary>
         public void InitializeNewFile()
         {
@@ -375,14 +303,20 @@ namespace NYurik.FastBinTimeseries
                 throw new InvalidOperationException(
                     "InitializeNewFile() can only be called once for new files before performing any other operations");
 
+            if (File.Exists(FileName))
+                throw new IOException(string.Format("File {0} already exists", FileName));
+
+            ArraySegment<byte> header = WriteHeader();
+
             // This call does not change the state, so no need to invalidate this object
             // This call must be left outside the following try-catch block, 
             // because file-already-exists exception would cause the deletion of that file.
-            m_fileStream = new FileStream(FileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
+            _fileStream = new FileStream(FileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
 
             try
             {
-                WriteHeader();
+                _fileStream.Write(header.Array, header.Offset, header.Count);
+                _fileStream.Flush();
                 _isInitialized = true;
             }
             catch (Exception ex)
@@ -430,13 +364,13 @@ namespace NYurik.FastBinTimeseries
             {
                 if (disposing)
                 {
-                    FileStream streamTmp = m_fileStream;
-                    m_fileStream = null;
+                    FileStream streamTmp = _fileStream;
+                    _fileStream = null;
                     if (streamTmp != null)
                         streamTmp.Close();
                 }
                 else
-                    m_fileStream = null;
+                    _fileStream = null;
 
                 _isDisposed = true;
             }
@@ -447,7 +381,7 @@ namespace NYurik.FastBinTimeseries
             Dispose(false);
         }
 
-        protected internal abstract void SetSerializer(IBinSerializer nonGenericSerializer);
+        protected abstract void SetSerializer(IBinSerializer nonGenericSerializer);
 
         private static byte[] ReadIntoNewBuffer(Stream stream, int bufferSize)
         {
@@ -492,79 +426,17 @@ namespace NYurik.FastBinTimeseries
         {
             return string.Format("{0} file {1} of type {2}{3}",
                                  IsDisposed ? "Disposed" : (IsInitialized ? "Open" : "Uninitialized"),
-                                 m_fileStream == null ? "(unknown)" : m_fileStream.Name,
+                                 _fileStream == null ? "(unknown)" : _fileStream.Name,
                                  GetType().FullName,
                                  IsOpen ? string.Format(" with {0} items", Count) : "");
         }
 
-        /// <summary>
-        /// Write the header info into the begining of the file.
-        /// This method must match the reading sequence in the
-        /// <see cref="Open(System.IO.FileStream,System.Collections.Generic.IDictionary{string,System.Type})"/>.
-        /// </summary>
-        /// <remarks>
-        ///            ***  Header structure: ***
-        /// int32   HeaderSize
-        /// Version BinFile main version
-        /// string  BinaryFile...&lt;...> type name
-        /// string  Serializer type name
-        /// int32   ItemSize
-        /// string  User-provided tag (non-null)
-        /// Version BinFile custom header version
-        /// ...     BinFile custom header
-        /// Version Serializer version
-        /// ...     Serializer custom header
-        /// </remarks>
-        private void WriteHeader()
-        {
-            var memStream = new MemoryStream();
-            var memWriter = new BinaryWriter(memStream);
-
-            //
-            // Serialize header values
-            //
-
-            // Header size will be replaced by an actual length later
-            memWriter.Write(0);
-            memWriter.WriteVersion(BaseVersion11);
-            BaseVersion = BaseVersion11;
-
-            memWriter.Write(GetType().AssemblyQualifiedName);
-            memWriter.Write(NonGenericSerializer.GetType().AssemblyQualifiedName);
-
-            // Make sure the item size will not change
-            memWriter.Write(m_itemSize);
-
-            // User tag
-            memWriter.Write(Tag);
-
-            // Save versions and custom headers
-            _fileVersion = memWriter.WriteHeaderWithVersion(WriteCustomHeader);
-            _serializerVersion = memWriter.WriteHeaderWithVersion(NonGenericSerializer.WriteCustomHeader);
-
-            // Header size must be dividable by the item size
-            var headerSize = (int) FastBinFileUtils.RoundUpToMultiple(memWriter.BaseStream.Position, m_itemSize);
-            if (memStream.Capacity < headerSize)
-                memStream.Capacity = headerSize;
-
-            // Override the header size value at the first position of the header
-            memWriter.Seek(0, SeekOrigin.Begin);
-            memWriter.Write(headerSize);
-
-            HeaderSize = headerSize;
-
-            if (m_fileStream.Position != 0)
-                throw new InvalidOperationException("Expected to be at the stream position 0");
-            m_fileStream.Write(memStream.GetBuffer(), 0, headerSize);
-            m_fileStream.Flush();
-        }
-
         /// <summary> Override to read custom header info. Must match the <see cref="WriteCustomHeader"/>. </summary>
-        protected abstract void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap);
+        protected abstract Version Init(BinaryReader reader, IDictionary<string, Type> typeMap);
 
-        /// <summary> Override to write custom header info. Must match the <see cref="ReadCustomHeader"/>. </summary>
+        /// <summary> Override to write custom header info. Must match the <see cref="Init"/>. </summary>
         /// <returns> Return the version number of the header. </returns>
-        protected abstract Version WriteCustomHeader(BinaryWriter stream);
+        protected abstract Version WriteCustomHeader(BinaryWriter writer);
 
         /// <summary> Shrink file to the new size. </summary>
         /// <param name="newCount">Number of items the file should contain after this operation</param>
@@ -594,6 +466,206 @@ namespace NYurik.FastBinTimeseries
         /// Calls a factory method without explicitly specifying the type of the sub-item.
         /// </summary>
         public abstract TDst CreateWrappedObject<TDst>(IWrapperFactory factory);
+
+        #region Header Reading/Writing
+
+        /// <summary>
+        /// Open a binary file from a filestream, and start reading the file header.
+        /// This method must match the <see cref="BinaryFile.WriteHeader"/> method.
+        /// </summary>
+        /// <param name="stream">Stream from which to read the binary data</param>
+        /// <param name="typeMap">
+        /// An optional map that would override the type strings in the file with the given types.
+        /// </param>
+        public static BinaryFile Open(FileStream stream, IDictionary<string, Type> typeMap)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+
+            stream.Seek(0, SeekOrigin.Begin);
+
+            // Get header size
+            int hdrSize = BitConverter.ToInt32(ReadIntoNewBuffer(stream, BytesInHeaderSize), 0);
+
+            // Read the rest of the header and create a memory reader so that we won't accidently go too far on string reads
+            var memReader = new BinaryReader(
+                new MemoryStream(ReadIntoNewBuffer(stream, hdrSize - BytesInHeaderSize), false));
+
+            // Instantiate BinaryFile-inherited class this file was created with
+            Version baseVersion = memReader.ReadVersion();
+
+            BinaryFile inst;
+            if (baseVersion == BaseVersion10 || baseVersion == BaseVersion11)
+                inst = ReadHeaderV10(baseVersion, stream, memReader, hdrSize, typeMap);
+            else if (baseVersion == BaseVersion12)
+                inst = ReadHeaderV12(baseVersion, stream, memReader, hdrSize, typeMap);
+            else
+                throw FastBinFileUtils.GetUnknownVersionException(baseVersion, typeof (BinaryFile));
+
+            inst.EnableMemMappedAccessOnRead = inst.NonGenericSerializer.SupportsMemoryMappedFiles;
+            inst.EnableMemMappedAccessOnWrite = inst.NonGenericSerializer.SupportsMemoryMappedFiles;
+            inst.m_count = inst.CalculateItemCountFromFilePosition(inst._fileStream.Length);
+            inst._isInitialized = true;
+
+            return inst;
+        }
+
+        /// <summary>
+        /// Write the header info into the begining of the file.
+        /// This method must match the reading sequence in the
+        /// <see cref="Open(System.IO.FileStream,System.Collections.Generic.IDictionary{string,System.Type})"/>.
+        /// </summary>
+        /// <remarks>
+        ///            ***  Header structure (v1.2): ***
+        /// int32   HeaderSize
+        /// Version BinFile main version
+        /// string  User-provided tag (non-null)
+        /// string  BinaryFile...&lt;...> type name
+        /// Version BinFile custom header version
+        /// ...     BinFile custom header
+        /// string  Serializer type name
+        /// Version Serializer version
+        /// ...     Serializer custom header
+        /// 
+        ///            ***  Header structure (v1.0, v1.1): ***
+        /// int32   HeaderSize
+        /// Version BinFile main version
+        /// string  BinaryFile...&lt;...> type name
+        /// string  Serializer type name
+        /// int32   ItemSize
+        /// string  User-provided tag (non-null)
+        /// Version BinFile custom header version
+        /// ...     BinFile custom header
+        /// Version Serializer version
+        /// ...     Serializer custom header
+        /// </remarks>
+        private ArraySegment<byte> WriteHeader()
+        {
+            var memStream = new MemoryStream();
+            var memWriter = new BinaryWriter(memStream);
+
+            //
+            // Serialize header values
+            //
+
+            // Header size will be replaced by an actual length later
+            memWriter.Write(0);
+            memWriter.WriteVersion(BaseVersion);
+
+            if (BaseVersion == BaseVersion10 || BaseVersion == BaseVersion11)
+                WriteHeaderV10(memWriter);
+            else if (BaseVersion == BaseVersion12)
+                WriteHeaderV12(memWriter);
+            else
+                throw FastBinFileUtils.GetUnknownVersionException(BaseVersion, GetType());
+
+            // Header size must be dividable by the item size
+            var headerSize = (int) FastBinFileUtils.RoundUpToMultiple(memWriter.BaseStream.Position, m_itemSize);
+            if (memStream.Capacity < headerSize)
+                memStream.Capacity = headerSize;
+
+            // Override the header size value at the first position of the header
+            memWriter.Seek(0, SeekOrigin.Begin);
+            memWriter.Write(headerSize);
+
+            HeaderSize = headerSize;
+
+            return new ArraySegment<byte>(memStream.GetBuffer(), 0, headerSize);
+        }
+
+        private static BinaryFile ReadHeaderV10(Version baseVersion, FileStream stream, BinaryReader reader,
+                                                int hdrSize, IDictionary<string, Type> typeMap)
+        {
+            var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeMap, true);
+
+            // Read values in the same order as WriteHeader()
+            // Serializer
+            var serializer = reader.ReadTypeAndInstantiate<IBinSerializer>(typeMap, false);
+
+            int itemSize = reader.ReadInt32();
+            // Make sure the item size has not changed
+            int serializerTypeSize = serializer.TypeSize;
+            if (itemSize != serializerTypeSize)
+                throw new InvalidOperationException(
+                    string.Format(
+                        "The file of type {0} was created with itemSize={1}, but now the itemSize={2}",
+                        inst.GetType().FullName, itemSize, serializerTypeSize));
+
+            string tag = "";
+            if (baseVersion > BaseVersion10)
+                tag = reader.ReadString();
+
+            inst.HeaderSize = hdrSize;
+            inst.BaseVersion = baseVersion;
+            inst._fileStream = stream;
+            inst._canWrite = stream.CanWrite;
+            inst.SetSerializer(serializer);
+            inst.m_itemSize = serializerTypeSize;
+            inst.Tag = tag;
+
+            inst._fileVersion = inst.Init(reader, typeMap);
+            serializer.Init(reader, typeMap);
+
+            return inst;
+        }
+
+        private static BinaryFile ReadHeaderV12(Version baseVersion, FileStream stream, BinaryReader reader,
+                                                int hdrSize, IDictionary<string, Type> typeMap)
+        {
+            // Read values in the same order as WriteHeader()
+            string tag = reader.ReadString();
+
+            // Serializer
+            var serializer = reader.ReadTypeAndInstantiate<IBinSerializer>(typeMap, false);
+            serializer.Init(reader, typeMap);
+
+            // BinaryFile
+            var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeMap, true);
+            inst.HeaderSize = hdrSize;
+            inst.BaseVersion = baseVersion;
+            inst._fileStream = stream;
+            inst._canWrite = stream.CanWrite;
+            inst.SetSerializer(serializer);
+            inst.m_itemSize = serializer.TypeSize;
+            inst.Tag = tag;
+            inst._fileVersion = inst.Init(reader, typeMap);
+
+            return inst;
+
+            //int itemSize = reader.ReadInt32();
+
+            //// Make sure the item size has not changed
+            //int serializerTypeSize = serializer.TypeSize;
+            //if (itemSize != serializerTypeSize)
+            //    throw new InvalidOperationException(
+            //        string.Format(
+            //            "The file of type {0} ({1}) / serializer {2} ({3}) was created with itemSize={4}, but now the itemSize={5}",
+            //            inst.GetType().FullName, 
+            //            itemSize, serializerTypeSize));
+        }
+
+        private void WriteHeaderV10(BinaryWriter writer)
+        {
+            writer.Write(GetType().AssemblyQualifiedName);
+            writer.Write(NonGenericSerializer.GetType().AssemblyQualifiedName);
+
+            // Make sure the item size will not change
+            writer.Write(m_itemSize);
+
+            // User tag
+            if (BaseVersion > BaseVersion10)
+                writer.Write(Tag);
+
+            // Save versions and custom headers
+            _fileVersion = WriteCustomHeader(writer);
+            NonGenericSerializer.WriteCustomHeader(writer);
+        }
+
+        private void WriteHeaderV12(BinaryWriter writer)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 
     /// <summary>

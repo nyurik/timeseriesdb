@@ -6,9 +6,10 @@ namespace NYurik.FastBinTimeseries
 {
     public interface IBinSerializer
     {
-        /// <summary>
-        /// The size of each data element
-        /// </summary>
+        /// <summary> Serializer version </summary>
+        Version Version { get; }
+
+        /// <summary> The size of each data element </summary>
         int TypeSize { get; }
 
         /// <summary>
@@ -19,12 +20,12 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Optionaly initialize this serializer from a binary reader. Must match all actions by <see cref="WriteCustomHeader"/>
         /// </summary>
-        void ReadCustomHeader(BinaryReader reader, Version version, IDictionary<string, Type> typeMap);
+        void Init(BinaryReader reader, IDictionary<string, Type> typeMap);
 
         /// <summary>
-        /// Optionaly save this serializer's parameters to a binary writer. Must match all actions by <see cref="ReadCustomHeader"/>
+        /// Optionaly save this serializer's parameters to a binary writer. Must match all actions by <see cref="Init"/>
         /// </summary>
-        Version WriteCustomHeader(BinaryWriter writer);
+        void WriteCustomHeader(BinaryWriter writer);
     }
 
     public interface IBinSerializer<T> : IBinSerializer

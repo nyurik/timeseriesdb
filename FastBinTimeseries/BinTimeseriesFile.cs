@@ -40,12 +40,11 @@ namespace NYurik.FastBinTimeseries
     public class BinTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinTimeseriesFile, IStoredTimeSeries<T>,
                                         IHistFeedInt<T>
     {
-        private static readonly Version CurrentVersion = new Version(1, 1);
-
         private static readonly DynamicSyncDictionary<Type, FieldInfo> TsFieldsCache =
             new DynamicSyncDictionary<Type, FieldInfo>(GetTimestampField);
 
         private static readonly Version Version10 = new Version(1, 0);
+        private static readonly Version Version11 = new Version(1, 1);
         private UtcDateTime? _firstTimestamp;
         private UtcDateTime? _lastTimestamp;
         private FieldInfo _timestampFieldInfo;
@@ -121,30 +120,32 @@ namespace NYurik.FastBinTimeseries
             return result;
         }
 
-        protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
+        protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            if (version == CurrentVersion || version == Version10)
-            {
-                // UniqueTimestamps was not available in ver 1.0
-                UniqueTimestamps = version > Version10 && stream.ReadBoolean();
+            var ver = reader.ReadVersion();
+            if (ver != Version11 && ver != Version10)
+                throw FastBinFileUtils.GetUnknownVersionException(ver, GetType());
 
-                string fieldName = stream.ReadString();
+            // UniqueTimestamps was not available in ver 1.0
+            UniqueTimestamps = ver > Version10 && reader.ReadBoolean();
 
-                FieldInfo fieldInfo = typeof (T).GetField(fieldName, DynamicCodeFactory.AllInstanceMembers);
-                if (fieldInfo == null)
-                    throw new InvalidOperationException(
-                        string.Format("Timestamp field {0} was not found in type {1}", fieldName, typeof (T).FullName));
-                TimestampFieldInfo = fieldInfo;
-            }
-            else
-                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
+            string fieldName = reader.ReadString();
+
+            FieldInfo fieldInfo = typeof(T).GetField(fieldName, DynamicCodeFactory.AllInstanceMembers);
+            if (fieldInfo == null)
+                throw new InvalidOperationException(
+                    string.Format("Timestamp field {0} was not found in type {1}", fieldName, typeof(T).FullName));
+            TimestampFieldInfo = fieldInfo;
+
+            return ver;
         }
 
-        protected override Version WriteCustomHeader(BinaryWriter stream)
+        protected override Version WriteCustomHeader(BinaryWriter writer)
         {
-            stream.Write(UniqueTimestamps);
-            stream.Write(TimestampFieldInfo.Name);
-            return CurrentVersion;
+            writer.WriteVersion(Version11);
+            writer.Write(UniqueTimestamps);
+            writer.Write(TimestampFieldInfo.Name);
+            return Version11;
         }
 
         #endregion
@@ -189,7 +190,7 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnInitialized();
                 if (value == null) throw new ArgumentNullException();
 
-                TimestampAccessor = DynamicCodeFactory.Instance.CreateTSAccessor<T>(value);
+                TimestampAccessor = DynamicCodeFactory.Instance.CreateTsAccessor<T>(value);
                 _timestampFieldInfo = value;
             }
         }

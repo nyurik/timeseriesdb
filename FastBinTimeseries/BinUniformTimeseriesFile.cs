@@ -151,8 +151,8 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        private static readonly Version CurrentVersion = new Version(1, 1);
-        private static readonly Version Ver10 = new Version(1, 0);
+        private static readonly Version Version10 = new Version(1, 0);
+        private static readonly Version Version11 = new Version(1, 1);
 
         #region IBinaryFile<T> Members
 
@@ -233,28 +233,30 @@ namespace NYurik.FastBinTimeseries
             PerformWrite(itemLong, buffer);
         }
 
-        protected override void ReadCustomHeader(BinaryReader stream, Version version, IDictionary<string, Type> typeMap)
+        protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            if (version == CurrentVersion || version == Ver10)
-            {
-                ItemTimeSpan = TimeSpan.FromTicks(stream.ReadInt64());
+            var ver = reader.ReadVersion();
+            if (ver != Version11 && ver != Version10)
+                throw FastBinFileUtils.GetUnknownVersionException(ver, GetType());
+            
+            ItemTimeSpan = TimeSpan.FromTicks(reader.ReadInt64());
 
-                // in 1.0, DateTime was serialized as binary instead of UtcDateTime.Ticks
-                FirstTimestamp =
-                    version == CurrentVersion
-                        ? new UtcDateTime(stream.ReadInt64())
-                        : new UtcDateTime(DateTime.FromBinary(stream.ReadInt64()));
-            }
-            else
-                FastBinFileUtils.ThrowUnknownVersion(version, GetType());
+            // in 1.0, DateTime was serialized as binary instead of UtcDateTime.Ticks
+            FirstTimestamp =
+                ver == Version11
+                    ? new UtcDateTime(reader.ReadInt64())
+                    : new UtcDateTime(DateTime.FromBinary(reader.ReadInt64()));
+
+            return ver;
         }
 
-        protected override Version WriteCustomHeader(BinaryWriter stream)
+        protected override Version WriteCustomHeader(BinaryWriter writer)
         {
-            stream.Write(ItemTimeSpan.Ticks);
-            stream.Write(FirstTimestamp.Ticks);
+            writer.WriteVersion(Version11);
+            writer.Write(ItemTimeSpan.Ticks);
+            writer.Write(FirstTimestamp.Ticks);
 
-            return CurrentVersion;
+            return Version11;
         }
 
         /// <summary>

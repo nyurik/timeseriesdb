@@ -4,9 +4,9 @@ using NUnit.Framework;
 
 namespace NYurik.FastBinTimeseries.Test
 {
-    internal class TestUtils
+    internal static class TestUtils
     {
-        private static readonly LinkedList<CacheItem> items = new LinkedList<CacheItem>();
+        private static readonly LinkedList<CacheItem> Items = new LinkedList<CacheItem>();
 
         public static long RoundUpToMultiple(long value, long multiple)
         {
@@ -67,10 +67,10 @@ namespace NYurik.FastBinTimeseries.Test
             string key = string.Format("{0},{1},{2}", typeof (T).FullName, startFrom, converter);
 
             T[] result;
-            LinkedListNode<CacheItem> res = items.Find(new CacheItem {Key = key});
+            LinkedListNode<CacheItem> res = Items.Find(new CacheItem {Key = key});
             if (res != null)
             {
-                items.Remove(res);
+                Items.Remove(res);
 
                 result = (T[]) res.Value.Value;
                 if (result.Length >= count)
@@ -82,7 +82,7 @@ namespace NYurik.FastBinTimeseries.Test
                         Array.Copy(rOld, result, count);
                     }
 
-                    items.AddFirst(res);
+                    Items.AddFirst(res);
                     return result;
                 }
             }
@@ -90,9 +90,9 @@ namespace NYurik.FastBinTimeseries.Test
             result = new T[count + 100];
             for (long i = 0; i < count + 100; i++)
                 result[i] = converter(i + startFrom);
-            items.AddFirst(new CacheItem {Key = key, Value = result});
-            if (items.Count > 100)
-                items.RemoveLast();
+            Items.AddFirst(new CacheItem {Key = key, Value = result});
+            if (Items.Count > 100)
+                Items.RemoveLast();
 
             var rNew = new T[count];
             Array.Copy(result, rNew, count);
@@ -102,6 +102,29 @@ namespace NYurik.FastBinTimeseries.Test
         public static byte NewByte(long i)
         {
             return (byte) (i & 0xFF);
+        }
+
+        public static void AssertException<T, TEx>(this BinaryFile<T> f, Action<BinaryFile<T>> operation)
+            where TEx : Exception
+        {
+            AssertException<T, TEx>(f, i =>
+            {
+                operation(i);
+                return null;
+            });
+        }
+
+        public static void AssertException<T, TEx>(this BinaryFile<T> f, Func<BinaryFile<T>, object> operation)
+            where TEx : Exception
+        {
+            try
+            {
+                object i = operation(f);
+                Assert.Fail("Should have thrown an InvalidOperatioExcetpion, but {0} was returned instead", i);
+            }
+            catch (TEx)
+            {
+            }
         }
 
         #region Nested type: CacheItem

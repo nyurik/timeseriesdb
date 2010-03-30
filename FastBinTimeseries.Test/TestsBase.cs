@@ -68,6 +68,8 @@ namespace NYurik.FastBinTimeseries.Test
             {
                 Console.WriteLine("{0}: Total test time {1}", GetType().Name, _stopwatch.Elapsed);
                 _stopwatch.Reset();
+//                GC.Collect();
+//                GC.WaitForFullGCComplete(300);
             }
             else
                 _stopwatch.Start();
