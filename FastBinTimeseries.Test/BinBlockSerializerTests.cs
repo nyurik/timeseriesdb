@@ -65,7 +65,7 @@ namespace NYurik.FastBinTimeseries.Test
     public class TradesBlock : IBinBlock<TradesBlock.Hdr, TradesBlock.Item>
     {
         private const int BlockItemCount = 1000;
-        public static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
+        private static UtcDateTime _firstTimeStamp = new UtcDateTime(2000, 1, 1);
         private readonly Item[] _items = new Item[BlockItemCount];
 
         public Hdr Header;
@@ -81,7 +81,7 @@ namespace NYurik.FastBinTimeseries.Test
                 Header = new Hdr
                              {
                                  ItemCount = (ushort) (BlockItemCount - i%(BlockItemCount/10)),
-                                 Timestamp = FirstTimeStamp.AddMinutes(i),
+                                 Timestamp = _firstTimeStamp.AddMinutes(i),
                                  Size = i,
                                  Value = i
                              };

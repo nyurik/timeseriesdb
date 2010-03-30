@@ -11,7 +11,7 @@ namespace NYurik.FastBinTimeseries.Test
     {
         #region Mode enum
 
-        public enum Mode
+        protected enum Mode
         {
             OneTime,
             Create,
@@ -25,17 +25,17 @@ namespace NYurik.FastBinTimeseries.Test
         private readonly Dictionary<string, int> _files = new Dictionary<string, int>();
         private readonly Stopwatch _stopwatch = new Stopwatch();
 
-        public static Mode RunMode
+        protected static Mode RunMode
         {
-            get { return Mode.Create; }
+            get { return Mode.Verify; }
         }
 
-        public static bool AllowCreate
+        protected static bool AllowCreate
         {
             get { return RunMode != Mode.Verify; }
         }
 
-        public string GetBinFileName()
+        protected string GetBinFileName()
         {
             var stackTrace = new StackTrace();
             int frameInd = 1;
