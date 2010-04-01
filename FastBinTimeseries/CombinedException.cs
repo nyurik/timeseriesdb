@@ -11,10 +11,6 @@ namespace NYurik.FastBinTimeseries
     {
         public readonly Exception InnerSecondary;
 
-        protected CombinedException()
-        {
-        }
-
         public CombinedException(string message, Exception innerPrimary, Exception innerSecondary)
             : base(message, innerPrimary)
         {

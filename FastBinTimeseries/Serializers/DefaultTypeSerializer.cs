@@ -1,28 +1,37 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.Serializers;
 
-namespace NYurik.FastBinTimeseries
+namespace NYurik.FastBinTimeseries.Serializers
 {
     internal delegate void UnsafeActionDelegate<TStorage, TItem>(
         TStorage storage, TItem[] buffer, int offset, int count, bool isWriting);
 
     internal delegate bool UnsafeMemCompareDelegate<TItem>(
         TItem[] buffer1, int offset1, TItem[] buffer2, int offset2, int count);
+}
 
-    public class DefaultTypeSerializer<T> : IBinSerializer<T>
+// For legacy compatibility, keep DefaultTypeSerializer in the root namespace
+namespace NYurik.FastBinTimeseries
+{
+    public class DefaultTypeSerializer<T> : Initializable, IBinSerializer<T>
     {
         private static readonly Version Version10 = new Version(1, 0);
+        private static readonly Version Version11 = new Version(1, 1);
         private readonly UnsafeMemCompareDelegate<T> _compareArrays;
         private readonly UnsafeActionDelegate<FileStream, T> _processFileStream;
         private readonly UnsafeActionDelegate<IntPtr, T> _processMemoryMap;
+
         private readonly int _typeSize;
-        private Version _version = Version10;
+        private Version _version;
 
         public DefaultTypeSerializer()
         {
             DynamicCodeFactory.BinSerializerInfo info = DynamicCodeFactory.Instance.CreateSerializer<T>();
 
+            _version = Version11;
             _typeSize = info.TypeSize;
 
             if (_typeSize <= 0)
@@ -45,27 +54,113 @@ namespace NYurik.FastBinTimeseries
 
         public Version Version
         {
-            get { return _version; }
+            get
+            {
+                ThrowOnNotInitialized();
+                return _version;
+            }
         }
 
         public int TypeSize
         {
-            get { return _typeSize; }
+            get
+            {
+                ThrowOnNotInitialized();
+                return _typeSize;
+            }
+        }
+
+        public Type ItemType
+        {
+            get { return typeof (T); }
         }
 
         public bool SupportsMemoryMappedFiles
         {
-            get { return true; }
+            get
+            {
+                ThrowOnNotInitialized();
+                return true;
+            }
+        }
+
+        public void InitNew(BinaryWriter writer)
+        {
+            ThrowOnInitialized();
+
+            writer.WriteVersion(_version);
+
+            if (_version >= Version11)
+            {
+                writer.Write(_typeSize);
+
+                // in the next version - will record the type signature and compare it with T
+                List<TypeExtensions.TypeInfo> sig = typeof (T).GenerateTypeSignature();
+                writer.Write(sig.Count);
+                foreach (TypeExtensions.TypeInfo s in sig)
+                {
+                    writer.Write(s.Level);
+                    writer.WriteType(s.Type);
+                }
+            }
+
+            IsInitialized = true;
+        }
+
+        public void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        {
+            ThrowOnInitialized();
+
+            _version = reader.ReadVersion();
+            if (_version != Version10 && _version != Version11)
+                throw new IncompatibleVersionException(GetType(), _version);
+
+            if (_version >= Version11)
+            {
+                // Make sure the item size has not changed
+                int itemSize = reader.ReadInt32();
+                if (_typeSize != itemSize)
+                    throw FastBinFileUtils.GetItemSizeChangedException(this, null, itemSize);
+
+                int fileSigCount = reader.ReadInt32();
+
+                var fileSig = new TypeExtensions.TypeInfo[fileSigCount];
+                for (int i = 0; i < fileSigCount; i++)
+                {
+                    fileSig[i].Level = reader.ReadInt32();
+                    fileSig[i].Type = reader.ReadType(typeMap);
+                }
+
+                if (typeMap == null)
+                {
+                    // For now only verify without the typemap, as it might become much more complex
+                    List<TypeExtensions.TypeInfo> sig = typeof (T).GenerateTypeSignature();
+                    if (sig.Count != fileSig.Length)
+                        throw new SerializerException(
+                            "Signature subtype count mismatch: expected={0}, found={1}",
+                            sig.Count, fileSig.Length);
+
+                    for (int i = 0; i < fileSig.Length; i++)
+                        if (sig[i] != fileSig[i])
+                            throw new SerializerException(
+                                "Signature subtype[{0}] mismatch: expected={1}, found={2}",
+                                i, sig[i], fileSig[i]);
+                }
+            }
+
+            IsInitialized = true;
         }
 
         public void ProcessFileStream(FileStream fileStream, ArraySegment<T> buffer, bool isWriting)
         {
+            ThrowOnNotInitialized();
             if (fileStream == null) throw new ArgumentNullException("fileStream");
             _processFileStream(fileStream, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
         public void ProcessMemoryMap(IntPtr memMapPtr, ArraySegment<T> buffer, bool isWriting)
         {
+            ThrowOnNotInitialized();
             if (memMapPtr == IntPtr.Zero) throw new ArgumentNullException("memMapPtr");
             _processMemoryMap(memMapPtr, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
@@ -80,24 +175,6 @@ namespace NYurik.FastBinTimeseries
             if (buffer1.Count == 0) return true;
 
             return _compareArrays(buffer1.Array, buffer1.Offset, buffer2.Array, buffer2.Offset, buffer1.Count);
-        }
-
-        public void Init(BinaryReader reader, IDictionary<string, Type> typeMap)
-        {
-            Version ver = reader.ReadVersion();
-            if (ver != Version10)
-                throw FastBinFileUtils.GetUnknownVersionException(ver, GetType());
-            
-            _version = ver;
-            // do nothing - in this version we do not validate the signature of the struct
-        }
-
-        public void WriteCustomHeader(BinaryWriter writer)
-        {
-            writer.WriteVersion(_version);
-
-            // in the next version - will record the type signature and compare it with T
-            // var typeSignature = typeof(T).GenerateTypeSignature();
         }
 
         #endregion

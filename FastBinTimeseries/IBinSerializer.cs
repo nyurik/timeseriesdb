@@ -6,6 +6,11 @@ namespace NYurik.FastBinTimeseries
 {
     public interface IBinSerializer
     {
+        /// <summary>
+        /// True if this serializer has been initialized, false otherwise.
+        /// </summary>
+        bool IsInitialized { get; }
+
         /// <summary> Serializer version </summary>
         Version Version { get; }
 
@@ -13,19 +18,24 @@ namespace NYurik.FastBinTimeseries
         int TypeSize { get; }
 
         /// <summary>
+        /// Get the type of items this serializer will process
+        /// </summary>
+        Type ItemType { get; }
+
+        /// <summary>
         /// Will be set to true when this provider supports reading and writing from fast memory mapped files
         /// </summary>
         bool SupportsMemoryMappedFiles { get; }
 
         /// <summary>
-        /// Optionaly initialize this serializer from a binary reader. Must match all actions by <see cref="WriteCustomHeader"/>
+        /// Save this serializer's parameters to a binary writer. Must match all actions by <see cref="InitExisting"/>
         /// </summary>
-        void Init(BinaryReader reader, IDictionary<string, Type> typeMap);
+        void InitNew(BinaryWriter writer);
 
         /// <summary>
-        /// Optionaly save this serializer's parameters to a binary writer. Must match all actions by <see cref="Init"/>
+        /// When creating serializer from a stream, load internal values. Must match all actions by <see cref="InitNew"/>
         /// </summary>
-        void WriteCustomHeader(BinaryWriter writer);
+        void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap);
     }
 
     public interface IBinSerializer<T> : IBinSerializer

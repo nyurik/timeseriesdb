@@ -9,25 +9,37 @@ namespace NYurik.FastBinTimeseries.Test
 {
     public class TestsBase
     {
-        #region Mode enum
-
-        protected enum Mode
-        {
-            OneTime,
-            Create,
-            Verify
-        }
-
-        #endregion
-
+        private const Mode InitRunMode = Mode.OneTime;
         private const string StoreDir = "Stored1";
+        private const string TestFileSuffix = ".testbsd";
 
         private readonly Dictionary<string, int> _files = new Dictionary<string, int>();
         private readonly Stopwatch _stopwatch = new Stopwatch();
 
+        protected IDictionary<string, Type> TypeMap =
+            new Dictionary<string, Type>
+                {
+                    //{
+                    //    "NYurik.FastBinTimeseries.DefaultTypeSerializer`1[[NYurik.FastBinTimeseries.Test.TradesBlock+Hdr, NYurik.FastBinTimeseries.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], NYurik.FastBinTimeseries, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+                    //    , typeof (DefaultTypeSerializer<TradesBlock.Hdr>)
+                    //    },
+                    //{
+                    //    "NYurik.FastBinTimeseries.DefaultTypeSerializer`1[[NYurik.FastBinTimeseries.Test.TradesBlock+Item, NYurik.FastBinTimeseries.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], NYurik.FastBinTimeseries, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+                    //    , typeof (DefaultTypeSerializer<TradesBlock.Item>)
+                    //    },
+                    {
+                        "NYurik.FastBinTimeseries.DefaultTypeSerializer`1[[NYurik.FastBinTimeseries.Test.TradesBlock+Hdr, NYurik.FastBinTimeseries.Test"
+                        , typeof (DefaultTypeSerializer<TradesBlock.Hdr>)
+                        },
+                    {
+                        "NYurik.FastBinTimeseries.DefaultTypeSerializer`1[[NYurik.FastBinTimeseries.Test.TradesBlock+Item, NYurik.FastBinTimeseries.Test"
+                        , typeof (DefaultTypeSerializer<TradesBlock.Item>)
+                        },
+                };
+
         protected static Mode RunMode
         {
-            get { return Mode.Verify; }
+            get { return InitRunMode; }
         }
 
         protected static bool AllowCreate
@@ -77,17 +89,12 @@ namespace NYurik.FastBinTimeseries.Test
             DeleteTempFiles();
         }
 
-        protected void DeleteTempFiles()
+        protected static void DeleteTempFiles()
         {
             if (RunMode == Mode.OneTime)
             {
-                foreach (var i in _files)
-                    for (int j = 1; j <= i.Value; j++)
-                    {
-                        string s = MakeFilename(i.Key, j);
-                        if (File.Exists(s))
-                            File.Delete(s);
-                    }
+                foreach (string file in Directory.GetFiles(".", "*" + TestFileSuffix, SearchOption.TopDirectoryOnly))
+                    File.Delete(file);
             }
         }
 
@@ -100,7 +107,18 @@ namespace NYurik.FastBinTimeseries.Test
                     Directory.CreateDirectory(StoreDir);
                 dir = StoreDir + "\\";
             }
-            return string.Format("{0}{1}{2}.bsd", dir, filename, count);
+            return string.Format("{0}{1}{2}{3}", dir, filename, count, TestFileSuffix);
         }
+
+        #region Nested type: Mode
+
+        protected enum Mode
+        {
+            OneTime,
+            Create,
+            Verify
+        }
+
+        #endregion
     }
 }

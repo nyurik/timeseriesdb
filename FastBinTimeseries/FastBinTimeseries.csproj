@@ -86,7 +86,7 @@
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
     <None Include="_ClassDiagram.cd" />
-    <Compile Include="BinarySerializerAttribute.cs" />
+    <Compile Include="Serializers\BinarySerializerAttribute.cs" />
     <Compile Include="BinIndexedFile.cs" />
     <Compile Include="BinTimeseriesFile.cs">
       <SubType>Code</SubType>
@@ -94,27 +94,33 @@
     <Compile Include="BinUniformTimeseriesFile.cs" />
     <Compile Include="CombinedException.cs" />
     <Compile Include="CommonCode\DateTimeExtensions.cs" />
+    <Compile Include="CommonCode\FormattedException.cs" />
     <Compile Include="CommonCode\ITimeSeries.cs" />
     <Compile Include="CommonCode\MergedTimeSeries.cs" />
     <Compile Include="CommonCode\TimeSeries.cs" />
-    <Compile Include="BinBlockSerializer.cs" />
+    <Compile Include="BinaryFileException.cs" />
+    <Compile Include="IncompatibleVersionException.cs" />
+    <Compile Include="Initializable.cs" />
+    <Compile Include="Serializers\SerializerException.cs" />
+    <Compile Include="Serializers\BinBlockSerializer.cs" />
     <Compile Include="FastBinFileUtils.cs" />
     <Compile Include="IBinaryFile.cs" />
     <Compile Include="IBinTimeseriesFile.cs" />
     <Compile Include="IBinUniformTimeseriesFile.cs" />
     <Compile Include="IStoredSeries.cs" />
     <Compile Include="NativeWinApis.cs" />
-    <Compile Include="DefaultTypeSerializer.cs" />
+    <Compile Include="Serializers\DefaultTypeSerializer.cs" />
     <Compile Include="EmitExtensions\ILGeneratorExtensions.cs" />
     <Compile Include="EmitExtensions\TypeBuilderExtensions.cs" />
     <Compile Include="EmitExtensions\TypeExtensions.cs" />
-    <Compile Include="DynamicCodeFactory.cs" />
+    <Compile Include="Serializers\DynamicCodeFactory.cs" />
     <Compile Include="IBinSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CommonCode\DynamicSyncDictionary.cs" />
     <Compile Include="CommonCode\Tuple.cs" />
     <Compile Include="CommonCode\TypeUtils.cs" />
     <Compile Include="CommonCode\UtcDateTime.cs" />
+    <Compile Include="Serializers\IBinBlock.cs" />
     <Compile Include="StoredSeriesExtensions.cs" />
     <Compile Include="TimestampAttribute.cs" />
   </ItemGroup>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using NYurik.FastBinTimeseries.CommonCode;
+using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -125,9 +126,16 @@ namespace NYurik.FastBinTimeseries
             return true;
         }
 
-        public static Exception GetUnknownVersionException(Version version, Type type)
+        public static SerializerException GetItemSizeChangedException(
+            IBinSerializer serializer, string tag, int itemSize)
         {
-            return new ArgumentOutOfRangeException("version", version, "Unknown version for " + type.FullName);
+            return new SerializerException(
+                "Serializer {1} ({2}){0} was created with ItemSize={3}, but now the ItemSize={4}",
+                tag == null ? "" : " Tag='" + tag + "'",
+                serializer.GetType().AssemblyQualifiedName,
+                serializer.Version,
+                itemSize,
+                serializer.TypeSize);
         }
 
         public static Version ReadVersion(this BinaryReader reader)
@@ -152,37 +160,63 @@ namespace NYurik.FastBinTimeseries
             writer.Write(ver.Revision);
         }
 
-        public static T ReadTypeAndInstantiate<T>(this BinaryReader reader, IDictionary<string, Type> typeMap, bool nonPublic) where T : class
+        public static T ReadTypeAndInstantiate<T>(
+            this BinaryReader reader, IDictionary<string, Type> typeMap, bool nonPublic)
+            where T : class
         {
-            if (reader == null) throw new ArgumentNullException("reader");
-
-            Type type;
-            bool typeFound = false;
-
-            string typeName = reader.ReadString();
-            if (typeMap == null || !typeMap.TryGetValue(typeName, out type))
-            {
-                type = TypeUtils.GetTypeFromAnyAssemblyVersion(typeName);
-                typeFound = true;
-            }
-
-            if (type == null)
-                throw new InvalidOperationException("Unable to find type " + typeName);
+            string typeName;
+            bool typeRemapped;
+            Type type = ReadType(reader, typeMap, out typeName, out typeRemapped);
 
             var instance = Activator.CreateInstance(type, nonPublic) as T;
             if (instance == null)
                 throw new InvalidOperationException(
                     String.Format("Type {0}{1} cannot be cast into {2}", type.AssemblyQualifiedName,
-                                  typeFound ? "" : " (re-mapped from " + typeName + ")",
+                                  !typeRemapped ? "" : " (re-mapped from " + typeName + ")",
                                   typeof (T).AssemblyQualifiedName));
             return instance;
         }
 
-        public static void WriteType(this BinaryWriter writer, object value)
+        private static Type ReadType(BinaryReader reader, IDictionary<string, Type> typeMap, out string typeName,
+                                     out bool typeRemapped)
+        {
+            if (reader == null) throw new ArgumentNullException("reader");
+
+            Type type;
+
+            typeName = reader.ReadString();
+            if (typeMap != null && typeMap.TryGetValue(typeName, out type))
+                typeRemapped = true;
+            else
+            {
+                type = TypeUtils.GetTypeFromAnyAssemblyVersion(typeName);
+                typeRemapped = false;
+            }
+
+            if (type == null)
+                throw new InvalidOperationException("Unable to find type " + typeName);
+
+            return type;
+        }
+
+        public static Type ReadType(this BinaryReader reader, IDictionary<string, Type> typeMap)
+        {
+            string typeName;
+            bool typeRemapped;
+            return ReadType(reader, typeMap, out typeName, out typeRemapped);
+        }
+
+        public static void WriteType(this BinaryWriter writer, Type type)
         {
             if (writer == null) throw new ArgumentNullException("writer");
+            if (type == null) throw new ArgumentNullException("type");
+            writer.Write(type.AssemblyQualifiedName);
+        }
+
+        public static void WriteType(this BinaryWriter writer, object value)
+        {
             if (value == null) throw new ArgumentNullException("value");
-            writer.Write(value.GetType().AssemblyQualifiedName);
+            writer.WriteType(value.GetType());
         }
     }
 }

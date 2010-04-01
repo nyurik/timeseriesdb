@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using NYurik.FastBinTimeseries.CommonCode;
+using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -51,8 +52,7 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                if (_serializer == null)
-                    throw new InvalidOperationException("Serializer is not initialized");
+                ThrowOnDisposed();
                 return _serializer;
             }
             set
@@ -60,16 +60,7 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnInitialized();
                 if (value == null)
                     throw new ArgumentNullException("value");
-
-                int itemSize = value.TypeSize;
-                if (itemSize <= 0)
-                    throw new ArgumentOutOfRangeException(
-                        "typeSize" + "", itemSize, "Element size given by the serializer must be > 0");
-
                 _serializer = value;
-                m_itemSize = itemSize;
-                EnableMemMappedAccessOnRead = value.SupportsMemoryMappedFiles;
-                EnableMemMappedAccessOnWrite = value.SupportsMemoryMappedFiles;
             }
         }
 

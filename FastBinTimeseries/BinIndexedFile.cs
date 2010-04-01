@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -67,7 +68,7 @@ namespace NYurik.FastBinTimeseries
         {
             var ver = reader.ReadVersion();
             if (ver != Version10)
-                throw FastBinFileUtils.GetUnknownVersionException(ver, GetType());
+                throw new IncompatibleVersionException(GetType(), ver);
             return ver;
         }
 

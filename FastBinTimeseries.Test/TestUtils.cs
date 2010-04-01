@@ -104,27 +104,28 @@ namespace NYurik.FastBinTimeseries.Test
             return (byte) (i & 0xFF);
         }
 
-        public static void AssertException<T, TEx>(this BinaryFile<T> f, Action<BinaryFile<T>> operation)
+        public static void AssertException<TEx>(Action operation)
             where TEx : Exception
         {
-            AssertException<T, TEx>(f, i =>
-            {
-                operation(i);
-                return null;
-            });
+            AssertException<TEx>(() =>
+                                     {
+                                         operation();
+                                         Assert.Fail("Should have thrown an {0}, but completed successfully instead",
+                                                     typeof (TEx).Name);
+                                         return null;
+                                     });
         }
 
-        public static void AssertException<T, TEx>(this BinaryFile<T> f, Func<BinaryFile<T>, object> operation)
+        public static void AssertException<TEx>(Func<object> operation)
             where TEx : Exception
         {
             try
             {
-                object i = operation(f);
-                Assert.Fail("Should have thrown an InvalidOperatioExcetpion, but {0} was returned instead", i);
+                object o = operation();
+                Assert.Fail("Should have thrown an {0}, but {1} was returned instead", typeof (TEx).Name, o);
             }
             catch (TEx)
-            {
-            }
+            {}
         }
 
         #region Nested type: CacheItem

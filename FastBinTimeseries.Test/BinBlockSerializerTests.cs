@@ -2,38 +2,13 @@
 using System.Runtime.InteropServices;
 using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
+using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries.Test
 {
     [TestFixture]
     public class BinBlockSerializerTests : TestsBase
     {
-        [Test]
-        public void Test()
-        {
-            var data = new TradesBlock[1000];
-
-            for (int i = 0; i < data.Length; i++)
-                data[i] = new TradesBlock(i);
-
-            var fileName = GetBinFileName();
-            if (AllowCreate)
-            {
-                using (var f = new BinIndexedFile<TradesBlock>(fileName))
-                {
-                    f.InitializeNewFile();
-                    f.WriteData(0, new ArraySegment<TradesBlock>(data));
-
-                    VerifyData(f, data);
-                }
-            }
-            
-            using(var bf = (BinIndexedFile<TradesBlock>) BinaryFile.Open(fileName, false))
-            {
-                VerifyData(bf, data);
-            }
-        }
-
         private static void VerifyData(BinIndexedFile<TradesBlock> bf, TradesBlock[] data)
         {
             int ind = 0;
@@ -58,32 +33,55 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
         }
+
+        [Test]
+        public void Test()
+        {
+            const int blockSize = 100;
+            var data = new TradesBlock[1000];
+
+            for (int i = 0; i < data.Length; i++)
+                data[i] = new TradesBlock(i, blockSize);
+
+            string fileName = GetBinFileName();
+            if (AllowCreate)
+            {
+                using (var f = new BinIndexedFile<TradesBlock>(fileName))
+                {
+                    ((IBinBlockSerializer) f.Serializer).ItemCount = blockSize;
+                    f.InitializeNewFile();
+                    f.WriteData(0, new ArraySegment<TradesBlock>(data));
+
+                    VerifyData(f, data);
+                }
+            }
+
+            using (var bf = (BinIndexedFile<TradesBlock>) BinaryFile.Open(fileName, false, base.TypeMap))
+            {
+                VerifyData(bf, data);
+            }
+        }
     }
 
     [BinarySerializer(typeof (BinBlockSerializer<TradesBlock, Hdr, Item>))]
-    [BinaryBlock(BlockItemCount)]
     public class TradesBlock : IBinBlock<TradesBlock.Hdr, TradesBlock.Item>
     {
-        private const int BlockItemCount = 1000;
         private static UtcDateTime _firstTimeStamp = new UtcDateTime(2000, 1, 1);
-        private readonly Item[] _items = new Item[BlockItemCount];
 
         public Hdr Header;
 
         public TradesBlock()
-        {
-        }
+        {}
 
-        public TradesBlock(long i)
+        public TradesBlock(long i, int itemCount)
         {
             unchecked
             {
+                Items = new Item[itemCount];
                 Header = new Hdr
                              {
-                                 ItemCount = (ushort) (BlockItemCount - i%(BlockItemCount/10)),
+                                 ItemCount = (ushort) (itemCount - i%(itemCount/10)),
                                  Timestamp = _firstTimeStamp.AddMinutes(i),
-                                 Size = i,
-                                 Value = i
                              };
 
                 for (int j = 0; j < Header.ItemCount; j++)
@@ -93,8 +91,8 @@ namespace NYurik.FastBinTimeseries.Test
                         new Item
                             {
                                 ShiftInMilliseconds = (ushort) tmp,
-                                ValueDiff = 1f/tmp,
-                                SizeDiff = 1f/tmp
+                                Value = 1d/tmp,
+                                Size = (int) tmp
                             };
                 }
             }
@@ -108,10 +106,7 @@ namespace NYurik.FastBinTimeseries.Test
             set { Header = value; }
         }
 
-        public Item[] Items
-        {
-            get { return _items; }
-        }
+        public Item[] Items { get; set; }
 
         #endregion
 
@@ -122,15 +117,12 @@ namespace NYurik.FastBinTimeseries.Test
         {
             public ushort ItemCount;
             public UtcDateTime Timestamp;
-            public double Value;
-            public double Size;
 
             #region Implementation
 
             public bool Equals(Hdr other)
             {
-                return other.ItemCount == ItemCount && other.Timestamp.Equals(Timestamp) &&
-                       other.Value.Equals(Value) &&  other.Size.Equals(Size);
+                return other.ItemCount == ItemCount && other.Timestamp.Equals(Timestamp);
             }
 
             public override bool Equals(object obj)
@@ -144,17 +136,13 @@ namespace NYurik.FastBinTimeseries.Test
             {
                 unchecked
                 {
-                    int result = ItemCount.GetHashCode();
-                    result = (result*397) ^ Timestamp.GetHashCode();
-                    result = (result*397) ^ Value.GetHashCode();
-                    result = (result*397) ^ Size.GetHashCode();
-                    return result;
+                    return (ItemCount.GetHashCode()*397) ^ Timestamp.GetHashCode();
                 }
             }
 
             public override string ToString()
             {
-                return string.Format("{0}, {1}, {2}, {3}", ItemCount, Timestamp, Value, Size);
+                return string.Format("{0}, {1}", ItemCount, Timestamp);
             }
 
             #endregion
@@ -167,16 +155,16 @@ namespace NYurik.FastBinTimeseries.Test
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct Item : IEquatable<Item>
         {
+            public double Value;
+            public int Size;
             public ushort ShiftInMilliseconds;
-            public float ValueDiff;
-            public float SizeDiff;
 
             #region Implementation
 
             public bool Equals(Item other)
             {
-                return other.ShiftInMilliseconds == ShiftInMilliseconds && other.ValueDiff.Equals(ValueDiff) &&
-                       other.SizeDiff.Equals(SizeDiff);
+                return other.Value.Equals(Value) && other.Size == Size &&
+                       other.ShiftInMilliseconds == ShiftInMilliseconds;
             }
 
             public override bool Equals(object obj)
@@ -190,16 +178,16 @@ namespace NYurik.FastBinTimeseries.Test
             {
                 unchecked
                 {
-                    int result = ShiftInMilliseconds.GetHashCode();
-                    result = (result*397) ^ ValueDiff.GetHashCode();
-                    result = (result*397) ^ SizeDiff.GetHashCode();
+                    int result = Value.GetHashCode();
+                    result = (result*397) ^ Size;
+                    result = (result*397) ^ ShiftInMilliseconds.GetHashCode();
                     return result;
                 }
             }
 
             public override string ToString()
             {
-                return string.Format("{0}, {1}, {2}", ShiftInMilliseconds, ValueDiff, SizeDiff);
+                return string.Format("{0}, {1}, {2}", ShiftInMilliseconds, Value, Size);
             }
 
             #endregion

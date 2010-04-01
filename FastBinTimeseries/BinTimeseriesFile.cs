@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.CommonCode;
+using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -82,7 +84,7 @@ namespace NYurik.FastBinTimeseries
 
         private static FieldInfo GetTimestampField(Type itemType)
         {
-            FieldInfo[] fieldInfo = itemType.GetFields(DynamicCodeFactory.AllInstanceMembers);
+            FieldInfo[] fieldInfo = itemType.GetFields(TypeExtensions.AllInstanceMembers);
             if (fieldInfo.Length < 1)
                 throw new InvalidOperationException("No fields found in type " + itemType.FullName);
 
@@ -124,14 +126,14 @@ namespace NYurik.FastBinTimeseries
         {
             var ver = reader.ReadVersion();
             if (ver != Version11 && ver != Version10)
-                throw FastBinFileUtils.GetUnknownVersionException(ver, GetType());
+                throw new IncompatibleVersionException(GetType(), ver);
 
             // UniqueTimestamps was not available in ver 1.0
             UniqueTimestamps = ver > Version10 && reader.ReadBoolean();
 
             string fieldName = reader.ReadString();
 
-            FieldInfo fieldInfo = typeof(T).GetField(fieldName, DynamicCodeFactory.AllInstanceMembers);
+            FieldInfo fieldInfo = typeof(T).GetField(fieldName, TypeExtensions.AllInstanceMembers);
             if (fieldInfo == null)
                 throw new InvalidOperationException(
                     string.Format("Timestamp field {0} was not found in type {1}", fieldName, typeof(T).FullName));

@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using NYurik.FastBinTimeseries;
 
 namespace NYurik.EmitExtensions
 {
     public static class TypeExtensions
     {
+        public const BindingFlags AllInstanceMembers =
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
         /// <summary>
         /// Gets a value indicating whether a type (or type's element type)
         /// instance can be null in the underlying data store.
@@ -117,18 +118,18 @@ namespace NYurik.EmitExtensions
             return type;
         }
 
-        public static List<string> GenerateTypeSignature(this Type subItemType)
+        public static List<TypeInfo> GenerateTypeSignature(this Type subItemType)
         {
-            var result = new List<Type>();
-            GenerateTypeSignature(subItemType, result);
-            return result.ConvertAll(i => Marshal.SizeOf(i).ToString() + "_" + i.FullName);
+            var result = new List<TypeInfo>();
+            GenerateTypeSignature(subItemType, result, 0);
+            return result;
         }
 
-        private static void GenerateTypeSignature(Type subItemType, ICollection<Type> result)
+        private static void GenerateTypeSignature(Type subItemType, ICollection<TypeInfo> result, int level)
         {
-            result.Add(subItemType);
+            result.Add(new TypeInfo {Type = subItemType, Level = level});
 
-            FieldInfo[] fields = subItemType.GetFields(DynamicCodeFactory.AllInstanceMembers);
+            FieldInfo[] fields = subItemType.GetFields(AllInstanceMembers);
             if (fields.Length == 1 && fields[0].FieldType == subItemType)
                 return;
 
@@ -136,8 +137,57 @@ namespace NYurik.EmitExtensions
             {
                 if (fi.FieldType == subItemType)
                     throw new InvalidOperationException("More than one field refers back to " + subItemType.FullName);
-                GenerateTypeSignature(fi.FieldType, result);
+                GenerateTypeSignature(fi.FieldType, result, level + 1);
             }
         }
+
+        #region Nested type: TypeInfo
+
+        public struct TypeInfo : IEquatable<TypeInfo>
+        {
+            public int Level;
+            public Type Type;
+
+            #region IEquatable<TypeInfo> Members
+
+            public bool Equals(TypeInfo other)
+            {
+                return other.Level == Level && Equals(other.Type, Type);
+            }
+
+            #endregion
+
+            public static bool operator ==(TypeInfo left, TypeInfo right)
+            {
+                return left.Equals(right);
+            }
+
+            public static bool operator !=(TypeInfo left, TypeInfo right)
+            {
+                return !left.Equals(right);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (obj.GetType() != typeof (TypeInfo)) return false;
+                return Equals((TypeInfo) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (Level*397) ^ (Type != null ? Type.GetHashCode() : 0);
+                }
+            }
+
+            public override string ToString()
+            {
+                return string.Format("Type: {0}, Level: {1}", Type, Level);
+            }
+        }
+
+        #endregion
     }
 }

@@ -8,13 +8,10 @@ using System.Runtime.InteropServices;
 using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.CommonCode;
 
-namespace NYurik.FastBinTimeseries
+namespace NYurik.FastBinTimeseries.Serializers
 {
     internal class DynamicCodeFactory
     {
-        internal const BindingFlags AllInstanceMembers =
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
         private static DynamicCodeFactory _instance;
 
         private readonly DynamicSyncDictionary<Type, BinSerializerInfo> _serializers =
@@ -24,8 +21,7 @@ namespace NYurik.FastBinTimeseries
             new DynamicSyncDictionary<FieldInfo, Delegate>(null);
 
         private DynamicCodeFactory()
-        {
-        }
+        {}
 
         public static DynamicCodeFactory Instance
         {
@@ -42,7 +38,7 @@ namespace NYurik.FastBinTimeseries
 
         private static MethodInfo GetMethodInfo(Type baseType, string methodName)
         {
-            MethodInfo methodToCall = baseType.GetMethod(methodName, AllInstanceMembers);
+            MethodInfo methodToCall = baseType.GetMethod(methodName, TypeExtensions.AllInstanceMembers);
             if (methodToCall == null)
                 throw new ArgumentOutOfRangeException(
                     "methodName", methodName, "Method not found in the base type " + baseType.FullName);
@@ -95,7 +91,7 @@ namespace NYurik.FastBinTimeseries
             {
                 typesStack.Push(type);
 
-                FieldInfo[] fields = type.GetFields(AllInstanceMembers);
+                FieldInfo[] fields = type.GetFields(TypeExtensions.AllInstanceMembers);
 
                 foreach (FieldInfo f in fields)
                     if (!typesStack.Contains(f.FieldType))
@@ -150,7 +146,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         private static DynamicMethod CreateSerializerMethod(Type itemType, Type baseType, string methodName,
-                                                              string methodToCallName, Type firstParamType)
+                                                            string methodToCallName, Type firstParamType)
         {
             MethodInfo methodToCall = GetMethodInfo(baseType, methodToCallName);
 

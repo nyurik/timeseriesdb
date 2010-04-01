@@ -12,8 +12,8 @@ namespace NYurik.FastBinTimeseries.Test
         private static void AfterInitValidation(BinaryFile<byte> f, bool canWrite, string fileName)
         {
             // assignment tests
-            f.AssertException<byte, InvalidOperationException>(i => i.Tag = "a");
-            f.AssertException<byte, InvalidOperationException>(i => i.Serializer = null);
+            TestUtils.AssertException<InvalidOperationException>(() => { f.Tag = "a"; });
+            TestUtils.AssertException<InvalidOperationException>(() => { f.Serializer = null; });
 
             Assert.AreEqual(0, f.Count);
             Assert.AreEqual(new Version(1, 0), f.FileVersion);
@@ -77,11 +77,14 @@ namespace NYurik.FastBinTimeseries.Test
                 using (var f = new BinIndexedFile<byte>(fileName))
                 {
                     temp = f;
-                    f.AssertException<byte, InvalidOperationException>(i => i.Count);
-                    f.AssertException<byte, InvalidOperationException>(i => i.FileVersion);
-                    f.AssertException<byte, InvalidOperationException>(i => i.HeaderSize);
-                    f.AssertException<byte, InvalidOperationException>(i => i.IsEmpty);
-                    f.AssertException<byte, InvalidOperationException>(i => i.ItemSize);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.Count);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.FileVersion);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.HeaderSize);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.IsEmpty);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.ItemSize);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.EnableMemMappedAccessOnRead);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.EnableMemMappedAccessOnWrite);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.Serializer.Version);
 
                     Assert.IsTrue(f.CanWrite);
                     Assert.IsFalse(f.IsInitialized);
@@ -91,46 +94,69 @@ namespace NYurik.FastBinTimeseries.Test
                     Assert.AreEqual("", f.Tag);
                     Assert.AreEqual(typeof (byte), f.ItemType);
                     Assert.IsNotNull(f.Serializer);
-                    Assert.IsNotNull(f.Serializer.Version);
+                    f.Tag = TagString;
+                    Assert.AreEqual(TagString, f.Tag);
+
                     Version curBaseVer = f.BaseVersion;
                     f.BaseVersion = new Version(1, 0);
                     f.BaseVersion = new Version(1, 1);
                     f.BaseVersion = new Version(1, 2);
-                    f.AssertException<byte, ArgumentNullException>(i => f.BaseVersion = null);
-                    f.AssertException<byte, ArgumentOutOfRangeException>(i => f.BaseVersion = new Version(0, 0));
+                    TestUtils.AssertException<ArgumentNullException>(() => { f.BaseVersion = null; });
+                    TestUtils.AssertException<IncompatibleVersionException>(() => { f.BaseVersion = new Version(0, 0); });
                     f.BaseVersion = curBaseVer;
-                    f.Tag = TagString;
+
 
                     f.InitializeNewFile();
 
+
+                    Assert.IsNotNull(f.Serializer.Version);
                     Assert.IsTrue(f.IsInitialized);
                     Assert.IsFalse(f.IsDisposed);
                     Assert.IsTrue(f.IsOpen);
                     Assert.AreEqual(fileName, f.FileName);
 
-                    f.AssertException<byte, InvalidOperationException>(i => i.InitializeNewFile());
-                    f.AssertException<byte, InvalidOperationException>(i => { f.BaseVersion = new Version(1, 1); });
+                    Assert.IsTrue(f.EnableMemMappedAccessOnRead);
+                    f.EnableMemMappedAccessOnRead = false;
+                    Assert.IsFalse(f.EnableMemMappedAccessOnRead);
+                    f.EnableMemMappedAccessOnRead = true;
+                    Assert.IsTrue(f.EnableMemMappedAccessOnRead);
+
+                    Assert.IsTrue(f.EnableMemMappedAccessOnWrite);
+                    f.EnableMemMappedAccessOnWrite = false;
+                    Assert.IsFalse(f.EnableMemMappedAccessOnWrite);
+                    f.EnableMemMappedAccessOnWrite = true;
+                    Assert.IsTrue(f.EnableMemMappedAccessOnWrite);
+
+                    TestUtils.AssertException<InvalidOperationException>(() => f.InitializeNewFile());
+                    TestUtils.AssertException<InvalidOperationException>(() => { f.BaseVersion = new Version(1, 1); });
 
                     AfterInitValidation(f, true, fileName);
                 }
 
+                temp.Close(); // allowed after disposing
+                ((IDisposable) temp).Dispose(); // disposing multiple times is ok
 
-                // allowed
-                temp.Close();
-                ((IDisposable) temp).Dispose();
-                temp.AssertException<byte, InvalidOperationException>(i => i.Tag);
+                TestUtils.AssertException<InvalidOperationException>(() => temp.Tag);
+                TestUtils.AssertException<InvalidOperationException>(() => temp.EnableMemMappedAccessOnRead);
+                TestUtils.AssertException<InvalidOperationException>(() => temp.EnableMemMappedAccessOnWrite);
+                TestUtils.AssertException<InvalidOperationException>(() => temp.Count);
+                TestUtils.AssertException<InvalidOperationException>(() => temp.IsEmpty);
+                TestUtils.AssertException<InvalidOperationException>(() => temp.ItemSize);
+                TestUtils.AssertException<InvalidOperationException>(() => temp.NonGenericSerializer);
+                TestUtils.AssertException<InvalidOperationException>(() => temp.Serializer);
 
                 Assert.IsTrue(temp.IsInitialized);
                 Assert.IsTrue(temp.IsDisposed);
                 Assert.IsFalse(temp.IsOpen);
                 Assert.AreEqual(fileName, temp.FileName);
+                Assert.AreEqual(typeof (byte), temp.ItemType);
 
 
                 using (var f = (BinIndexedFile<byte>) BinaryFile.Open(fileName, AllowCreate))
                 {
                     AfterInitValidation(f, true, fileName);
                     f.Close();
-                    f.AssertException<byte, InvalidOperationException>(i => i.Tag);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.Tag);
 
                     Assert.IsTrue(f.IsInitialized);
                     Assert.IsTrue(f.IsDisposed);
@@ -143,12 +169,12 @@ namespace NYurik.FastBinTimeseries.Test
             {
                 AfterInitValidation(f, false, fileName);
                 ((IDisposable) f).Dispose();
-                f.AssertException<byte, InvalidOperationException>(i => i.Tag);
+                TestUtils.AssertException<InvalidOperationException>(() => f.Tag);
             }
 
             using (var f = new BinIndexedFile<byte>(fileName))
             {
-                f.AssertException<byte, IOException>(i => i.InitializeNewFile());
+                TestUtils.AssertException<IOException>(() => f.InitializeNewFile());
 
                 if (RunMode == Mode.OneTime)
                 {

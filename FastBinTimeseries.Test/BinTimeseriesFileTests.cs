@@ -10,10 +10,10 @@ namespace NYurik.FastBinTimeseries.Test
         private void RunTest(int itemCount, bool uniqueTimestamps)
         {
             string fileName = GetBinFileName();
-            using (var f = 
+            using (BinTimeseriesFile<_DatetimeByte_SeqPk1> f =
                 AllowCreate
-                ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = uniqueTimestamps}
-                : (BinTimeseriesFile<_DatetimeByte_SeqPk1>)BinaryFile.Open(fileName, false))
+                    ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = uniqueTimestamps}
+                    : (BinTimeseriesFile<_DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false))
             {
                 _DatetimeByte_SeqPk1[] newData = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New,
                                                                                               itemCount, 0);
@@ -46,10 +46,10 @@ namespace NYurik.FastBinTimeseries.Test
                 _DatetimeByte_SeqPk1.New, 10000, 0);
 
             string fileName = GetBinFileName();
-            using (var f = 
+            using (BinTimeseriesFile<_DatetimeByte_SeqPk1> f =
                 AllowCreate
-                ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = false}
-                : (BinTimeseriesFile<_DatetimeByte_SeqPk1>)BinaryFile.Open(fileName, false))
+                    ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = false}
+                    : (BinTimeseriesFile<_DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false))
             {
                 if (AllowCreate)
                 {
