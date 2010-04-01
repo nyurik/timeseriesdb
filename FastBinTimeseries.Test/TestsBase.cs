@@ -16,27 +16,6 @@ namespace NYurik.FastBinTimeseries.Test
         private readonly Dictionary<string, int> _files = new Dictionary<string, int>();
         private readonly Stopwatch _stopwatch = new Stopwatch();
 
-        protected IDictionary<string, Type> TypeMap =
-            new Dictionary<string, Type>
-                {
-                    //{
-                    //    "NYurik.FastBinTimeseries.DefaultTypeSerializer`1[[NYurik.FastBinTimeseries.Test.TradesBlock+Hdr, NYurik.FastBinTimeseries.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], NYurik.FastBinTimeseries, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
-                    //    , typeof (DefaultTypeSerializer<TradesBlock.Hdr>)
-                    //    },
-                    //{
-                    //    "NYurik.FastBinTimeseries.DefaultTypeSerializer`1[[NYurik.FastBinTimeseries.Test.TradesBlock+Item, NYurik.FastBinTimeseries.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], NYurik.FastBinTimeseries, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
-                    //    , typeof (DefaultTypeSerializer<TradesBlock.Item>)
-                    //    },
-                    {
-                        "NYurik.FastBinTimeseries.DefaultTypeSerializer`1[[NYurik.FastBinTimeseries.Test.TradesBlock+Hdr, NYurik.FastBinTimeseries.Test"
-                        , typeof (DefaultTypeSerializer<TradesBlock.Hdr>)
-                        },
-                    {
-                        "NYurik.FastBinTimeseries.DefaultTypeSerializer`1[[NYurik.FastBinTimeseries.Test.TradesBlock+Item, NYurik.FastBinTimeseries.Test"
-                        , typeof (DefaultTypeSerializer<TradesBlock.Item>)
-                        },
-                };
-
         protected static Mode RunMode
         {
             get { return InitRunMode; }

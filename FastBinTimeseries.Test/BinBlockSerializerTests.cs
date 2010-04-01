@@ -56,7 +56,7 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
 
-            using (var bf = (BinIndexedFile<TradesBlock>) BinaryFile.Open(fileName, false, base.TypeMap))
+            using (var bf = (BinIndexedFile<TradesBlock>) BinaryFile.Open(fileName, false))
             {
                 VerifyData(bf, data);
             }
