@@ -6,7 +6,7 @@ using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries.Serializers
 {
-    internal delegate void UnsafeActionDelegate<TStorage, TItem>(
+    internal delegate int UnsafeActionDelegate<TStorage, TItem>(
         TStorage storage, TItem[] buffer, int offset, int count, bool isWriting);
 
     internal delegate bool UnsafeMemCompareDelegate<TItem>(
@@ -14,6 +14,7 @@ namespace NYurik.FastBinTimeseries.Serializers
 }
 
 // For legacy compatibility, keep DefaultTypeSerializer in the root namespace
+
 namespace NYurik.FastBinTimeseries
 {
     public class DefaultTypeSerializer<T> : Initializable, IBinSerializer<T>
@@ -151,11 +152,11 @@ namespace NYurik.FastBinTimeseries
             IsInitialized = true;
         }
 
-        public void ProcessFileStream(FileStream fileStream, ArraySegment<T> buffer, bool isWriting)
+        public int ProcessFileStream(FileStream fileStream, ArraySegment<T> buffer, bool isWriting)
         {
             ThrowOnNotInitialized();
             if (fileStream == null) throw new ArgumentNullException("fileStream");
-            _processFileStream(fileStream, buffer.Array, buffer.Offset, buffer.Count, isWriting);
+            return _processFileStream(fileStream, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
         public void ProcessMemoryMap(IntPtr memMapPtr, ArraySegment<T> buffer, bool isWriting)
@@ -180,25 +181,31 @@ namespace NYurik.FastBinTimeseries
         #endregion
 
 // ReSharper disable UnusedMember.Local
-        private unsafe void ProcessFileStreamPtr(FileStream fileStream, void* bufPtr, int offset, int count,
-                                                 bool isWriting)
+        private unsafe int ProcessFileStreamPtr(FileStream fileStream, void* bufPtr, int offset, int count,
+                                                bool isWriting)
 // ReSharper restore UnusedMember.Local
         {
             byte* byteBufPtr = (byte*) bufPtr + offset*_typeSize;
             int byteCount = count*_typeSize;
 
-            uint bytesProcessed = isWriting
-                                      ? NativeWinApis.WriteFile(fileStream, byteBufPtr, byteCount)
-                                      : NativeWinApis.ReadFile(fileStream, byteBufPtr, byteCount);
+            var bytesProcessed = (int) (isWriting
+                                            ? NativeWinApis.WriteFile(fileStream, byteBufPtr, byteCount)
+                                            : NativeWinApis.ReadFile(fileStream, byteBufPtr, byteCount));
 
-            if (bytesProcessed != byteCount)
-                throw new IOException(
-                    String.Format("Unable to {0} {1} bytes - only {2} bytes were available",
-                                  isWriting ? "write" : "read", byteCount, bytesProcessed));
+            if (isWriting && bytesProcessed != byteCount)
+                throw new SerializerException(
+                    "Unable to write {0} bytes - only {1} bytes were done",
+                    byteCount, bytesProcessed);
+            if (!isWriting && bytesProcessed%_typeSize != 0)
+                throw new SerializerException(
+                    "Incomplete items were detected while reading: {0} items ({1} bytes) requested, {2} bytes read",
+                    count, byteCount, bytesProcessed);
+
+            return bytesProcessed/_typeSize;
         }
 
 // ReSharper disable UnusedMember.Local
-        private unsafe void ProcessMemoryMapPtr(IntPtr memMapPtr, void* bufPtr, int offset, int count, bool isWriting)
+        private unsafe int ProcessMemoryMapPtr(IntPtr memMapPtr, void* bufPtr, int offset, int count, bool isWriting)
 // ReSharper restore UnusedMember.Local
         {
             byte* byteBufPtr = (byte*) bufPtr + offset*_typeSize;
@@ -208,6 +215,8 @@ namespace NYurik.FastBinTimeseries
             byte* dest = isWriting ? (byte*) memMapPtr : byteBufPtr;
 
             FastBinFileUtils.CopyMemory(dest, src, (uint) byteCount);
+
+            return count;
         }
 
 // ReSharper disable UnusedMember.Local
@@ -222,4 +231,23 @@ namespace NYurik.FastBinTimeseries
             return FastBinFileUtils.CompareMemory(byteBufPtr1, byteBufPtr2, (uint) byteCount);
         }
     }
+
+#if IncludePrototype
+    // ReSharper disable MemberCanBeMadeStatic.Local
+    internal unsafe class Prototype
+    {
+        private int ProcessFileStreamPtr(FileStream fileStream, void* bufPtr, int offset, int count,
+                                                 bool isWriting)
+        { return 0; }
+
+        public int DynProcessFileStream(FileStream fileStream, DateTime[] bufPtr, int offset, int count,
+                                                 bool isWriting)
+        {
+            fixed (DateTime* pt = &bufPtr[0])
+            {
+                return ProcessFileStreamPtr(fileStream, pt, offset, count, isWriting);
+            }
+        }
+    }
+#endif
 }

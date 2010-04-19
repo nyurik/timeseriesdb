@@ -41,7 +41,7 @@ namespace NYurik.FastBinTimeseries.Test
                     using (var f = new BinIndexedFile<T>(fileName))
                     {
                         f.InitializeNewFile();
-                        fileVersion = f.FileVersion;
+                        fileVersion = f.Version;
                         Assert.IsNotNull(fileVersion);
                         baseVersion = f.BaseVersion;
                         Assert.IsNotNull(baseVersion);
@@ -72,7 +72,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                     if (AllowCreate)
                     {
-                        Assert.AreEqual(fileVersion, f.FileVersion);
+                        Assert.AreEqual(fileVersion, f.Version);
                         Assert.AreEqual(baseVersion, f.BaseVersion);
                         Assert.AreEqual(serializerVersion, f.Serializer.Version);
                         Assert.AreEqual(hdrSize, f.HeaderSize);

@@ -189,6 +189,26 @@ namespace NYurik.FastBinTimeseries
                 typeRemapped = true;
             else
             {
+                if(typeMap != null)
+                {
+                    foreach (var tm in typeMap)
+                    {
+                        int startIndex = 0;
+                        while (true)
+                        {
+                            var pos = typeName.IndexOf(tm.Key, startIndex);
+                            if (pos < 0)
+                                break;
+                            if (pos == 0 || typeName[pos - 1] == ' ' || typeName[pos - 1] == '[' || typeName[pos - 1] == '+')
+                            {
+                                startIndex = pos + tm.Key.Length;
+                                typeName = typeName.Substring(0, pos) + tm.Value.AssemblyQualifiedName + typeName.Substring(startIndex);
+                            }
+                            else
+                                startIndex = pos + 1;
+                        }
+                    }
+                }
                 type = TypeUtils.GetTypeFromAnyAssemblyVersion(typeName);
                 typeRemapped = false;
             }

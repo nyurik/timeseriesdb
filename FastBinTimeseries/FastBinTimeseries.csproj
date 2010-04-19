@@ -86,6 +86,7 @@
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
     <None Include="_ClassDiagram.cd" />
+    <Compile Include="IWrapperFactory.cs" />
     <Compile Include="Serializers\BinarySerializerAttribute.cs" />
     <Compile Include="BinIndexedFile.cs" />
     <Compile Include="BinTimeseriesFile.cs">

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
@@ -20,25 +21,18 @@ namespace NYurik.FastBinTimeseries
 
         /// <summary> Base version for new files by default </summary>
         private Version _baseVersion = BaseVersion12;
+        
+        /// <summary> The version of the specific file implementation </summary>
+        private Version _version;
 
-        private bool _canWrite;
         private bool _enableMemMappedAccessOnRead;
         private bool _enableMemMappedAccessOnWrite;
         private string _fileName;
-        private FileStream _fileStream;
-        private Version _fileVersion;
+        private Stream _stream;
         private int _headerSize;
         private bool _isDisposed;
         private bool _isInitialized;
         private string _tag = "";
-
-        #region Fields accessed from the derived BinaryFile<T> class
-
-        // ReSharper disable InconsistentNaming
-        internal long m_count;
-        // ReSharper restore InconsistentNaming
-
-        #endregion
 
         protected BinaryFile()
         {
@@ -46,8 +40,24 @@ namespace NYurik.FastBinTimeseries
 
         protected BinaryFile(string fileName)
         {
-            _canWrite = true;
             _fileName = fileName;
+        }
+
+        public bool IsFileStream { get { return BaseStream is FileStream; } }
+
+        public Stream BaseStream
+        {
+            get
+            {
+                ThrowOnNotInitialized();
+                return _stream;
+            }
+            set
+            {
+                if (value == null) throw new ArgumentNullException("value");
+                ThrowOnInitialized();
+                _stream = value;
+            }
         }
 
         /// <summary> All memory mapping operations must align to this value (not the dwPageSize) </summary>
@@ -76,15 +86,6 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        protected FileStream FileStream
-        {
-            get
-            {
-                ThrowOnNotInitialized();
-                return _fileStream;
-            }
-        }
-
         public abstract IBinSerializer NonGenericSerializer { get; }
 
         public long Count
@@ -92,7 +93,9 @@ namespace NYurik.FastBinTimeseries
             get
             {
                 ThrowOnNotInitialized();
-                return m_count;
+                if (!BaseStream.CanSeek)
+                    throw new NotSupportedException("Not supported for Stream.CanSeek == false");
+                return CalculateItemCountFromFilePosition(BaseStream.Length);
             }
         }
 
@@ -225,17 +228,16 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                ThrowOnDisposed();
-                return _canWrite;
+                return BaseStream.CanWrite;
             }
         }
 
-        public Version FileVersion
+        public Version Version
         {
             get
             {
                 ThrowOnNotInitialized();
-                return _fileVersion;
+                return _version;
             }
         }
 
@@ -330,12 +332,13 @@ namespace NYurik.FastBinTimeseries
             // This call does not change the state, so no need to invalidate this object
             // This call must be left outside the following try-catch block, 
             // because file-already-exists exception would cause the deletion of that file.
-            _fileStream = new FileStream(FileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
+            var s = new FileStream(FileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
 
             try
             {
-                _fileStream.Write(header.Array, header.Offset, header.Count);
-                _fileStream.Flush();
+                s.Write(header.Array, header.Offset, header.Count);
+                s.Flush();
+                BaseStream = s;
                 _isInitialized = true;
             }
             catch (Exception ex)
@@ -383,13 +386,13 @@ namespace NYurik.FastBinTimeseries
             {
                 if (disposing)
                 {
-                    FileStream streamTmp = _fileStream;
-                    _fileStream = null;
+                    var streamTmp = _stream;
+                    _stream = null;
                     if (streamTmp != null)
                         streamTmp.Close();
                 }
                 else
-                    _fileStream = null;
+                    _stream = null;
 
                 _isDisposed = true;
             }
@@ -405,7 +408,7 @@ namespace NYurik.FastBinTimeseries
         private static byte[] ReadIntoNewBuffer(Stream stream, int bufferSize)
         {
             var headerBuffer = new byte[bufferSize];
-            int bytesRead = stream.Read(headerBuffer, 0, bufferSize);
+            int bytesRead = EnsureStreamRead(stream, new ArraySegment<byte>(headerBuffer));
             if (bytesRead < bufferSize)
                 throw new IOException(
                     String.Format("Unable to read a block of size {0}: only {1} bytes were available", bufferSize,
@@ -443,11 +446,16 @@ namespace NYurik.FastBinTimeseries
 
         public override string ToString()
         {
+            var fileStream = _stream as FileStream;
             return string.Format("{0} file {1} of type {2}{3}",
                                  IsDisposed ? "Disposed" : (IsInitialized ? "Open" : "Uninitialized"),
-                                 _fileStream == null ? "(unknown)" : _fileStream.Name,
+                                 _stream == null
+                                     ? "(unknown)"
+                                     : (fileStream == null ? _stream.ToString() : fileStream.Name),
                                  GetType().FullName,
-                                 IsOpen ? string.Format(" with {0} items", Count) : "");
+                                 fileStream != null && IsOpen && fileStream.CanSeek
+                                     ? string.Format(" with {0} items", Count)
+                                     : "");
         }
 
         /// <summary> Override to read custom header info. Must match the <see cref="WriteCustomHeader"/>. </summary>
@@ -469,16 +477,15 @@ namespace NYurik.FastBinTimeseries
             if (Count == newCount)
                 return;
 
-            FileStream.SetLength(ItemIdxToOffset(newCount));
-            FileStream.Flush();
-            m_count = CalculateItemCountFromFilePosition(FileStream.Length);
+            BaseStream.SetLength(ItemIdxToOffset(newCount));
+            BaseStream.Flush();
 
             // Just in case, hope this will never happen
-            if (newCount != m_count)
+            if (newCount != Count)
                 throw new IOException(
                     string.Format(
                         "Internal error: the new file should have had {0} items, but was calculated to have {1}",
-                        newCount, m_count));
+                        newCount, Count));
         }
 
         /// <summary>
@@ -496,11 +503,14 @@ namespace NYurik.FastBinTimeseries
         /// <param name="typeMap">
         /// An optional map that would override the type strings in the file with the given types.
         /// </param>
-        public static BinaryFile Open(FileStream stream, IDictionary<string, Type> typeMap)
+        public static BinaryFile Open(Stream stream, IDictionary<string, Type> typeMap)
         {
             if (stream == null) throw new ArgumentNullException("stream");
 
-            stream.Seek(0, SeekOrigin.Begin);
+            var canSeek = stream.CanSeek;
+            var isFile = stream is FileStream;
+            if(canSeek)
+                stream.Seek(0, SeekOrigin.Begin);
 
             // Get header signature & size
             int hdrSigSize = sizeof (int);
@@ -533,9 +543,8 @@ namespace NYurik.FastBinTimeseries
                 throw new ArgumentOutOfRangeException(
                     "TypeSize" + "", typeSize, "Element size given by the serializer must be > 0");
 
-            inst._enableMemMappedAccessOnRead = inst.NonGenericSerializer.SupportsMemoryMappedFiles;
-            inst._enableMemMappedAccessOnWrite = inst.NonGenericSerializer.SupportsMemoryMappedFiles;
-            inst.m_count = inst.CalculateItemCountFromFilePosition(inst._fileStream.Length);
+            inst._enableMemMappedAccessOnRead = isFile && inst.NonGenericSerializer.SupportsMemoryMappedFiles;
+            inst._enableMemMappedAccessOnWrite = isFile && inst.NonGenericSerializer.SupportsMemoryMappedFiles;
             inst._isInitialized = true;
 
             return inst;
@@ -544,7 +553,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Serialize header info into a memory stream and return as a byte array.
         /// This method must match the reading sequence in the
-        /// <see cref="Open(System.IO.FileStream,System.Collections.Generic.IDictionary{string,System.Type})"/>.
+        /// <see cref="Open(System.IO.Stream,System.Collections.Generic.IDictionary{string,System.Type})"/>.
         /// </summary>
         private ArraySegment<byte> CreateHeader()
         {
@@ -593,7 +602,7 @@ namespace NYurik.FastBinTimeseries
             return new ArraySegment<byte>(memStream.GetBuffer(), 0, headerSize);
         }
 
-        private static BinaryFile ReadHeaderV10(Version baseVersion, FileStream stream, BinaryReader reader,
+        private static BinaryFile ReadHeaderV10(Version baseVersion, Stream stream, BinaryReader reader,
                                                 int hdrSize, IDictionary<string, Type> typeMap)
         {
             var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeMap, true);
@@ -610,14 +619,13 @@ namespace NYurik.FastBinTimeseries
 
             inst.HeaderSize = hdrSize;
             inst.BaseVersion = baseVersion;
-            inst._fileStream = stream;
-            inst._canWrite = stream.CanWrite;
+            inst._stream = stream;
             inst.Tag = tag;
 
             // Here we do it before finishing serializer instantiation due to design before v1.2
             inst.SetSerializer(serializer);
 
-            inst._fileVersion = inst.Init(reader, typeMap);
+            inst._version = inst.Init(reader, typeMap);
             serializer.InitExisting(reader, typeMap);
 
             // Make sure the item size has not changed
@@ -653,11 +661,11 @@ namespace NYurik.FastBinTimeseries
                 writer.Write(Tag);
 
             // Save versions and custom headers
-            _fileVersion = WriteCustomHeader(writer);
+            _version = WriteCustomHeader(writer);
             NonGenericSerializer.InitNew(writer);
         }
 
-        private static BinaryFile ReadHeaderV12(Version baseVersion, FileStream stream, BinaryReader reader,
+        private static BinaryFile ReadHeaderV12(Version baseVersion, Stream stream, BinaryReader reader,
                                                 int hdrSize, IDictionary<string, Type> typeMap)
         {
             // Tag
@@ -676,11 +684,10 @@ namespace NYurik.FastBinTimeseries
             var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeMap, true);
             inst.HeaderSize = hdrSize;
             inst.BaseVersion = baseVersion;
-            inst._fileStream = stream;
-            inst._canWrite = stream.CanWrite;
+            inst._stream = stream;
             inst.Tag = tag;
             inst.SetSerializer(serializer);
-            inst._fileVersion = inst.Init(reader, typeMap);
+            inst._version = inst.Init(reader, typeMap);
 
             return inst;
         }
@@ -712,17 +719,49 @@ namespace NYurik.FastBinTimeseries
 
             // Save versions and custom headers
             writer.WriteType(this);
-            _fileVersion = WriteCustomHeader(writer);
+            _version = WriteCustomHeader(writer);
         }
 
         #endregion
-    }
 
-    /// <summary>
-    /// This interface is used to easily create wrapper objects without referencing the generic subtype
-    /// </summary>
-    public interface IWrapperFactory
-    {
-        TDst Create<TSrc, TDst, TSubType>(TSrc source);
+        public static IBinSerializer<T> GetDefaultSerializer<T>()
+        {
+            Type typeT = typeof(T);
+            BinarySerializerAttribute[] attr = typeT.GetCustomAttributes<BinarySerializerAttribute>(false);
+            if (attr.Length >= 1)
+            {
+                Type typeSer = attr[0].BinSerializerType;
+                if (typeSer.IsGenericTypeDefinition)
+                    typeSer = typeSer.MakeGenericType(typeT);
+
+                var ser = Activator.CreateInstance(typeSer) as IBinSerializer<T>;
+                if (ser == null)
+                    throw new ArgumentException(
+                        string.Format("Custom binary serializer for type {0} does not implement IBinSerializer<{0}>",
+                                      typeT.Name));
+                return ser;
+            }
+
+            // Initialize default serializer
+            return new DefaultTypeSerializer<T>();
+        }
+
+        protected static int EnsureStreamRead(Stream stream, ArraySegment<byte> buffer)
+        {
+            int offset = buffer.Offset;
+            int count = buffer.Count;
+
+            while (true)
+            {
+                int c = stream.Read(buffer.Array, offset, count);
+                if (c == count)
+                    return buffer.Count;
+                if (c == 0)
+                    return offset - buffer.Offset;
+
+                offset += c;
+                count -= c;
+            }
+        }
     }
 }

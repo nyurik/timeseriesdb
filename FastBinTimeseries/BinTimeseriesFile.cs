@@ -177,7 +177,7 @@ namespace NYurik.FastBinTimeseries
 
         public void ReadData(long firstItemIdx, ArraySegment<T> buffer)
         {
-            PerformRead(firstItemIdx, buffer);
+            PerformFileAccess(firstItemIdx, buffer, false);
         }
 
         #endregion
@@ -204,7 +204,7 @@ namespace NYurik.FastBinTimeseries
                 if (_firstTimestamp == null && Count > 0)
                 {
                     var oneElementBuff = new T[1];
-                    PerformRead(0, new ArraySegment<T>(oneElementBuff));
+                    PerformFileAccess(0, new ArraySegment<T>(oneElementBuff), false);
                     _firstTimestamp = TimestampAccessor(oneElementBuff[0]);
                 }
                 return _firstTimestamp;
@@ -218,7 +218,7 @@ namespace NYurik.FastBinTimeseries
                 if (_lastTimestamp == null && Count > 0)
                 {
                     var oneElementBuff = new T[1];
-                    PerformRead(Count - 1, new ArraySegment<T>(oneElementBuff));
+                    PerformFileAccess(Count - 1, new ArraySegment<T>(oneElementBuff), false);
                     _lastTimestamp = TimestampAccessor(oneElementBuff[0]);
                 }
                 return _lastTimestamp;
@@ -259,10 +259,12 @@ namespace NYurik.FastBinTimeseries
                     // for the special case where we are left with two elements,
                     // and searching for the last non-unique element,
                     // read both elements to see if the 2nd one matches our search
-                    PerformRead(mid, new ArraySegment<T>(buff));
+                    PerformFileAccess(mid, new ArraySegment<T>(buff), false);
                 }
                 else
-                    PerformRead(mid, oneElementSegment);
+                {
+                    PerformFileAccess(mid, oneElementSegment, false);
+                }
 
 
                 int comp = TimestampAccessor(buff[0]).CompareTo(timestamp);
@@ -406,7 +408,7 @@ namespace NYurik.FastBinTimeseries
                 lastTs = newTs;
             }
 
-            PerformWrite(Count, buffer);
+            PerformFileAccess(Count, buffer, true);
 
             if (isEmptyFile)
                 _firstTimestamp = firstBufferTs;
@@ -424,7 +426,7 @@ namespace NYurik.FastBinTimeseries
             if (buffer.Array == null) throw new ArgumentNullException("buffer");
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
 
-            PerformRead(rng.Item1, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)));
+            PerformFileAccess(rng.Item1, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)), false);
 
             return rng.Item2;
         }
@@ -441,7 +443,7 @@ namespace NYurik.FastBinTimeseries
 
             var buffer = new T[Math.Min(maxItemsToRead, rng.Item2)];
 
-            PerformRead(rng.Item1, new ArraySegment<T>(buffer));
+            PerformFileAccess(rng.Item1, new ArraySegment<T>(buffer), false);
 
             return buffer;
         }
@@ -463,7 +465,7 @@ namespace NYurik.FastBinTimeseries
             int reqSize = (Count - firstItemIdx).ToIntCountChecked();
             var buffer = new T[reqSize];
 
-            PerformRead(firstItemIdx, new ArraySegment<T>(buffer));
+            PerformFileAccess(firstItemIdx, new ArraySegment<T>(buffer), false);
 
             return buffer;
         }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
@@ -26,26 +25,7 @@ namespace NYurik.FastBinTimeseries
         protected BinaryFile(string fileName)
             : base(fileName)
         {
-            Type typeT = typeof (T);
-            BinarySerializerAttribute[] attr = typeT.GetCustomAttributes<BinarySerializerAttribute>(false);
-            if (attr.Length >= 1)
-            {
-                Type typeSer = attr[0].BinSerializerType;
-                if (typeSer.IsGenericTypeDefinition)
-                    typeSer = typeSer.MakeGenericType(typeT);
-
-                var ser = Activator.CreateInstance(typeSer) as IBinSerializer<T>;
-                if (ser == null)
-                    throw new ArgumentException(
-                        string.Format("Custom binary serializer for type {0} does not implement IBinSerializer<{0}>",
-                                      typeT.Name));
-                Serializer = ser;
-            }
-            else
-            {
-                // Initialize default serializer
-                Serializer = new DefaultTypeSerializer<T>();
-            }
+            Serializer = GetDefaultSerializer<T>();
         }
 
         public IBinSerializer<T> Serializer
@@ -91,101 +71,164 @@ namespace NYurik.FastBinTimeseries
 
             var result = new T[(int) Math.Min(Count - firstItemIdx, count)];
 
-            PerformRead(firstItemIdx, new ArraySegment<T>(result));
+            PerformFileAccess(firstItemIdx, new ArraySegment<T>(result), false);
 
             return result;
         }
 
         #endregion
 
-        /// <summary> Used by <see cref="BinaryFile.Open(FileStream,System.Collections.Generic.IDictionary{string,System.Type})"/> when opening an existing file </summary>
+        /// <summary> Used by <see cref="BinaryFile.Open(Stream,System.Collections.Generic.IDictionary{string,System.Type})"/> when opening an existing file </summary>
         protected override sealed void SetSerializer(IBinSerializer nonGenericSerializer)
         {
             _serializer = (IBinSerializer<T>) nonGenericSerializer;
         }
 
-        protected void PerformRead(long firstItemIdx, ArraySegment<T> buffer)
-        {
-            PerformFileAccess(firstItemIdx, buffer, false);
-        }
-
-        protected void PerformWrite(long firstItemIdx, ArraySegment<T> buffer)
-        {
-            PerformFileAccess(firstItemIdx, buffer, true);
-        }
-
-        private void PerformFileAccess(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
+        protected int PerformFileAccess(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             ThrowOnNotInitialized();
-            if (firstItemIdx < 0 || firstItemIdx > Count)
-                throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx, "Must be >= 0 and <= Count");
 
-            if (!isWriting && firstItemIdx + buffer.Count > Count)
-                throw new ArgumentOutOfRangeException(
-                    "buffer", buffer.Count,
-                    "There is not enough data to fulfill this request. FirstItemIndex + Buffer.Count > Count");
+            var canSeek = BaseStream.CanSeek;
+            
+            if (!canSeek && firstItemIdx != 0)
+                throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx,
+                                                      "Must be 0 when the base stream is not seekable");
+
+            if (canSeek && (firstItemIdx < 0 || firstItemIdx > Count))
+                throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx, "Must be >= 0 and <= Count");
 
             // Optimize empty requests
             if (buffer.Count == 0)
-                return;
+                return 0;
 
-            bool useMemMapping = (
-                                     (isWriting && EnableMemMappedAccessOnWrite)
-                                     ||
-                                     (!isWriting && EnableMemMappedAccessOnRead)
-                                 )
-                                 && ItemIdxToOffset(buffer.Count) > MinReqSizeToUseMapView;
-
-            if (useMemMapping)
-                ProcessFileMmf(firstItemIdx, buffer, isWriting);
-            else
-                ProcessFileNoMmf(firstItemIdx, buffer, isWriting);
-
-            if (isWriting)
+            int ret;
+            if (IsFileStream
+                && ((isWriting && EnableMemMappedAccessOnWrite) || (!isWriting && EnableMemMappedAccessOnRead))
+                && ItemIdxToOffset(buffer.Count) > MinReqSizeToUseMapView)
             {
-                if (!useMemMapping)
-                    FileStream.Flush();
-
-                long newCount = CalculateItemCountFromFilePosition(FileStream.Length);
-                if (Count < newCount)
-                    m_count = newCount;
+                ret = ProcessMemoryMappedFile(firstItemIdx, buffer, isWriting);
             }
+            else
+            {
+                ret = ProcessStreamSlow(firstItemIdx, buffer, isWriting);
+                if (isWriting)
+                    BaseStream.Flush();
+            }
+
+            return ret;
         }
 
-        /// Access file using FileStream object
-        private void ProcessFileNoMmf(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
+        /// Access file using Stream object
+        private int ProcessStreamSlow(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
-            long fileOffset = ItemIdxToOffset(firstItemIdx);
+            var canSeek = BaseStream.CanSeek;
+            long fileOffset = 0;
 
-            FileStream.Seek(fileOffset, SeekOrigin.Begin);
-            Serializer.ProcessFileStream(FileStream, buffer, isWriting);
+            if (canSeek)
+            {
+                fileOffset = ItemIdxToOffset(firstItemIdx);
+                BaseStream.Seek(fileOffset, SeekOrigin.Begin);
+            }
 
-            long expectedStreamPos = fileOffset + buffer.Count*ItemSize;
-            if (expectedStreamPos != FileStream.Position)
-                throw new InvalidOperationException(
-                    String.Format(
-                        "Possible loss of data or file corruption detected.\n" +
-                        "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
-                        "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
-                        isWriting ? "writing" : "reading",
-                        buffer.Count, fileOffset, expectedStreamPos, FileStream.Position));
+            var fs = BaseStream as FileStream;
+            int count = fs != null
+                             ? Serializer.ProcessFileStream(fs, buffer, isWriting)
+                             : ProcessStreamSlow(buffer, isWriting);
+
+            if (canSeek)
+            {
+                long expectedStreamPos = fileOffset + buffer.Count*ItemSize;
+                if (expectedStreamPos != BaseStream.Position)
+                    throw new InvalidOperationException(
+                        String.Format(
+                            "Possible loss of data or file corruption detected.\n" +
+                            "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
+                            "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
+                            isWriting ? "writing" : "reading",
+                            buffer.Count, fileOffset, expectedStreamPos, BaseStream.Position));
+            }
+
+            return count;
         }
 
-        private void ProcessFileMmf(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
+        private int ProcessStreamSlow(ArraySegment<T> buffer, bool isWriting)
+        {
+            const int maxBufferSize = 512*1024; // 512 KB
+
+            ThrowOnNotInitialized();
+
+            int offset = buffer.Offset;
+            int count = buffer.Count;
+
+            var itemSize = ItemSize;
+            int tempBufSize = Math.Min((int) FastBinFileUtils.RoundUpToMultiple(maxBufferSize, itemSize), count*itemSize);
+            var tempBuf = new byte[tempBufSize];
+            int tempSize = tempBuf.Length/itemSize;
+
+            while (count > 0)
+            {
+                int opSize = tempSize < count ? tempSize : count;
+                int opByteSize = opSize*itemSize;
+                int readBytes = 0;
+
+                if (!isWriting)
+                {
+                    readBytes = EnsureStreamRead(BaseStream, new ArraySegment<byte>(tempBuf, 0, opByteSize));
+                    if (readBytes%itemSize != 0)
+                        throw new SerializerException("Unexpected end of stream. Received {0} bytes", readBytes);
+                    opSize = readBytes/itemSize;
+                }
+
+                unsafe
+                {
+                    fixed (byte* p = &tempBuf[0])
+                    {
+                        Serializer.ProcessMemoryMap(
+                            (IntPtr) p,
+                            new ArraySegment<T>(buffer.Array, offset, opSize),
+                            isWriting);
+                    }
+                }
+
+                if (isWriting)
+                {
+                    // Write into the stream
+                    BaseStream.Write(tempBuf, 0, opByteSize);
+                }
+                else if (readBytes != opByteSize)
+                {
+                    // Finish early - the stream is done
+                    return buffer.Count - count + opSize;
+                }
+
+                offset += opSize;
+                count -= opSize;
+            }
+
+            return buffer.Count;
+        }
+
+        private int ProcessMemoryMappedFile(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             SafeMapHandle hMap = null;
             try
             {
+                long fileSize = BaseStream.Length;
+                long fileCount = CalculateItemCountFromFilePosition(fileSize);
                 long idxToStopAt = firstItemIdx + buffer.Count;
+
+                if (!isWriting && idxToStopAt > fileCount)
+                    idxToStopAt = fileCount;
+                
                 long offsetToStopAt = ItemIdxToOffset(idxToStopAt);
                 long idxCurrent = firstItemIdx;
 
                 // Grow file if needed
-                long fileSize = FileStream.Length;
                 if (isWriting && offsetToStopAt > fileSize)
                     fileSize = offsetToStopAt;
+
                 hMap = NativeWinApis.CreateFileMapping(
-                    FileStream, fileSize,
+                    (FileStream) BaseStream, fileSize,
                     isWriting ? FileMapProtection.PageReadWrite : FileMapProtection.PageReadOnly);
 
                 while (idxCurrent < idxToStopAt)
@@ -227,6 +270,8 @@ namespace NYurik.FastBinTimeseries
                             ptrMapViewBaseAddr.Dispose();
                     }
                 }
+
+                return (int) (idxCurrent - firstItemIdx);
             }
             finally
             {
@@ -249,20 +294,28 @@ namespace NYurik.FastBinTimeseries
         protected IEnumerable<ArraySegment<T>> PerformStreaming(long firstItemIdx, bool enumerateInReverse,
                                                                 int bufferSize)
         {
+            ThrowOnNotInitialized();
             if (bufferSize < 0)
                 throw new ArgumentOutOfRangeException("bufferSize", bufferSize, "Must be >= 0");
 
             long idx;
+            var canSeek = BaseStream.CanSeek;
             if (enumerateInReverse)
             {
+                if (!canSeek)
+                    throw new NotSupportedException("Reverse enumeration is not supported when Stream.CanSeek == false");
                 idx = Math.Min(firstItemIdx, Count - 1);
                 if (idx < 0)
                     yield break;
             }
             else
             {
+                if(!canSeek && firstItemIdx != 0)
+                    throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx,
+                                                          "Must be 0 when the base stream is not seekable");
+
                 idx = Math.Max(firstItemIdx, 0);
-                if (idx >= Count)
+                if (canSeek && idx >= Count)
                     yield break;
             }
 
@@ -272,7 +325,7 @@ namespace NYurik.FastBinTimeseries
 
             while (true)
             {
-                long itemsLeft = enumerateInReverse ? idx + 1 : Count - idx;
+                long itemsLeft = !canSeek ? long.MaxValue : (enumerateInReverse ? idx + 1 : Count - idx);
 
                 if (itemsLeft <= 0)
                     yield break;
@@ -289,15 +342,25 @@ namespace NYurik.FastBinTimeseries
 
                 if (enumerateInReverse)
                 {
-                    PerformRead(idx - readSize + 1, block);
+                    var read = PerformFileAccess(idx - readSize + 1, block, false);
+                    if (read != block.Count)
+                        throw new SerializerException(
+                            "Unexpected number of items read during reverse traversal. {0} was expected, {1} returned",
+                            block.Count, read);
+
                     yield return block;
                     idx = idx - readSize;
                 }
                 else
                 {
-                    PerformRead(idx, block);
-                    yield return block;
-                    idx = idx + readSize;
+                    var read = PerformFileAccess(idx, block, false);
+                    if(read == 0)
+                        yield break;
+
+                    yield return read < block.Count ? new ArraySegment<T>(block.Array, 0, read) : block;
+                    
+                    if(canSeek)
+                        idx += readSize;
                 }
 
                 iterations++;

@@ -122,11 +122,11 @@ namespace NYurik.FastBinTimeseries.Serializers
 
         #region IBinSerializer<TObject> Members
 
-        public void ProcessFileStream(FileStream fileStream, ArraySegment<TObject> buffer, bool isWriting)
+        public int ProcessFileStream(FileStream fileStream, ArraySegment<TObject> buffer, bool isWriting)
         {
             ThrowOnNotInitialized();
             if (fileStream == null) throw new ArgumentNullException("fileStream");
-            Process(fileStream, IntPtr.Zero, buffer, isWriting);
+            return Process(fileStream, IntPtr.Zero, buffer, isWriting);
         }
 
         public void ProcessMemoryMap(IntPtr memMapPtr, ArraySegment<TObject> buffer, bool isWriting)
@@ -185,7 +185,7 @@ namespace NYurik.FastBinTimeseries.Serializers
             return _headerSerializer.TypeSize + _dataSerializer.TypeSize*ItemCount;
         }
 
-        private void Process(FileStream fileStream, IntPtr memMapPtr, ArraySegment<TObject> buffer,
+        private int Process(FileStream fileStream, IntPtr memMapPtr, ArraySegment<TObject> buffer,
                              bool isWriting)
         {
             bool useMmf = fileStream == null;
@@ -224,7 +224,11 @@ namespace NYurik.FastBinTimeseries.Serializers
                     memMapPtr = (IntPtr) (memMapPtr.ToInt64() + _headerSerializer.TypeSize);
                 }
                 else
-                    _headerSerializer.ProcessFileStream(fileStream, hdrSegment, isWriting);
+                {
+                    var cnt = _headerSerializer.ProcessFileStream(fileStream, hdrSegment, isWriting);
+                    if (!isWriting && cnt == 0)
+                        return i - buffer.Offset;
+                }
 
                 if (!isWriting)
                     block.Header = hdrArray[0];
@@ -236,8 +240,14 @@ namespace NYurik.FastBinTimeseries.Serializers
                     memMapPtr = (IntPtr) (memMapPtr.ToInt64() + _dataSerializer.TypeSize*ItemCount);
                 }
                 else
-                    _dataSerializer.ProcessFileStream(fileStream, new ArraySegment<TItem>(items), isWriting);
+                {
+                    var cnt = _dataSerializer.ProcessFileStream(fileStream, new ArraySegment<TItem>(items), isWriting);
+                    if (!isWriting && cnt < ItemCount)
+                        return i - buffer.Offset;   // We cave incomplete file, ignore this item
+                }
             }
+
+            return buffer.Count;
         }
     }
 }

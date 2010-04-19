@@ -40,7 +40,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="buffer">Array of values to be written into a file.</param>
         public void ReadData(long firstItemIndex, ArraySegment<T> buffer)
         {
-            PerformRead(firstItemIndex, buffer);
+            PerformFileAccess(firstItemIndex, buffer, false);
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="buffer">Array of values to be written into a file.</param>
         public void WriteData(long firstItemIndex, ArraySegment<T> buffer)
         {
-            PerformWrite(firstItemIndex, buffer);
+            PerformFileAccess(firstItemIndex, buffer, true);
         }
 
         /// <summary>

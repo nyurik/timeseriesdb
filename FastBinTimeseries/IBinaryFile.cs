@@ -32,7 +32,7 @@ namespace NYurik.FastBinTimeseries
         bool CanWrite { get; }
 
         /// <summary> The version of the binary file handler used to create this file </summary>
-        Version FileVersion { get; }
+        Version Version { get; }
 
         /// <summary>
         /// True after the file has been initialized. This property will be false right after creating a new object

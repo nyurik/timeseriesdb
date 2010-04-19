@@ -152,7 +152,7 @@ namespace NYurik.FastBinTimeseries.Serializers
 
             var method = new DynamicMethod(
                 methodName,
-                typeof (void),
+                typeof (int),
                 new[] {baseType, firstParamType, itemType.MakeArrayType(), typeof (int), typeof (int), typeof (bool)},
                 baseType.Module,
                 true);
@@ -161,7 +161,12 @@ namespace NYurik.FastBinTimeseries.Serializers
 
             //                .locals init (
             //                    [0] void& pinned bufPtr)
+            //                    [1] int32 CS$1$0000)
             LocalBuilder bufPtr = emit.DeclareLocal(typeof (void).MakeByRefType(), true);
+            LocalBuilder retVal = emit.DeclareLocal(typeof (int));
+
+
+            Label l0019 = emit.DefineLabel();
 
             // Argument index: 
             // 0 - this
@@ -183,10 +188,16 @@ namespace NYurik.FastBinTimeseries.Serializers
                 .ldarg_s(4) //        L_000d: ldarg.s count
                 .ldarg_s(5) //        L_000f: ldarg.s isWriting
                 .call(methodToCall) //L_0011: call instance ... (our method)
-                .ldc_i4_0() //        L_0016: ldc.i4.0 
-                .conv_u() //          L_0017: conv.u 
-                .stloc(bufPtr) //     L_0018: stloc.0 
-                .ret() //             L_0019: ret 
+                //.ldc_i4_0() //        L_0016: ldc.i4.0 
+                //.conv_u() //          L_0017: conv.u 
+                //.stloc(bufPtr) //     L_0018: stloc.0 
+                //.ret() //             L_0019: ret 
+
+                .stloc(retVal) //     L_0016: stloc.1 
+                .leave_s(l0019) //    L_0017: leave.s L_0019
+                .MarkLabelExt(l0019)
+                .ldloc(retVal) //     L_0019: ldloc.1 
+                .ret() //             L_001a: ret 
                 ;
 
             return method;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 
@@ -16,7 +17,7 @@ namespace NYurik.FastBinTimeseries.Test
             TestUtils.AssertException<InvalidOperationException>(() => { f.Serializer = null; });
 
             Assert.AreEqual(0, f.Count);
-            Assert.AreEqual(new Version(1, 0), f.FileVersion);
+            Assert.AreEqual(new Version(1, 0), f.Version);
             Assert.Greater(f.HeaderSize, 0);
             Assert.AreEqual(true, f.IsEmpty);
             Assert.AreEqual(1, f.ItemSize);
@@ -78,15 +79,15 @@ namespace NYurik.FastBinTimeseries.Test
                 {
                     temp = f;
                     TestUtils.AssertException<InvalidOperationException>(() => f.Count);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.FileVersion);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.Version);
                     TestUtils.AssertException<InvalidOperationException>(() => f.HeaderSize);
                     TestUtils.AssertException<InvalidOperationException>(() => f.IsEmpty);
                     TestUtils.AssertException<InvalidOperationException>(() => f.ItemSize);
                     TestUtils.AssertException<InvalidOperationException>(() => f.EnableMemMappedAccessOnRead);
                     TestUtils.AssertException<InvalidOperationException>(() => f.EnableMemMappedAccessOnWrite);
                     TestUtils.AssertException<InvalidOperationException>(() => f.Serializer.Version);
+                    TestUtils.AssertException<InvalidOperationException>(() => f.CanWrite);
 
-                    Assert.IsTrue(f.CanWrite);
                     Assert.IsFalse(f.IsInitialized);
                     Assert.IsFalse(f.IsDisposed);
                     Assert.IsFalse(f.IsOpen);
@@ -108,6 +109,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                     f.InitializeNewFile();
 
+                    Assert.IsTrue(f.CanWrite);
 
                     Assert.IsNotNull(f.Serializer.Version);
                     Assert.IsTrue(f.IsInitialized);
@@ -181,6 +183,38 @@ namespace NYurik.FastBinTimeseries.Test
                     File.Delete(fileName);
                     f.InitializeNewFile();
                 }
+            }
+        }
+
+        [Test]
+        public void MappingTest()
+        {
+            string fileName = GetBinFileName();
+            var data = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, 1, 10);
+            if (AllowCreate)
+            {
+                using (var f = new BinIndexedFile<_DatetimeByte_SeqPk1>(fileName))
+                {
+                    f.InitializeNewFile();
+                    f.WriteData(0, new ArraySegment<_DatetimeByte_SeqPk1>(data));
+                }
+            }
+
+            using (
+                var f = BinaryFile.Open(
+                    fileName, false,
+                    new Dictionary<string, Type>
+                        {
+                            {typeof (_DatetimeByte_SeqPk1).AssemblyQualifiedName, typeof (_LongByte_SeqPk1)}
+                        }))
+            {
+                var p = (BinIndexedFile<_LongByte_SeqPk1>) f;
+                
+                var data2 = new _LongByte_SeqPk1[1];
+                p.ReadData(0, new ArraySegment<_LongByte_SeqPk1>(data2));
+
+                Assert.AreEqual(data[0].a.Ticks, data2[0].a);
+                Assert.AreEqual(data[0].b, data2[0].b);
             }
         }
     }

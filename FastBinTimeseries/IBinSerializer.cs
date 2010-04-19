@@ -47,7 +47,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="fileStream">FileStream already positioned at the point in the file from which to begin</param>
         /// <param name="buffer">Buffer to fill with/read from values</param>
         /// <param name="isWriting">True when buffer should be written into a file, false - when reading into the buffer</param>
-        void ProcessFileStream(FileStream fileStream, ArraySegment<T> buffer, bool isWriting);
+        int ProcessFileStream(FileStream fileStream, ArraySegment<T> buffer, bool isWriting);
 
         /// <summary>
         /// Read/Write items from/to the memory pointer <paramref name="memMapPtr"/> into/from <paramref name="buffer"/>

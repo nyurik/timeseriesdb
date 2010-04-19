@@ -9,8 +9,8 @@ namespace NYurik.FastBinTimeseries.Test
 {
     public class TestsBase
     {
-        private const Mode InitRunMode = Mode.OneTime;
-        private const string StoreDir = "Stored1";
+        private const Mode InitRunMode = Mode.Create;
+        private const string StoreDir = "Stored2";
         private const string TestFileSuffix = ".testbsd";
 
         private readonly Dictionary<string, int> _files = new Dictionary<string, int>();
@@ -49,7 +49,11 @@ namespace NYurik.FastBinTimeseries.Test
             _files.TryGetValue(filename, out count);
             count++;
             _files[filename] = count;
-            return MakeFilename(filename, count);
+            
+            filename = MakeFilename(filename, count);
+            if (AllowCreate && File.Exists(filename))
+                File.Delete(filename);
+            return filename;
         }
 
         [SetUp, TearDown]

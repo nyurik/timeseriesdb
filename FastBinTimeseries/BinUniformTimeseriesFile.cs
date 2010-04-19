@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using NYurik.FastBinTimeseries.CommonCode;
-using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -135,7 +134,7 @@ namespace NYurik.FastBinTimeseries
             int bufCount = Math.Min((Count - firstItemIdx).ToIntCountChecked(), count);
             var buffer = new ArraySegment<T>(new T[bufCount], 0, bufCount);
 
-            PerformRead(firstItemIdx, buffer);
+            PerformFileAccess(firstItemIdx, buffer, false);
 
             return buffer.Array;
         }
@@ -159,7 +158,7 @@ namespace NYurik.FastBinTimeseries
 
         public void ReadData(long firstItemIdx, ArraySegment<T> buffer)
         {
-            PerformRead(firstItemIdx, buffer);
+            PerformFileAccess(firstItemIdx, buffer, false);
         }
 
         #endregion
@@ -178,7 +177,7 @@ namespace NYurik.FastBinTimeseries
             if (buffer.Count > maxCount)
                 buffer = new ArraySegment<T>(buffer.Array, buffer.Offset, maxCount);
 
-            PerformRead(firstItemIdx, buffer);
+            PerformFileAccess(firstItemIdx, buffer, false);
 
             return buffer.Count;
         }
@@ -193,7 +192,7 @@ namespace NYurik.FastBinTimeseries
         {
             if (buffer.Array == null) throw new ArgumentNullException("buffer");
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-            PerformRead(rng.Item1, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)));
+            PerformFileAccess(rng.Item1, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)), false);
             return rng.Item2;
         }
 
@@ -205,7 +204,7 @@ namespace NYurik.FastBinTimeseries
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
             var buffer = new T[rng.Item2];
 
-            PerformRead(rng.Item1, new ArraySegment<T>(buffer));
+            PerformFileAccess(rng.Item1, new ArraySegment<T>(buffer), false);
 
             return buffer;
         }
@@ -231,7 +230,7 @@ namespace NYurik.FastBinTimeseries
 
             long itemLong = this.IndexToLong(firstItemIndex);
 
-            PerformWrite(itemLong, buffer);
+            PerformFileAccess(itemLong, buffer, true);
         }
 
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
