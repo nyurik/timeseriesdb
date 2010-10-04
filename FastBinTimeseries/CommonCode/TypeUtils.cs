@@ -16,7 +16,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
         /// without specifying assembly version or any other part of the signature
         /// </summary>
         /// <param name="typeName">
-        /// The assembly-qualified name of the type to get. See System.Type.AssemblyQualifiedName.
+        /// The assembly-qualified name of the type to get (<see cref="System.Type.AssemblyQualifiedName"/>).
         /// If the type is in the currently executing assembly or in Mscorlib.dll, it 
         /// is sufficient to supply the type name qualified by its namespace.
         /// </param>

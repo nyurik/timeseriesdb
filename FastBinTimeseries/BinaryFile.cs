@@ -183,7 +183,7 @@ namespace NYurik.FastBinTimeseries
                 {
                     fixed (byte* p = &tempBuf[0])
                     {
-                        Serializer.ProcessMemoryMap(
+                        Serializer.ProcessMemoryPtr(
                             (IntPtr) p,
                             new ArraySegment<T>(buffer.Array, offset, opSize),
                             isWriting);
@@ -213,8 +213,15 @@ namespace NYurik.FastBinTimeseries
             SafeMapHandle hMap = null;
             try
             {
+                bool isAligned;
                 long fileSize = BaseStream.Length;
-                long fileCount = CalculateItemCountFromFilePosition(fileSize);
+                long fileCount = CalculateItemCountFromFilePosition(fileSize, out isAligned);
+                if (!isAligned && isWriting)
+                    throw new IOException(
+                        String.Format(
+                            "Cannot write to a file when its length does not align to item size ({0})",
+                            ToString()));
+
                 long idxToStopAt = firstItemIdx + buffer.Count;
 
                 if (!isWriting && idxToStopAt > fileCount)
@@ -257,7 +264,7 @@ namespace NYurik.FastBinTimeseries
                         long bufItemOffset = buffer.Offset + totalItemsDone;
 
                         // Access file using memory-mapped pages
-                        Serializer.ProcessMemoryMap(
+                        Serializer.ProcessMemoryPtr(
                             (IntPtr) (ptrMapViewBaseAddr.Address + offsetCurrent - mapViewFileOffset),
                             new ArraySegment<T>(buffer.Array, (int) bufItemOffset, (int) itemsToProcessThisRun),
                             isWriting);

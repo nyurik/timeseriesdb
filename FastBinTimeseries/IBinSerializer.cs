@@ -23,9 +23,9 @@ namespace NYurik.FastBinTimeseries
         Type ItemType { get; }
 
         /// <summary>
-        /// Will be set to true when this provider supports reading and writing from fast memory mapped files
+        /// Will be set to true when this provider supports reading and writing to native memory (e.g. memory mapped file)
         /// </summary>
-        bool SupportsMemoryMappedFiles { get; }
+        bool SupportsMemoryPtrOperations { get; }
 
         /// <summary>
         /// Save this serializer's parameters to a binary writer. Must match all actions by <see cref="InitExisting"/>
@@ -50,12 +50,12 @@ namespace NYurik.FastBinTimeseries
         int ProcessFileStream(FileStream fileStream, ArraySegment<T> buffer, bool isWriting);
 
         /// <summary>
-        /// Read/Write items from/to the memory pointer <paramref name="memMapPtr"/> into/from <paramref name="buffer"/>
+        /// Read/Write items from/to the memory pointer <paramref name="memPointer"/> into/from <paramref name="buffer"/>
         /// </summary>
-        /// <param name="memMapPtr">A pointer to unmanaged memory mapped to the file</param>
+        /// <param name="memPointer">A pointer to unmanaged memory (e.g. mapped to the file)</param>
         /// <param name="buffer">Buffer to fill with/read from values</param>
         /// <param name="isWriting">True when buffer should be written into a file, false - when reading into the buffer</param>
-        void ProcessMemoryMap(IntPtr memMapPtr, ArraySegment<T> buffer, bool isWriting);
+        void ProcessMemoryPtr(IntPtr memPointer, ArraySegment<T> buffer, bool isWriting);
 
         /// <summary>
         /// Compare the elements of <paramref name="buffer1"/> with <paramref name="buffer2"/>, and returns true if they are the same

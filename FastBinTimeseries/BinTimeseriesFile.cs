@@ -40,11 +40,8 @@ namespace NYurik.FastBinTimeseries
     /// Object representing a binary-serialized timeseries file.
     /// </summary>
     public class BinTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinTimeseriesFile, IStoredTimeSeries<T>,
-                                        IHistFeedInt<T>
+                                        IHistFeedInt<T>, IEnumerableFeed<T>
     {
-        private static readonly DynamicSyncDictionary<Type, FieldInfo> TsFieldsCache =
-            new DynamicSyncDictionary<Type, FieldInfo>(GetTimestampField);
-
         private static readonly Version Version10 = new Version(1, 0);
         private static readonly Version Version11 = new Version(1, 1);
         private UtcDateTime? _firstTimestamp;
@@ -66,7 +63,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
         public BinTimeseriesFile(string fileName)
-            : this(fileName, TsFieldsCache.GetCreateValue(typeof (T)))
+            : this(fileName, DynamicCodeFactory.Instance.Value.GetTimestampField<T>())
         {
         }
 
@@ -80,46 +77,6 @@ namespace NYurik.FastBinTimeseries
         {
             UniqueTimestamps = false;
             TimestampFieldInfo = timestampFieldInfo;
-        }
-
-        private static FieldInfo GetTimestampField(Type itemType)
-        {
-            FieldInfo[] fieldInfo = itemType.GetFields(TypeExtensions.AllInstanceMembers);
-            if (fieldInfo.Length < 1)
-                throw new InvalidOperationException("No fields found in type " + itemType.FullName);
-
-            FieldInfo result = null;
-            bool foundTsAttribute = false;
-            bool foundMultiple = false;
-            foreach (FieldInfo fi in fieldInfo)
-                if (fi.FieldType == typeof (UtcDateTime))
-                {
-                    if (fi.ExtractSingleAttribute<TimestampAttribute>() != null)
-                    {
-                        if (foundTsAttribute)
-                            throw new InvalidOperationException(
-                                "More than one field has an TimestampAttribute attached in type " +
-                                itemType.FullName);
-                        foundTsAttribute = true;
-                        result = fi;
-                    }
-                    else if (!foundTsAttribute)
-                    {
-                        if (result != null)
-                            foundMultiple = true;
-                        result = fi;
-                    }
-                }
-
-            if (foundMultiple)
-                throw new InvalidOperationException(
-                    "Must explicitly specify the fieldInfo because there is more than one UtcDateTime field in type " +
-                    itemType.FullName);
-            if (result == null)
-                throw new InvalidOperationException("No field of type UtcDateTime was found in type " +
-                                                    itemType.FullName);
-
-            return result;
         }
 
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
@@ -157,13 +114,6 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<T, UtcDateTime> TimestampAccessor { get; private set; }
 
-        /// <summary>
-        /// Enumerate all items one at a time using an internal buffer.
-        /// </summary>
-        /// <param name="from">The index of the first element to read. Inclusive if going forward, exclusive when going backwards</param>
-        /// <param name="enumerateInReverse">Set to true if you want to enumerate backwards, from last to first</param>
-        /// <param name="bufferSize">Size of the read buffer. If 0, the buffer will start small and grow with time</param>
-        /// <returns></returns>
         public IEnumerable<ArraySegment<T>> StreamSegments(UtcDateTime from, bool enumerateInReverse, int bufferSize)
         {
             long index = FirstTimestampToIndex(from);
@@ -192,7 +142,7 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnInitialized();
                 if (value == null) throw new ArgumentNullException();
 
-                TimestampAccessor = DynamicCodeFactory.Instance.CreateTsAccessor<T>(value);
+                TimestampAccessor = DynamicCodeFactory.Instance.Value.GetTimestampAccessor<T>(value);
                 _timestampFieldInfo = value;
             }
         }

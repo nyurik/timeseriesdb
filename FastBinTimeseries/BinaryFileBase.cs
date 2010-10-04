@@ -95,7 +95,9 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnNotInitialized();
                 if (!BaseStream.CanSeek)
                     throw new NotSupportedException("Not supported for Stream.CanSeek == false");
-                return CalculateItemCountFromFilePosition(BaseStream.Length);
+
+                bool isAligned;
+                return CalculateItemCountFromFilePosition(BaseStream.Length, out isAligned);
             }
         }
 
@@ -148,7 +150,7 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnNotInitialized();
                 if (_enableMemMappedAccessOnRead != value)
                 {
-                    if (value && !NonGenericSerializer.SupportsMemoryMappedFiles)
+                    if (value && !NonGenericSerializer.SupportsMemoryPtrOperations)
                         throw new NotSupportedException("Memory mapped files are not supported by the serializer");
                     _enableMemMappedAccessOnRead = value;
                 }
@@ -167,7 +169,7 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnNotInitialized();
                 if (_enableMemMappedAccessOnWrite != value)
                 {
-                    if (value && !NonGenericSerializer.SupportsMemoryMappedFiles)
+                    if (value && !NonGenericSerializer.SupportsMemoryPtrOperations)
                         throw new NotSupportedException("Memory mapped files are not supported by the serializer");
                     _enableMemMappedAccessOnWrite = value;
                 }
@@ -324,15 +326,20 @@ namespace NYurik.FastBinTimeseries
                 throw new InvalidOperationException(
                     "InitializeNewFile() can only be called once for new files before performing any other operations");
 
-            if (File.Exists(FileName))
-                throw new IOException(string.Format("File {0} already exists", FileName));
+            var path = FileName;
+            if (File.Exists(path))
+                throw new IOException(string.Format("File {0} already exists", path));
+
+            var dir = Path.GetDirectoryName(path);
+            if(dir != "" && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
 
             ArraySegment<byte> header = CreateHeader();
 
             // This call does not change the state, so no need to invalidate this object
             // This call must be left outside the following try-catch block, 
             // because file-already-exists exception would cause the deletion of that file.
-            var s = new FileStream(FileName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
+            var s = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
 
             try
             {
@@ -347,7 +354,7 @@ namespace NYurik.FastBinTimeseries
                 try
                 {
                     Dispose(true); // invalidate object state
-                    File.Delete(FileName);
+                    File.Delete(path);
                 }
                 catch (Exception ex2)
                 {
@@ -423,18 +430,11 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary> Calculates the number of items that would make up the given file size </summary>
-        protected long CalculateItemCountFromFilePosition(long position)
+        protected long CalculateItemCountFromFilePosition(long position, out bool isAligned)
         {
-            long items = position/NonGenericSerializer.TypeSize;
-            items -= CalculateHeaderSizeAsItemCount();
-
-            if (position != ItemIdxToOffset(items))
-                throw new IOException(
-                    String.Format(
-                        "Calculated file size should be {0}, but the size on disk is {1} ({2})",
-                        ItemIdxToOffset(items), position, ToString()));
-
-            return items;
+            var typeSize = NonGenericSerializer.TypeSize;
+            isAligned = position%typeSize == 0;
+            return position/typeSize - CalculateHeaderSizeAsItemCount();
         }
 
         /// <summary> Calculate file position from an item index </summary>
@@ -543,8 +543,8 @@ namespace NYurik.FastBinTimeseries
                 throw new ArgumentOutOfRangeException(
                     "TypeSize" + "", typeSize, "Element size given by the serializer must be > 0");
 
-            inst._enableMemMappedAccessOnRead = isFile && inst.NonGenericSerializer.SupportsMemoryMappedFiles;
-            inst._enableMemMappedAccessOnWrite = isFile && inst.NonGenericSerializer.SupportsMemoryMappedFiles;
+            inst._enableMemMappedAccessOnRead = isFile && inst.NonGenericSerializer.SupportsMemoryPtrOperations;
+            inst._enableMemMappedAccessOnWrite = isFile && inst.NonGenericSerializer.SupportsMemoryPtrOperations;
             inst._isInitialized = true;
 
             return inst;
@@ -583,8 +583,8 @@ namespace NYurik.FastBinTimeseries
                     srlzr.GetType().AssemblyQualifiedName, srlzr.TypeSize,
                     srlzr.ItemType.AssemblyQualifiedName);
 
-            _enableMemMappedAccessOnRead = srlzr.SupportsMemoryMappedFiles;
-            _enableMemMappedAccessOnWrite = srlzr.SupportsMemoryMappedFiles;
+            _enableMemMappedAccessOnRead = srlzr.SupportsMemoryPtrOperations;
+            _enableMemMappedAccessOnWrite = srlzr.SupportsMemoryPtrOperations;
 
             // Header size must be dividable by the item size
             var headerSize =

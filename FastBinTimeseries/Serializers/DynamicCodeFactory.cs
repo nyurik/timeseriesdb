@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
@@ -10,31 +11,22 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries.Serializers
 {
-    internal class DynamicCodeFactory
+    public class DynamicCodeFactory
     {
-        private static DynamicCodeFactory _instance;
+        public static readonly Lazy<DynamicCodeFactory> Instance =
+            new Lazy<DynamicCodeFactory>(() => new DynamicCodeFactory());
 
-        private readonly DynamicSyncDictionary<Type, BinSerializerInfo> _serializers =
-            new DynamicSyncDictionary<Type, BinSerializerInfo>(CreateDynamicSerializerType);
+        private readonly ConcurrentDictionary<Type, BinSerializerInfo> _serializers =
+            new ConcurrentDictionary<Type, BinSerializerInfo>();
 
-        private readonly DynamicSyncDictionary<FieldInfo, Delegate> _tsAccessorExpr =
-            new DynamicSyncDictionary<FieldInfo, Delegate>(null);
+        private readonly ConcurrentDictionary<Type, FieldInfo> _tsFieldsCache =
+            new ConcurrentDictionary<Type, FieldInfo>();
+
+        private readonly ConcurrentDictionary<FieldInfo, Delegate> _tsAccessorCache =
+            new ConcurrentDictionary<FieldInfo, Delegate>();
 
         private DynamicCodeFactory()
         {}
-
-        public static DynamicCodeFactory Instance
-        {
-            get
-            {
-                // todo: NET4 switch to Lazy<>
-                if (_instance == null)
-                    lock (typeof (DynamicCodeFactory))
-                        if (_instance == null)
-                            _instance = new DynamicCodeFactory();
-                return _instance;
-            }
-        }
 
         private static MethodInfo GetMethodInfo(Type baseType, string methodName)
         {
@@ -112,25 +104,25 @@ namespace NYurik.FastBinTimeseries.Serializers
 
         internal BinSerializerInfo CreateSerializer<T>()
         {
-            return _serializers.GetCreateValue(typeof (T));
-        }
+            return _serializers.GetOrAdd(
+                typeof (T),
+                t =>
+                    {
+                        // Parameter validation
+                        ThrowIfNotUnmanagedType(t);
 
-        private static BinSerializerInfo CreateDynamicSerializerType(Type itemType)
-        {
-            // Parameter validation
-            ThrowIfNotUnmanagedType(itemType);
+                        Type ifType = typeof (DefaultTypeSerializer<>).MakeGenericType(t);
 
-            Type ifType = typeof (DefaultTypeSerializer<>).MakeGenericType(itemType);
-
-            // Create the abstract method overrides
-            return new BinSerializerInfo(
-                (int) CreateSizeOfMethod(itemType, ifType.Module).Invoke(null, null),
-                CreateSerializerMethod(
-                    itemType, ifType, "DynProcessFileStream", "ProcessFileStreamPtr", typeof (FileStream)),
-                CreateSerializerMethod(
-                    itemType, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr)),
-                CreateMemComparerMethod(itemType, ifType)
-                );
+                        // Create the abstract method overrides
+                        return new BinSerializerInfo(
+                            (int) CreateSizeOfMethod(t, ifType.Module).Invoke(null, null),
+                            CreateSerializerMethod(
+                                t, ifType, "DynProcessFileStream", "ProcessFileStreamPtr", typeof (FileStream)),
+                            CreateSerializerMethod(
+                                t, ifType, "DynProcessMemoryMap", "ProcessMemoryMapPtr", typeof (IntPtr)),
+                            CreateMemComparerMethod(t, ifType)
+                            );
+                    });
         }
 
         private static DynamicMethod CreateSizeOfMethod(Type itemType, Module module)
@@ -269,33 +261,96 @@ namespace NYurik.FastBinTimeseries.Serializers
 
         #endregion
 
-        #region Timestamp Accessor
+        #region Timestamp Field and Accessor
+
+        /// <summary>
+        /// Find default timestamp field's <see cref="FieldInfo"/> for type T.
+        /// </summary>
+        public FieldInfo GetTimestampField<T>()
+        {
+            return GetTimestampField(typeof (T));
+        }
+
+        /// <summary>
+        /// Find default timestamp field's <see cref="FieldInfo"/> for <param name="type"/>.
+        /// </summary>
+        public FieldInfo GetTimestampField(Type type)
+        {
+            if (type == null) throw new ArgumentNullException("type");
+
+            return _tsFieldsCache.GetOrAdd(
+                type,
+                t =>
+                    {
+                        FieldInfo[] fieldInfo = t.GetFields(TypeExtensions.AllInstanceMembers);
+                        if (fieldInfo.Length < 1)
+                            throw new InvalidOperationException("No fields found in type " + t.FullName);
+
+                        FieldInfo result = null;
+                        bool foundTsAttribute = false;
+                        bool foundMultiple = false;
+                        foreach (FieldInfo fi in fieldInfo)
+                            if (fi.FieldType == typeof (UtcDateTime))
+                            {
+                                if (fi.ExtractSingleAttribute<TimestampAttribute>() != null)
+                                {
+                                    if (foundTsAttribute)
+                                        throw new InvalidOperationException(
+                                            "More than one field has an TimestampAttribute attached in type " +
+                                            t.FullName);
+                                    foundTsAttribute = true;
+                                    result = fi;
+                                }
+                                else if (!foundTsAttribute)
+                                {
+                                    if (result != null)
+                                        foundMultiple = true;
+                                    result = fi;
+                                }
+                            }
+
+                        if (foundMultiple)
+                            throw new InvalidOperationException(
+                                "Must explicitly specify the fieldInfo because there is more than one UtcDateTime field in type " +
+                                t.FullName);
+                        if (result == null)
+                            throw new InvalidOperationException("No field of type UtcDateTime was found in type " +
+                                                                t.FullName);
+
+                        return result;
+                    }
+                );
+        }
 
         /// <summary>
         /// Create a delegate that extracts a timestamp from the struct of type T.
-        /// A datetime field must be first in the struct.
         /// </summary>
-        internal Func<T, UtcDateTime> CreateTsAccessor<T>(FieldInfo fieldInfo)
+        /// <param name="tsField">Optionally provide timestamp field, otherwise will attempt to find default.</param>
+        public Func<T, UtcDateTime> GetTimestampAccessor<T>(FieldInfo tsField = null)
         {
-            return (Func<T, UtcDateTime>) _tsAccessorExpr.GetCreateValue(fieldInfo, CreateAccessor<T>);
-        }
+            return
+                (Func<T, UtcDateTime>)
+                _tsAccessorCache.GetOrAdd(
+                    tsField ?? GetTimestampField<T>(),
+                    fi =>
+                        {
+                            Type itemType = typeof (T);
+                            if (fi.DeclaringType != itemType)
+                                throw new InvalidOperationException(
+                                    String.Format("The field {0} does not belong to type {1}",
+                                                  fi.Name, itemType.FullName));
+                            if (fi.FieldType != typeof (UtcDateTime))
+                                throw new InvalidOperationException(
+                                    String.Format("The field {0} in type {1} is not a UtcDateTime",
+                                                  fi.Name, itemType.FullName));
 
-        private static Delegate CreateAccessor<T>(FieldInfo fieldInfo)
-        {
-            Type itemType = typeof (T);
-            if (fieldInfo.DeclaringType != itemType)
-                throw new InvalidOperationException(
-                    String.Format("The field {0} does not belong to type {1}",
-                                  fieldInfo.Name, itemType.FullName));
-            if (fieldInfo.FieldType != typeof (UtcDateTime))
-                throw new InvalidOperationException(
-                    String.Format("The field {0} in type {1} is not a UtcDateTime",
-                                  fieldInfo.Name, itemType.FullName));
+                            ParameterExpression vParam = Expression.Parameter(itemType, "v");
+                            Expression<Func<T, UtcDateTime>> exprLambda = Expression.Lambda<Func<T, UtcDateTime>>(
+                                Expression.Field(vParam, fi), vParam);
 
-            ParameterExpression vParam = Expression.Parameter(itemType, "v");
-            Expression<Func<T, UtcDateTime>> exprLambda = Expression.Lambda<Func<T, UtcDateTime>>(
-                Expression.Field(vParam, fieldInfo), vParam);
-            return exprLambda.Compile();
+                            return exprLambda.Compile();
+                        }
+                    );
         }
 
         #endregion
@@ -306,15 +361,15 @@ namespace NYurik.FastBinTimeseries.Serializers
         {
             public readonly DynamicMethod FileStreamMethod;
             public readonly DynamicMethod MemCompareMethod;
-            public readonly DynamicMethod MemMapMethod;
+            public readonly DynamicMethod MemPtrMethod;
             public readonly int TypeSize;
 
-            public BinSerializerInfo(int typeSize, DynamicMethod fileStreamMethod, DynamicMethod memMapMethod,
+            public BinSerializerInfo(int typeSize, DynamicMethod fileStreamMethod, DynamicMethod memPtrMethod,
                                      DynamicMethod memCompareMethod)
             {
                 TypeSize = typeSize;
                 FileStreamMethod = fileStreamMethod;
-                MemMapMethod = memMapMethod;
+                MemPtrMethod = memPtrMethod;
                 MemCompareMethod = memCompareMethod;
             }
         }

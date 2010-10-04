@@ -61,7 +61,7 @@ namespace NYurik.FastBinTimeseries.Serializers
             }
         }
 
-        public bool SupportsMemoryMappedFiles
+        public bool SupportsMemoryPtrOperations
         {
             get
             {
@@ -129,11 +129,11 @@ namespace NYurik.FastBinTimeseries.Serializers
             return Process(fileStream, IntPtr.Zero, buffer, isWriting);
         }
 
-        public void ProcessMemoryMap(IntPtr memMapPtr, ArraySegment<TObject> buffer, bool isWriting)
+        public void ProcessMemoryPtr(IntPtr memPointer, ArraySegment<TObject> buffer, bool isWriting)
         {
             ThrowOnNotInitialized();
-            if (memMapPtr == IntPtr.Zero) throw new ArgumentNullException("memMapPtr");
-            Process(null, memMapPtr, buffer, isWriting);
+            if (memPointer == IntPtr.Zero) throw new ArgumentNullException("memPointer");
+            Process(null, memPointer, buffer, isWriting);
         }
 
         public bool BinaryArrayCompare(ArraySegment<TObject> buffer1, ArraySegment<TObject> buffer2)
@@ -185,7 +185,7 @@ namespace NYurik.FastBinTimeseries.Serializers
             return _headerSerializer.TypeSize + _dataSerializer.TypeSize*ItemCount;
         }
 
-        private int Process(FileStream fileStream, IntPtr memMapPtr, ArraySegment<TObject> buffer,
+        private int Process(FileStream fileStream, IntPtr memPtr, ArraySegment<TObject> buffer,
                              bool isWriting)
         {
             bool useMmf = fileStream == null;
@@ -220,8 +220,8 @@ namespace NYurik.FastBinTimeseries.Serializers
                 // Serialize header struct
                 if (useMmf)
                 {
-                    _headerSerializer.ProcessMemoryMap(memMapPtr, hdrSegment, isWriting);
-                    memMapPtr = (IntPtr) (memMapPtr.ToInt64() + _headerSerializer.TypeSize);
+                    _headerSerializer.ProcessMemoryPtr(memPtr, hdrSegment, isWriting);
+                    memPtr = (IntPtr) (memPtr.ToInt64() + _headerSerializer.TypeSize);
                 }
                 else
                 {
@@ -236,8 +236,8 @@ namespace NYurik.FastBinTimeseries.Serializers
                 // Serialize items array
                 if (useMmf)
                 {
-                    _dataSerializer.ProcessMemoryMap(memMapPtr, new ArraySegment<TItem>(items), isWriting);
-                    memMapPtr = (IntPtr) (memMapPtr.ToInt64() + _dataSerializer.TypeSize*ItemCount);
+                    _dataSerializer.ProcessMemoryPtr(memPtr, new ArraySegment<TItem>(items), isWriting);
+                    memPtr = (IntPtr) (memPtr.ToInt64() + _dataSerializer.TypeSize*ItemCount);
                 }
                 else
                 {

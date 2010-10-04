@@ -23,14 +23,14 @@ namespace NYurik.FastBinTimeseries
         private static readonly Version Version11 = new Version(1, 1);
         private readonly UnsafeMemCompareDelegate<T> _compareArrays;
         private readonly UnsafeActionDelegate<FileStream, T> _processFileStream;
-        private readonly UnsafeActionDelegate<IntPtr, T> _processMemoryMap;
+        private readonly UnsafeActionDelegate<IntPtr, T> _processMemoryPtr;
 
         private readonly int _typeSize;
         private Version _version;
 
         public DefaultTypeSerializer()
         {
-            DynamicCodeFactory.BinSerializerInfo info = DynamicCodeFactory.Instance.CreateSerializer<T>();
+            DynamicCodeFactory.BinSerializerInfo info = DynamicCodeFactory.Instance.Value.CreateSerializer<T>();
 
             _version = Version11;
             _typeSize = info.TypeSize;
@@ -42,8 +42,8 @@ namespace NYurik.FastBinTimeseries
                                  info.FileStreamMethod.CreateDelegate(
                                      typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (FileStream), typeof (T)),
                                      this);
-            _processMemoryMap = (UnsafeActionDelegate<IntPtr, T>)
-                                info.MemMapMethod.CreateDelegate(
+            _processMemoryPtr = (UnsafeActionDelegate<IntPtr, T>)
+                                info.MemPtrMethod.CreateDelegate(
                                     typeof (UnsafeActionDelegate<,>).MakeGenericType(typeof (IntPtr), typeof (T)),
                                     this);
             _compareArrays = (UnsafeMemCompareDelegate<T>)
@@ -76,7 +76,7 @@ namespace NYurik.FastBinTimeseries
             get { return typeof (T); }
         }
 
-        public bool SupportsMemoryMappedFiles
+        public bool SupportsMemoryPtrOperations
         {
             get
             {
@@ -159,11 +159,11 @@ namespace NYurik.FastBinTimeseries
             return _processFileStream(fileStream, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
-        public void ProcessMemoryMap(IntPtr memMapPtr, ArraySegment<T> buffer, bool isWriting)
+        public void ProcessMemoryPtr(IntPtr memPointer, ArraySegment<T> buffer, bool isWriting)
         {
             ThrowOnNotInitialized();
-            if (memMapPtr == IntPtr.Zero) throw new ArgumentNullException("memMapPtr");
-            _processMemoryMap(memMapPtr, buffer.Array, buffer.Offset, buffer.Count, isWriting);
+            if (memPointer == IntPtr.Zero) throw new ArgumentNullException("memPointer");
+            _processMemoryPtr(memPointer, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
         public bool BinaryArrayCompare(ArraySegment<T> buffer1, ArraySegment<T> buffer2)
