@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -39,13 +40,18 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Object representing a binary-serialized timeseries file.
     /// </summary>
-    public class BinTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinTimeseriesFile, IStoredTimeSeries<T>,
-                                        IHistFeedInt<T>, IEnumerableFeed<T>
+    public class BinTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinTimeseriesFile, IEnumerableFeed<T>
     {
+        private const int DefaultMaxBinaryCacheSize = 1 << 20;
+
+        // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
         private static readonly Version Version11 = new Version(1, 1);
+        // ReSharper restore StaticFieldInGenericType
+
         private UtcDateTime? _firstTimestamp;
         private UtcDateTime? _lastTimestamp;
+        private Tuple<long, ConcurrentDictionary<long, UtcDateTime>> _searchCache;
         private FieldInfo _timestampFieldInfo;
         private bool _uniqueTimestamps;
 
@@ -62,26 +68,17 @@ namespace NYurik.FastBinTimeseries
         /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
         /// </summary>
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
-        public BinTimeseriesFile(string fileName)
-            : this(fileName, DynamicCodeFactory.Instance.Value.GetTimestampField<T>())
-        {
-        }
-
-        /// <summary>
-        /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
-        /// </summary>
-        /// <param name="fileName">A relative or absolute path for the file to create.</param>
-        /// <param name="timestampFieldInfo">Field containing the UtcDateTime timestamp</param>
-        public BinTimeseriesFile(string fileName, FieldInfo timestampFieldInfo)
+        /// <param name="timestampFieldInfo">Field containing the UtcDateTime timestamp, or null to get default</param>
+        public BinTimeseriesFile(string fileName, FieldInfo timestampFieldInfo = null)
             : base(fileName)
         {
             UniqueTimestamps = false;
-            TimestampFieldInfo = timestampFieldInfo;
+            TimestampFieldInfo = timestampFieldInfo ?? DynamicCodeFactory.Instance.Value.GetTimestampField<T>();
         }
 
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            var ver = reader.ReadVersion();
+            Version ver = reader.ReadVersion();
             if (ver != Version11 && ver != Version10)
                 throw new IncompatibleVersionException(GetType(), ver);
 
@@ -90,10 +87,10 @@ namespace NYurik.FastBinTimeseries
 
             string fieldName = reader.ReadString();
 
-            FieldInfo fieldInfo = typeof(T).GetField(fieldName, TypeExtensions.AllInstanceMembers);
+            FieldInfo fieldInfo = typeof (T).GetField(fieldName, TypeExtensions.AllInstanceMembers);
             if (fieldInfo == null)
                 throw new InvalidOperationException(
-                    string.Format("Timestamp field {0} was not found in type {1}", fieldName, typeof(T).FullName));
+                    string.Format("Timestamp field {0} was not found in type {1}", fieldName, typeof (T).FullName));
             TimestampFieldInfo = fieldInfo;
 
             return ver;
@@ -109,19 +106,8 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        /// <summary>
-        /// A delegate to a function that extracts timestamp of a given item
-        /// </summary>
-        public Func<T, UtcDateTime> TimestampAccessor { get; private set; }
-
-        public IEnumerable<ArraySegment<T>> StreamSegments(UtcDateTime from, bool enumerateInReverse, int bufferSize)
-        {
-            long index = FirstTimestampToIndex(from);
-            if (enumerateInReverse)
-                index--;
-
-            return PerformStreaming(index, enumerateInReverse, bufferSize);
-        }
+        /// <summary> Number of binary search lookups to cache. 0-internal defaults, negative-disable </summary>
+        public int BinarySearchCacheSize { get; set; }
 
         #region IBinaryFile<T> Members
 
@@ -151,7 +137,10 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                if (_firstTimestamp == null && Count > 0)
+                long count = Count;
+                ResetOnChangedAndGetCache(count, false);
+
+                if (_firstTimestamp == null && count > 0)
                 {
                     var oneElementBuff = new T[1];
                     PerformFileAccess(0, new ArraySegment<T>(oneElementBuff), false);
@@ -165,10 +154,13 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                if (_lastTimestamp == null && Count > 0)
+                long count = Count;
+                ResetOnChangedAndGetCache(count, false);
+
+                if (_lastTimestamp == null && count > 0)
                 {
                     var oneElementBuff = new T[1];
-                    PerformFileAccess(Count - 1, new ArraySegment<T>(oneElementBuff), false);
+                    PerformFileAccess(count - 1, new ArraySegment<T>(oneElementBuff), false);
                     _lastTimestamp = TimestampAccessor(oneElementBuff[0]);
                 }
                 return _lastTimestamp;
@@ -196,28 +188,64 @@ namespace NYurik.FastBinTimeseries
         public long BinarySearch(UtcDateTime timestamp, bool findFirst)
         {
             long start = 0L;
-            long end = Count - 1;
+            long count = Count;
+            long end = count - 1;
+
+            // Optimize in case we search outside of the file
+            if (count <= 0 || timestamp < FirstFileTS)
+                return ~0;
+            if (timestamp > LastFileTS)
+                return ~count;
+
             var buff = new T[2];
             var oneElementSegment = new ArraySegment<T>(buff, 0, 1);
+
+            ConcurrentDictionary<long, UtcDateTime> cache = null;
+            if (BinarySearchCacheSize >= 0)
+            {
+                cache = ResetOnChangedAndGetCache(count, true);
+                if (cache.Count > (BinarySearchCacheSize == 0 ? DefaultMaxBinaryCacheSize : BinarySearchCacheSize))
+                    cache.Clear();
+            }
 
             while (start <= end)
             {
                 long mid = start + ((end - start) >> 1);
+                UtcDateTime timeAtMid;
+                UtcDateTime timeAtMid2 = default(UtcDateTime);
 
+                // Read new value from file unless we already have it pre-cached in the dictionary
                 if (end - start == 1 && !UniqueTimestamps && !findFirst)
                 {
                     // for the special case where we are left with two elements,
                     // and searching for the last non-unique element,
                     // read both elements to see if the 2nd one matches our search
-                    PerformFileAccess(mid, new ArraySegment<T>(buff), false);
+                    if (cache == null
+                        || !cache.TryGetValue(mid, out timeAtMid)
+                        || !cache.TryGetValue(mid + 1, out timeAtMid2))
+                    {
+                        PerformFileAccess(mid, new ArraySegment<T>(buff), false);
+                        timeAtMid = TimestampAccessor(buff[0]);
+                        timeAtMid2 = TimestampAccessor(buff[1]);
+                        if (cache != null)
+                        {
+                            cache.TryAdd(mid, timeAtMid);
+                            cache.TryAdd(mid + 1, timeAtMid2);
+                        }
+                    }
                 }
                 else
                 {
-                    PerformFileAccess(mid, oneElementSegment, false);
+                    if (cache == null || !cache.TryGetValue(mid, out timeAtMid))
+                    {
+                        PerformFileAccess(mid, oneElementSegment, false);
+                        timeAtMid = TimestampAccessor(buff[0]);
+                        if (cache != null)
+                            cache.TryAdd(mid, timeAtMid);
+                    }
                 }
 
-
-                int comp = TimestampAccessor(buff[0]).CompareTo(timestamp);
+                int comp = timeAtMid.CompareTo(timestamp);
                 if (comp == 0)
                 {
                     if (UniqueTimestamps)
@@ -239,7 +267,7 @@ namespace NYurik.FastBinTimeseries
 
                         // special case - see above
                         if (end - start == 1)
-                            return TimestampAccessor(buff[1]).CompareTo(timestamp) == 0 ? mid + 1 : mid;
+                            return timeAtMid2.CompareTo(timestamp) == 0 ? mid + 1 : mid;
 
                         start = mid;
                     }
@@ -276,39 +304,55 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        #region IHistFeed<T> Members
+        #region IEnumerableFeed<T> Members
 
-        public ITimeSeries<T> GetTimeSeries(UtcDateTime start, UtcDateTime end)
+        /// <summary>
+        /// A delegate to a function that extracts timestamp of a given item
+        /// </summary>
+        public Func<T, UtcDateTime> TimestampAccessor { get; private set; }
+
+        public IEnumerable<ArraySegment<T>> StreamSegments(UtcDateTime from, bool inReverse, int bufferSize)
         {
-            T[] result = ReadData(start, end, int.MaxValue);
-            return new MergedTimeSeries<T>(result, TimestampAccessor);
-        }
+            long index = FirstTimestampToIndex(from);
+            if (inReverse)
+                index--;
 
-        ITimeSeries IHistFeedInt.GetTimeSeries(UtcDateTime start, UtcDateTime end)
-        {
-            return GetTimeSeries(start, end);
-        }
-
-        #endregion
-
-        #region IStoredTimeSeries<T> Members
-
-        public ITimeSeries<T> GetTimeSeries(long firstItemIdx, int count)
-        {
-            throw new NotImplementedException();
-        }
-
-        ITimeSeries IStoredTimeSeries.GetTimeSeries(long firstItemIdx, int count)
-        {
-            return GetTimeSeries(firstItemIdx, count);
-        }
-
-        public int ReadData(UtcDateTime fromInclusive, ArraySegment<T> buffer)
-        {
-            return ReadData(fromInclusive, UtcDateTime.MaxValue, buffer);
+            return PerformStreaming(index, inReverse, bufferSize);
         }
 
         #endregion
+
+        private ConcurrentDictionary<long, UtcDateTime> ResetOnChangedAndGetCache(long count, bool createCache)
+        {
+            Tuple<long, ConcurrentDictionary<long, UtcDateTime>> sc = _searchCache;
+
+            if (sc == null || sc.Item1 != count || (createCache && sc.Item2 == null))
+            {
+                lock (LockObj)
+                {
+                    sc = _searchCache;
+                    bool countChanged = sc == null || sc.Item1 != count;
+
+                    if (countChanged)
+                    {
+                        // always reset just in case
+                        _firstTimestamp = null;
+                        _lastTimestamp = null;
+                    }
+
+                    if (countChanged || (createCache && sc.Item2 == null))
+                    {
+                        ConcurrentDictionary<long, UtcDateTime> cache =
+                            createCache ? new ConcurrentDictionary<long, UtcDateTime>() : null;
+
+                        _searchCache = Tuple.Create(count, cache);
+                        return cache;
+                    }
+                }
+            }
+
+            return sc.Item2;
+        }
 
         /// <summary>
         /// Add new items at the end of the existing file
@@ -376,7 +420,9 @@ namespace NYurik.FastBinTimeseries
             if (buffer.Array == null) throw new ArgumentNullException("buffer");
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
 
-            PerformFileAccess(rng.Item1, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)), false);
+            PerformFileAccess(rng.Item1,
+                              new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)),
+                              false);
 
             return rng.Item2;
         }

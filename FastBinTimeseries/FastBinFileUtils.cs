@@ -189,20 +189,22 @@ namespace NYurik.FastBinTimeseries
                 typeRemapped = true;
             else
             {
-                if(typeMap != null)
+                if (typeMap != null)
                 {
                     foreach (var tm in typeMap)
                     {
                         int startIndex = 0;
                         while (true)
                         {
-                            var pos = typeName.IndexOf(tm.Key, startIndex);
+                            int pos = typeName.IndexOf(tm.Key, startIndex);
                             if (pos < 0)
                                 break;
-                            if (pos == 0 || typeName[pos - 1] == ' ' || typeName[pos - 1] == '[' || typeName[pos - 1] == '+')
+                            if (pos == 0 || typeName[pos - 1] == ' ' || typeName[pos - 1] == '['
+                                || typeName[pos - 1] == '+')
                             {
                                 startIndex = pos + tm.Key.Length;
-                                typeName = typeName.Substring(0, pos) + tm.Value.AssemblyQualifiedName + typeName.Substring(startIndex);
+                                typeName = typeName.Substring(0, pos) + tm.Value.AssemblyQualifiedName
+                                           + typeName.Substring(startIndex);
                             }
                             else
                                 startIndex = pos + 1;
@@ -230,7 +232,9 @@ namespace NYurik.FastBinTimeseries
         {
             if (writer == null) throw new ArgumentNullException("writer");
             if (type == null) throw new ArgumentNullException("type");
-            writer.Write(type.AssemblyQualifiedName);
+            string aqn = type.AssemblyQualifiedName;
+            if (aqn == null) throw new ArgumentOutOfRangeException("type", type, "AssemblyQualifiedName is null");
+            writer.Write(aqn);
         }
 
         public static void WriteType(this BinaryWriter writer, object value)

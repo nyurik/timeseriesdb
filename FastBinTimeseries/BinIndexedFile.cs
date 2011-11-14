@@ -31,7 +31,9 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
+        // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
+        // ReSharper restore StaticFieldInGenericType
 
         /// <summary>
         /// Read enough items to fill the <paramref name="buffer"/>, starting at <paramref name="firstItemIndex"/>.
@@ -66,7 +68,7 @@ namespace NYurik.FastBinTimeseries
 
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            var ver = reader.ReadVersion();
+            Version ver = reader.ReadVersion();
             if (ver != Version10)
                 throw new IncompatibleVersionException(GetType(), ver);
             return ver;

@@ -7,7 +7,7 @@ namespace NYurik.FastBinTimeseries
 {
     public abstract class BinaryFile<T> : BinaryFile, IBinaryFile
     {
-        private const int MinReqSizeToUseMapView = 4 * 1024; // 4 KB
+        private const int MinReqSizeToUseMapView = 4*1024; // 4 KB
 
         private IBinSerializer<T> _serializer;
 
@@ -88,8 +88,8 @@ namespace NYurik.FastBinTimeseries
         {
             ThrowOnNotInitialized();
 
-            var canSeek = BaseStream.CanSeek;
-            
+            bool canSeek = BaseStream.CanSeek;
+
             if (!canSeek && firstItemIdx != 0)
                 throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx,
                                                       "Must be 0 when the base stream is not seekable");
@@ -110,7 +110,7 @@ namespace NYurik.FastBinTimeseries
             }
             else
             {
-                ret = ProcessStreamSlow(firstItemIdx, buffer, isWriting);
+                ret = ProcessStream(firstItemIdx, buffer, isWriting);
                 if (isWriting)
                     BaseStream.Flush();
             }
@@ -119,9 +119,9 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// Access file using Stream object
-        private int ProcessStreamSlow(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
+        private int ProcessStream(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
-            var canSeek = BaseStream.CanSeek;
+            bool canSeek = BaseStream.CanSeek;
             long fileOffset = 0;
 
             if (canSeek)
@@ -132,8 +132,8 @@ namespace NYurik.FastBinTimeseries
 
             var fs = BaseStream as FileStream;
             int count = fs != null
-                             ? Serializer.ProcessFileStream(fs, buffer, isWriting)
-                             : ProcessStreamSlow(buffer, isWriting);
+                            ? Serializer.ProcessFileStream(fs, buffer, isWriting)
+                            : ProcessManagedStream(buffer, isWriting);
 
             if (canSeek)
             {
@@ -151,16 +151,15 @@ namespace NYurik.FastBinTimeseries
             return count;
         }
 
-        private int ProcessStreamSlow(ArraySegment<T> buffer, bool isWriting)
+        /// Use additional byte buffer for stream operations. Slowest method.
+        private int ProcessManagedStream(ArraySegment<T> buffer, bool isWriting)
         {
             const int maxBufferSize = 512*1024; // 512 KB
-
-            ThrowOnNotInitialized();
 
             int offset = buffer.Offset;
             int count = buffer.Count;
 
-            var itemSize = ItemSize;
+            int itemSize = ItemSize;
             int tempBufSize = Math.Min((int) FastBinFileUtils.RoundUpToMultiple(maxBufferSize, itemSize), count*itemSize);
             var tempBuf = new byte[tempBufSize];
             int tempSize = tempBuf.Length/itemSize;
@@ -226,7 +225,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (!isWriting && idxToStopAt > fileCount)
                     idxToStopAt = fileCount;
-                
+
                 long offsetToStopAt = ItemIdxToOffset(idxToStopAt);
                 long idxCurrent = firstItemIdx;
 
@@ -287,9 +286,9 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        public override TDst CreateWrappedObject<TDst>(IWrapperFactory factory)
+        public override TDst RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg)
         {
-            return factory.Create<BinaryFile<T>, TDst, T>(this);
+            return callable.Run<T>(this, arg);
         }
 
         /// <summary>
@@ -298,15 +297,15 @@ namespace NYurik.FastBinTimeseries
         /// <param name="firstItemIdx">The index of the first block to read (both forward and backward). Invalid values will be adjusted to existing data.</param>
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
         /// <param name="bufferSize">The size of the internal buffer to read data. Set to 0 to make internal buffer autogrow with time</param>
-        protected IEnumerable<ArraySegment<T>> PerformStreaming(long firstItemIdx, bool enumerateInReverse,
-                                                                int bufferSize)
+        protected internal IEnumerable<ArraySegment<T>> PerformStreaming(long firstItemIdx, bool enumerateInReverse,
+                                                                         int bufferSize)
         {
             ThrowOnNotInitialized();
             if (bufferSize < 0)
                 throw new ArgumentOutOfRangeException("bufferSize", bufferSize, "Must be >= 0");
 
             long idx;
-            var canSeek = BaseStream.CanSeek;
+            bool canSeek = BaseStream.CanSeek;
             if (enumerateInReverse)
             {
                 if (!canSeek)
@@ -317,7 +316,7 @@ namespace NYurik.FastBinTimeseries
             }
             else
             {
-                if(!canSeek && firstItemIdx != 0)
+                if (!canSeek && firstItemIdx != 0)
                     throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx,
                                                           "Must be 0 when the base stream is not seekable");
 
@@ -337,7 +336,7 @@ namespace NYurik.FastBinTimeseries
                 if (itemsLeft <= 0)
                     yield break;
 
-                if (autogrow && iterations > 10)
+                if (autogrow && iterations++ > 10)
                 {
                     // switch to larger blocks
                     buffer = new T[Math.Min(MaxLargePageSize/ItemSize, itemsLeft)];
@@ -349,7 +348,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (enumerateInReverse)
                 {
-                    var read = PerformFileAccess(idx - readSize + 1, block, false);
+                    int read = PerformFileAccess(idx - readSize + 1, block, false);
                     if (read != block.Count)
                         throw new SerializerException(
                             "Unexpected number of items read during reverse traversal. {0} was expected, {1} returned",
@@ -360,17 +359,15 @@ namespace NYurik.FastBinTimeseries
                 }
                 else
                 {
-                    var read = PerformFileAccess(idx, block, false);
-                    if(read == 0)
+                    int read = PerformFileAccess(idx, block, false);
+                    if (read == 0)
                         yield break;
 
                     yield return read < block.Count ? new ArraySegment<T>(block.Array, 0, read) : block;
-                    
-                    if(canSeek)
+
+                    if (canSeek)
                         idx += readSize;
                 }
-
-                iterations++;
             }
         }
     }

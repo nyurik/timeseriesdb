@@ -118,18 +118,18 @@ namespace NYurik.EmitExtensions
 
             MethodBuilder method = methodInfoDeclaration.ContainsGenericParameters
                                        ? typeBuilder.DefineGenericMethod(
-                                             name,
-                                             attributes,
-                                             methodInfoDeclaration.CallingConvention,
-                                             methodInfoDeclaration.GetGenericArguments(),
-                                             methodInfoDeclaration.ReturnType,
-                                             parameters)
+                                           name,
+                                           attributes,
+                                           methodInfoDeclaration.CallingConvention,
+                                           methodInfoDeclaration.GetGenericArguments(),
+                                           methodInfoDeclaration.ReturnType,
+                                           parameters)
                                        : typeBuilder.DefineMethod(
-                                             name,
-                                             attributes,
-                                             methodInfoDeclaration.CallingConvention,
-                                             methodInfoDeclaration.ReturnType,
-                                             parameters);
+                                           name,
+                                           attributes,
+                                           methodInfoDeclaration.CallingConvention,
+                                           methodInfoDeclaration.ReturnType,
+                                           parameters);
 
             // Compiler overrides methods only for interfaces. We do the same.
             // If we wanted to override virtual methods, then methods should've had

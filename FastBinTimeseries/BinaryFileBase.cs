@@ -7,9 +7,9 @@ using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
 {
-    public abstract class BinaryFile : IDisposable
+    public abstract class BinaryFile : IDisposable, IGenericInvoker
     {
-        private const int FileSignature = 0xBF << 24 | (byte)'a' << 16 | (byte)'r' << 8 | (byte)'Y';
+        private const int FileSignature = 0xBF << 24 | (byte) 'a' << 16 | (byte) 'r' << 8 | (byte) 'Y';
 
         private const int MaxHeaderSize = 4*1024*1024;
 
@@ -19,20 +19,23 @@ namespace NYurik.FastBinTimeseries
 
         private static readonly Version[] KnownVersions = {BaseVersion10, BaseVersion11, BaseVersion12};
 
+        /// <summary> Used by any derived classes for their explicit locking requirements </summary>
+        protected readonly object LockObj = new object();
+
         /// <summary> Base version for new files by default </summary>
         private Version _baseVersion = BaseVersion12;
-        
-        /// <summary> The version of the specific file implementation </summary>
-        private Version _version;
 
         private bool _enableMemMappedAccessOnRead;
         private bool _enableMemMappedAccessOnWrite;
         private string _fileName;
-        private Stream _stream;
         private int _headerSize;
         private bool _isDisposed;
         private bool _isInitialized;
+        private Stream _stream;
         private string _tag = "";
+
+        /// <summary> The version of the specific file implementation </summary>
+        private Version _version;
 
         protected BinaryFile()
         {
@@ -43,7 +46,10 @@ namespace NYurik.FastBinTimeseries
             _fileName = fileName;
         }
 
-        public bool IsFileStream { get { return BaseStream is FileStream; } }
+        public bool IsFileStream
+        {
+            get { return BaseStream is FileStream; }
+        }
 
         public Stream BaseStream
         {
@@ -217,21 +223,9 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        private static void ValidateHeaderSize(int value)
-        {
-            const int minHeaderSize = sizeof (int)*2;
-            if (value > MaxHeaderSize || value < minHeaderSize)
-                throw new BinaryFileException(
-                    "File header size {0} is not within allowed range {1}..{2}",
-                    value, minHeaderSize, MaxHeaderSize);
-        }
-
         public bool CanWrite
         {
-            get
-            {
-                return BaseStream.CanWrite;
-            }
+            get { return BaseStream.CanWrite; }
         }
 
         public Version Version
@@ -263,235 +257,11 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        public void Close()
-        {
-            ((IDisposable) this).Dispose();
-        }
+        #region IGenericInvoker Members
 
-        /// <summary>
-        /// Open existing binary timeseries file. A <see cref="FileNotFoundException"/> if the file does not exist.
-        /// </summary>
-        /// <param name="fileName">A relative or absolute path for the existing file to open.</param>
-        /// <param name="canWrite">Should allow write operations</param>
-        public static BinaryFile Open(string fileName, bool canWrite)
-        {
-            return Open(fileName, canWrite, null);
-        }
+        public abstract TDst RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg);
 
-        /// <summary>
-        /// Open existing binary timeseries file. A <see cref="FileNotFoundException"/> if the file does not exist.
-        /// </summary>
-        /// <param name="fileName">A relative or absolute path for the existing file to open.</param>
-        /// <param name="canWrite">Should allow write operations</param>
-        /// <param name="typeMap">An optional map that would override the type strings in the file with the given types.</param>
-        public static BinaryFile Open(string fileName, bool canWrite, IDictionary<string, Type> typeMap)
-        {
-            FileStream stream = null;
-            try
-            {
-                stream = new FileStream(
-                    fileName, FileMode.Open, canWrite ? FileAccess.ReadWrite : FileAccess.Read,
-                    canWrite ? FileShare.Read : FileShare.ReadWrite);
-
-                BinaryFile file = Open(stream, typeMap);
-                file._fileName = fileName;
-
-                return file;
-            }
-            catch
-            {
-                if (stream != null)
-                {
-                    try
-                    {
-                        stream.Dispose();
-                    }
-                        // ReSharper disable EmptyGeneralCatchClause
-                    catch
-                    {
-                        // Silent fail in order to report the original exception
-                    }
-                    // ReSharper restore EmptyGeneralCatchClause
-                }
-
-                throw;
-            }
-        }
-
-        /// <summary> This method must be called for all new files (object created with the constructor) before usage. </summary>
-        public void InitializeNewFile()
-        {
-            ThrowOnDisposed();
-            if (IsInitialized)
-                throw new InvalidOperationException(
-                    "InitializeNewFile() can only be called once for new files before performing any other operations");
-
-            var path = FileName;
-            if (File.Exists(path))
-                throw new IOException(string.Format("File {0} already exists", path));
-
-            var dir = Path.GetDirectoryName(path);
-            if(dir != "" && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            ArraySegment<byte> header = CreateHeader();
-
-            // This call does not change the state, so no need to invalidate this object
-            // This call must be left outside the following try-catch block, 
-            // because file-already-exists exception would cause the deletion of that file.
-            var s = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
-
-            try
-            {
-                s.Write(header.Array, header.Offset, header.Count);
-                s.Flush();
-                BaseStream = s;
-                _isInitialized = true;
-            }
-            catch (Exception ex)
-            {
-                // on error, delete the newly created file and pass on the exception
-                try
-                {
-                    Dispose(true); // invalidate object state
-                    File.Delete(path);
-                }
-                catch (Exception ex2)
-                {
-                    throw new CombinedException("Failed to clean up after failed header writing", ex, ex2);
-                }
-
-                throw;
-            }
-        }
-
-        protected void ThrowOnNotInitialized()
-        {
-            ThrowOnDisposed();
-            if (!_isInitialized)
-                throw new InvalidOperationException(
-                    "InitializeNewFile() must be called before performing any operations on the new file");
-        }
-
-        protected void ThrowOnInitialized()
-        {
-            ThrowOnDisposed();
-            if (_isInitialized)
-                throw new InvalidOperationException(
-                    "This call is only allowed for new files before InitializeNewFile() was called");
-        }
-
-        protected void ThrowOnDisposed()
-        {
-            if (_isDisposed)
-                throw new ObjectDisposedException(GetType().FullName, "The file has been closed");
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_isDisposed)
-            {
-                if (disposing)
-                {
-                    var streamTmp = _stream;
-                    _stream = null;
-                    if (streamTmp != null)
-                        streamTmp.Close();
-                }
-                else
-                    _stream = null;
-
-                _isDisposed = true;
-            }
-        }
-
-        ~BinaryFile()
-        {
-            Dispose(false);
-        }
-
-        protected abstract void SetSerializer(IBinSerializer nonGenericSerializer);
-
-        private static byte[] ReadIntoNewBuffer(Stream stream, int bufferSize)
-        {
-            var headerBuffer = new byte[bufferSize];
-            int bytesRead = EnsureStreamRead(stream, new ArraySegment<byte>(headerBuffer));
-            if (bytesRead < bufferSize)
-                throw new IOException(
-                    String.Format("Unable to read a block of size {0}: only {1} bytes were available", bufferSize,
-                                  bytesRead));
-            return headerBuffer;
-        }
-
-        /// <summary> Size of the file header expressed as a number of items </summary>
-        protected int CalculateHeaderSizeAsItemCount()
-        {
-            return _headerSize/NonGenericSerializer.TypeSize;
-        }
-
-        /// <summary> Calculates the number of items that would make up the given file size </summary>
-        protected long CalculateItemCountFromFilePosition(long position, out bool isAligned)
-        {
-            var typeSize = NonGenericSerializer.TypeSize;
-            isAligned = position%typeSize == 0;
-            return position/typeSize - CalculateHeaderSizeAsItemCount();
-        }
-
-        /// <summary> Calculate file position from an item index </summary>
-        protected long ItemIdxToOffset(long itemIdx)
-        {
-            long adjIndex = itemIdx + CalculateHeaderSizeAsItemCount();
-            return adjIndex * NonGenericSerializer.TypeSize;
-        }
-
-        public override string ToString()
-        {
-            var fileStream = _stream as FileStream;
-            return string.Format("{0} file {1} of type {2}{3}",
-                                 IsDisposed ? "Disposed" : (IsInitialized ? "Open" : "Uninitialized"),
-                                 _stream == null
-                                     ? "(unknown)"
-                                     : (fileStream == null ? _stream.ToString() : fileStream.Name),
-                                 GetType().FullName,
-                                 fileStream != null && IsOpen && fileStream.CanSeek
-                                     ? string.Format(" with {0} items", Count)
-                                     : "");
-        }
-
-        /// <summary> Override to read custom header info. Must match the <see cref="WriteCustomHeader"/>. </summary>
-        protected abstract Version Init(BinaryReader reader, IDictionary<string, Type> typeMap);
-
-        /// <summary> Override to write custom header info. Must match the <see cref="Init"/>. </summary>
-        /// <returns> Return the version number of the header. </returns>
-        protected abstract Version WriteCustomHeader(BinaryWriter writer);
-
-        /// <summary> Shrink file to the new size. </summary>
-        /// <param name="newCount">Number of items the file should contain after this operation</param>
-        protected void PerformTruncateFile(long newCount)
-        {
-            ThrowOnNotInitialized();
-            if (newCount < 0 || newCount > Count)
-                throw new ArgumentOutOfRangeException("newCount", newCount, "Must be >= 0 and <= Count");
-
-            // Optimize empty requests
-            if (Count == newCount)
-                return;
-
-            BaseStream.SetLength(ItemIdxToOffset(newCount));
-            BaseStream.Flush();
-
-            // Just in case, hope this will never happen
-            if (newCount != Count)
-                throw new IOException(
-                    string.Format(
-                        "Internal error: the new file should have had {0} items, but was calculated to have {1}",
-                        newCount, Count));
-        }
-
-        /// <summary>
-        /// Calls a factory method without explicitly specifying the type of the sub-item.
-        /// </summary>
-        public abstract TDst CreateWrappedObject<TDst>(IWrapperFactory factory);
+        #endregion
 
         #region Header Reading/Writing
 
@@ -507,9 +277,8 @@ namespace NYurik.FastBinTimeseries
         {
             if (stream == null) throw new ArgumentNullException("stream");
 
-            var canSeek = stream.CanSeek;
-            var isFile = stream is FileStream;
-            if(canSeek)
+            bool canSeek = stream.CanSeek;
+            if (canSeek)
                 stream.Seek(0, SeekOrigin.Begin);
 
             // Get header signature & size
@@ -538,13 +307,13 @@ namespace NYurik.FastBinTimeseries
             else
                 throw new IncompatibleVersionException(typeof (BinaryFile), baseVersion);
 
-            var typeSize = inst.NonGenericSerializer.TypeSize;
+            int typeSize = inst.NonGenericSerializer.TypeSize;
             if (typeSize <= 0)
                 throw new ArgumentOutOfRangeException(
                     "TypeSize" + "", typeSize, "Element size given by the serializer must be > 0");
 
-            inst._enableMemMappedAccessOnRead = isFile && inst.NonGenericSerializer.SupportsMemoryPtrOperations;
-            inst._enableMemMappedAccessOnWrite = isFile && inst.NonGenericSerializer.SupportsMemoryPtrOperations;
+            inst._enableMemMappedAccessOnRead = false;
+            inst._enableMemMappedAccessOnWrite = false;
             inst._isInitialized = true;
 
             return inst;
@@ -576,15 +345,15 @@ namespace NYurik.FastBinTimeseries
             else
                 throw new IncompatibleVersionException(GetType(), BaseVersion);
 
-            var srlzr = NonGenericSerializer;
+            IBinSerializer srlzr = NonGenericSerializer;
             if (srlzr.TypeSize <= 0)
                 throw new BinaryFileException(
                     "Serializer {0} reported incorrect type size {1} for type {2}",
                     srlzr.GetType().AssemblyQualifiedName, srlzr.TypeSize,
                     srlzr.ItemType.AssemblyQualifiedName);
 
-            _enableMemMappedAccessOnRead = srlzr.SupportsMemoryPtrOperations;
-            _enableMemMappedAccessOnWrite = srlzr.SupportsMemoryPtrOperations;
+            _enableMemMappedAccessOnRead = false;
+            _enableMemMappedAccessOnWrite = false;
 
             // Header size must be dividable by the item size
             var headerSize =
@@ -594,7 +363,7 @@ namespace NYurik.FastBinTimeseries
 
             // Override the header size value at the 5th byte of the header.
             // The first 4 bytes are taken up by the 4 byte signature
-            memWriter.Seek(sizeof(int), SeekOrigin.Begin);
+            memWriter.Seek(sizeof (int), SeekOrigin.Begin);
             memWriter.Write(headerSize);
 
             HeaderSize = headerSize;
@@ -724,9 +493,241 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
+        private static void ValidateHeaderSize(int value)
+        {
+            const int minHeaderSize = sizeof (int)*2;
+            if (value > MaxHeaderSize || value < minHeaderSize)
+                throw new BinaryFileException(
+                    "File header size {0} is not within allowed range {1}..{2}",
+                    value, minHeaderSize, MaxHeaderSize);
+        }
+
+        public void Close()
+        {
+            ((IDisposable) this).Dispose();
+        }
+
+        /// <summary>
+        /// Open existing binary timeseries file. A <see cref="FileNotFoundException"/> if the file does not exist.
+        /// </summary>
+        /// <param name="fileName">A relative or absolute path for the existing file to open.</param>
+        /// <param name="canWrite">Should allow write operations</param>
+        /// <param name="typeMap">An optional map that would override the type strings in the file with the given types.</param>
+        /// <param name="bufferSize">Buffer size as used in <see cref="FileStream"/> constructor</param>
+        /// <param name="fileOptions">Options as used in <see cref="FileStream"/> constructor</param>
+        public static BinaryFile Open(string fileName, bool canWrite, IDictionary<string, Type> typeMap = null,
+                                      int bufferSize = 0x1000, FileOptions fileOptions = FileOptions.None)
+        {
+            FileStream stream = null;
+            try
+            {
+                stream = new FileStream(
+                    fileName, FileMode.Open,
+                    canWrite ? FileAccess.ReadWrite : FileAccess.Read,
+                    canWrite ? FileShare.Read : FileShare.ReadWrite,
+                    bufferSize, fileOptions);
+
+                BinaryFile file = Open(stream, typeMap);
+                file._fileName = fileName;
+
+                return file;
+            }
+            catch
+            {
+                if (stream != null)
+                {
+                    try
+                    {
+                        stream.Dispose();
+                    }
+                        // ReSharper disable EmptyGeneralCatchClause
+                    catch
+                    {
+                        // Silent fail in order to report the original exception
+                    }
+                    // ReSharper restore EmptyGeneralCatchClause
+                }
+
+                throw;
+            }
+        }
+
+        /// <summary> This method must be called for all new files (object created with the constructor) before usage. </summary>
+        public void InitializeNewFile()
+        {
+            ThrowOnDisposed();
+            if (IsInitialized)
+                throw new InvalidOperationException(
+                    "InitializeNewFile() can only be called once for new files before performing any other operations");
+
+            string path = FileName;
+            if (File.Exists(path))
+                throw new IOException(string.Format("File {0} already exists", path));
+
+            string dir = Path.GetDirectoryName(path);
+            if(dir == null)
+                throw new IOException(string.Format("Filename '{0}' is not valid", path));
+
+            if (dir != "" && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            ArraySegment<byte> header = CreateHeader();
+
+            // This call does not change the state, so no need to invalidate this object
+            // This call must be left outside the following try-catch block, 
+            // because file-already-exists exception would cause the deletion of that file.
+            var s = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
+
+            try
+            {
+                s.Write(header.Array, header.Offset, header.Count);
+                s.Flush();
+                BaseStream = s;
+                _isInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                // on error, delete the newly created file and pass on the exception
+                try
+                {
+                    Dispose(true); // invalidate object state
+                    File.Delete(path);
+                }
+                catch (Exception ex2)
+                {
+                    throw new CombinedException("Failed to clean up after failed header writing", ex, ex2);
+                }
+
+                throw;
+            }
+        }
+
+        protected void ThrowOnNotInitialized()
+        {
+            ThrowOnDisposed();
+            if (!_isInitialized)
+                throw new InvalidOperationException(
+                    "InitializeNewFile() must be called before performing any operations on the new file");
+        }
+
+        protected void ThrowOnInitialized()
+        {
+            ThrowOnDisposed();
+            if (_isInitialized)
+                throw new InvalidOperationException(
+                    "This call is only allowed for new files before InitializeNewFile() was called");
+        }
+
+        protected void ThrowOnDisposed()
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName, "The file has been closed");
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_isDisposed)
+            {
+                if (disposing)
+                {
+                    Stream streamTmp = _stream;
+                    _stream = null;
+                    if (streamTmp != null)
+                        streamTmp.Close();
+                }
+                else
+                    _stream = null;
+
+                _isDisposed = true;
+            }
+        }
+
+        ~BinaryFile()
+        {
+            Dispose(false);
+        }
+
+        protected abstract void SetSerializer(IBinSerializer nonGenericSerializer);
+
+        private static byte[] ReadIntoNewBuffer(Stream stream, int bufferSize)
+        {
+            var headerBuffer = new byte[bufferSize];
+            int bytesRead = EnsureStreamRead(stream, new ArraySegment<byte>(headerBuffer));
+            if (bytesRead < bufferSize)
+                throw new IOException(
+                    String.Format("Unable to read a block of size {0}: only {1} bytes were available", bufferSize,
+                                  bytesRead));
+            return headerBuffer;
+        }
+
+        /// <summary> Size of the file header expressed as a number of items </summary>
+        protected int CalculateHeaderSizeAsItemCount()
+        {
+            return _headerSize/NonGenericSerializer.TypeSize;
+        }
+
+        /// <summary> Calculates the number of items that would make up the given file size </summary>
+        protected long CalculateItemCountFromFilePosition(long position, out bool isAligned)
+        {
+            int typeSize = NonGenericSerializer.TypeSize;
+            isAligned = position%typeSize == 0;
+            return position/typeSize - CalculateHeaderSizeAsItemCount();
+        }
+
+        /// <summary> Calculate file position from an item index </summary>
+        protected long ItemIdxToOffset(long itemIdx)
+        {
+            long adjIndex = itemIdx + CalculateHeaderSizeAsItemCount();
+            return adjIndex*NonGenericSerializer.TypeSize;
+        }
+
+        public override string ToString()
+        {
+            var fileStream = _stream as FileStream;
+            return string.Format("{0} file {1} of type {2}{3}",
+                                 IsDisposed ? "Disposed" : (IsInitialized ? "Open" : "Uninitialized"),
+                                 _stream == null
+                                     ? "(unknown)"
+                                     : (fileStream == null ? _stream.ToString() : fileStream.Name),
+                                 GetType().FullName,
+                                 fileStream != null && IsOpen && fileStream.CanSeek
+                                     ? string.Format(" with {0} items", Count)
+                                     : "");
+        }
+
+        /// <summary> Override to read custom header info. Must match the <see cref="WriteCustomHeader"/>. </summary>
+        protected abstract Version Init(BinaryReader reader, IDictionary<string, Type> typeMap);
+
+        /// <summary> Override to write custom header info. Must match the <see cref="Init"/>. </summary>
+        /// <returns> Return the version number of the header. </returns>
+        protected abstract Version WriteCustomHeader(BinaryWriter writer);
+
+        /// <summary> Shrink file to the new size. </summary>
+        /// <param name="newCount">Number of items the file should contain after this operation</param>
+        protected void PerformTruncateFile(long newCount)
+        {
+            ThrowOnNotInitialized();
+            if (newCount < 0 || newCount > Count)
+                throw new ArgumentOutOfRangeException("newCount", newCount, "Must be >= 0 and <= Count");
+
+            // Optimize empty requests
+            if (Count == newCount)
+                return;
+
+            BaseStream.SetLength(ItemIdxToOffset(newCount));
+            BaseStream.Flush();
+
+            // Just in case, hope this will never happen
+            if (newCount != Count)
+                throw new IOException(
+                    string.Format(
+                        "Internal error: the new file should have had {0} items, but was calculated to have {1}",
+                        newCount, Count));
+        }
+
         public static IBinSerializer<T> GetDefaultSerializer<T>()
         {
-            Type typeT = typeof(T);
+            Type typeT = typeof (T);
             BinarySerializerAttribute[] attr = typeT.GetCustomAttributes<BinarySerializerAttribute>(false);
             if (attr.Length >= 1)
             {

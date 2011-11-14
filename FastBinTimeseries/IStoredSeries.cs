@@ -4,41 +4,33 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
-    public interface IHistFeedInt
+    public interface IEnumerableFeed : IGenericInvoker, IDisposable
     {
-        /// <summary> Returns items such, that  start &lt;= timestamp &lt; end </summary>
-        ITimeSeries GetTimeSeries(UtcDateTime start, UtcDateTime end);
-
+        /// <summary> Type of the items stored in this file </summary>
         Type ItemType { get; }
+
+        /// <summary> User string stored in the header </summary>
+        string Tag { get; }
     }
 
-    public interface IHistFeedInt<T> : IHistFeedInt
+    public interface IEnumerableFeed<T> : IEnumerableFeed
     {
-        /// <summary> Returns items such, that  start &lt;= timestamp &lt; end </summary>
-        new ITimeSeries<T> GetTimeSeries(UtcDateTime start, UtcDateTime end);
-    }
-
-    public interface IEnumerableFeed<T>
-    {
-        /// <summary>
-        /// Enumerate all items one block at a time using an internal buffer.
-        /// </summary>
-        /// <param name="from">The index of the first element to read. Inclusive if going forward, exclusive when going backwards</param>
-        /// <param name="enumerateInReverse">Set to true if you want to enumerate backwards, from last to first</param>
-        /// <param name="bufferSize">Size of the read buffer. If 0, the buffer will start small and grow with time</param>
-        IEnumerable<ArraySegment<T>> StreamSegments(UtcDateTime from, bool enumerateInReverse, int bufferSize);
-
         /// <summary>
         /// Returns function that can extract timestamp from a given value T
         /// </summary>
         Func<T, UtcDateTime> TimestampAccessor { get; }
+
+        /// <summary>
+        /// Enumerate all items one block at a time using an internal buffer.
+        /// </summary>
+        /// <param name="from">The index of the first element to read. Inclusive if going forward, exclusive when going backwards</param>
+        /// <param name="inReverse">Set to true if you want to enumerate backwards, from last to first</param>
+        /// <param name="bufferSize">Size of the read buffer. If 0, the buffer will start small and grow with time</param>
+        IEnumerable<ArraySegment<T>> StreamSegments(UtcDateTime from, bool inReverse = false, int bufferSize = 0);
     }
 
     public interface IStoredSeries : IDisposable
     {
-        /// <summary> Total number of items in the file </summary>
-        long GetItemCount();
-
         /// <summary> Type of the items stored in this file </summary>
         Type ItemType { get; }
 
@@ -51,39 +43,15 @@ namespace NYurik.FastBinTimeseries
         /// <summary> True when the object has been disposed. No further operations are allowed. </summary>
         bool IsDisposed { get; }
 
+        /// <summary> Total number of items in the file </summary>
+        long GetItemCount();
+
         /// <summary>
         /// Read up to <paramref name="count"/> items beging at <paramref name="firstItemIdx"/>, and return an <see cref="Array"/> object. 
         /// </summary>
         /// <param name="firstItemIdx">Index of the item to start from.</param>
         /// <param name="count">The maximum number of items to read.</param>
         Array GenericReadData(long firstItemIdx, int count);
-    }
-
-    public interface IStoredTimeSeries : IStoredSeries
-    {
-        long BinarySearch(UtcDateTime timestamp);
-
-        /// <summary>
-        /// Create a timeseries representing data within the indexed range
-        /// </summary>
-        ITimeSeries GetTimeSeries(long firstItemIdx, int count);
-    }
-
-    public interface IStoredTimeSeries<T> : IStoredTimeSeries
-    {
-        /// <summary>
-        /// Create a timeseries representing data within the indexed range
-        /// </summary>
-        new ITimeSeries<T> GetTimeSeries(long firstItemIdx, int count);
-
-        /// <summary>
-        /// Read as many items as in the <paramref name="buffer"/> or end of file,
-        /// starting at <paramref name="fromInclusive"/>.
-        /// </summary>
-        /// <param name="fromInclusive">Index of the item to start from.</param>
-        /// <param name="buffer">Array of values to be read into from a file.</param>
-        /// <returns>Number of items read</returns>
-        int ReadData(UtcDateTime fromInclusive, ArraySegment<T> buffer);
     }
 
     public interface IStoredUniformTimeseries : IStoredSeries
@@ -118,9 +86,5 @@ namespace NYurik.FastBinTimeseries
         /// <param name="fromInclusive">Index of the item to start from.</param>
         /// <param name="count">The number of items to be read.</param>
         Array GenericReadData(UtcDateTime fromInclusive, int count);
-    }
-
-    public interface IStoredUniformTimeseries<T> : IStoredTimeSeries<T>, IStoredUniformTimeseries
-    {
     }
 }

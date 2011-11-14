@@ -27,8 +27,7 @@ namespace NYurik.FastBinTimeseries
     /// Object representing a binary-serialized timeseries file with each item with uniform distribution of items
     /// one <see cref="ItemTimeSpan"/> from each other.
     /// </summary>
-    public class BinUniformTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinUniformTimeseriesFile,
-                                               IStoredUniformTimeseries<T>, IHistFeedInt<T>
+    public class BinUniformTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinUniformTimeseriesFile
     {
         #region Constructors
 
@@ -163,13 +162,7 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        #region IStoredUniformTimeseries<T> Members
-
-        public ITimeSeries<T> GetTimeSeries(long firstItemIdx, int count)
-        {
-            throw new NotImplementedException();
-        }
-
+        [Obsolete]
         public int ReadData(UtcDateTime fromInclusive, ArraySegment<T> buffer)
         {
             long firstItemIdx = this.IndexToLong(fromInclusive);
@@ -182,8 +175,6 @@ namespace NYurik.FastBinTimeseries
             return buffer.Count;
         }
 
-        #endregion
-
         /// <summary>
         /// Read data starting at <paramref name="fromInclusive"/>, up to, but not including <paramref name="toExclusive"/>.
         /// </summary>
@@ -192,7 +183,8 @@ namespace NYurik.FastBinTimeseries
         {
             if (buffer.Array == null) throw new ArgumentNullException("buffer");
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-            PerformFileAccess(rng.Item1, new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)), false);
+            PerformFileAccess(rng.Item1,
+                              new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)), false);
             return rng.Item2;
         }
 
@@ -235,10 +227,10 @@ namespace NYurik.FastBinTimeseries
 
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            var ver = reader.ReadVersion();
+            Version ver = reader.ReadVersion();
             if (ver != Version11 && ver != Version10)
                 throw new IncompatibleVersionException(GetType(), ver);
-            
+
             ItemTimeSpan = TimeSpan.FromTicks(reader.ReadInt64());
 
             // in 1.0, DateTime was serialized as binary instead of UtcDateTime.Ticks
@@ -271,32 +263,9 @@ namespace NYurik.FastBinTimeseries
             return Tuple.Create(firstIndexIncl, (this.IndexToLong(toExclusive) - firstIndexIncl).ToIntCountChecked());
         }
 
-        public ITimeSeries<T> GetTimeSeries(UtcDateTime start, UtcDateTime end)
-        {
-            AdjustRangeToExistingData(ref start, ref end);
-
-            var data = ReadData(start, end);
-            return new UniformTimeSeries<T>(start, ItemTimeSpan, data);
-        }
-
         public override string ToString()
         {
             return string.Format("{0}, firstTS={1}, slice={2}", base.ToString(), FirstTimestamp, ItemTimeSpan);
-        }
-
-        ITimeSeries IHistFeedInt.GetTimeSeries(UtcDateTime start, UtcDateTime end)
-        {
-            return GetTimeSeries(start, end);
-        }
-
-        public long BinarySearch(UtcDateTime timestamp)
-        {
-            throw new NotImplementedException();
-        }
-
-        ITimeSeries IStoredTimeSeries.GetTimeSeries(long firstItemIdx, int count)
-        {
-            return GetTimeSeries(firstItemIdx, count);
         }
     }
 }

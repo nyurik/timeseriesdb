@@ -117,13 +117,13 @@ namespace NYurik.FastBinTimeseries.Test
                     Assert.IsTrue(f.IsOpen);
                     Assert.AreEqual(fileName, f.FileName);
 
-                    Assert.IsTrue(f.EnableMemMappedAccessOnRead);
+                    Assert.IsFalse(f.EnableMemMappedAccessOnRead);
                     f.EnableMemMappedAccessOnRead = false;
                     Assert.IsFalse(f.EnableMemMappedAccessOnRead);
                     f.EnableMemMappedAccessOnRead = true;
                     Assert.IsTrue(f.EnableMemMappedAccessOnRead);
 
-                    Assert.IsTrue(f.EnableMemMappedAccessOnWrite);
+                    Assert.IsFalse(f.EnableMemMappedAccessOnWrite);
                     f.EnableMemMappedAccessOnWrite = false;
                     Assert.IsFalse(f.EnableMemMappedAccessOnWrite);
                     f.EnableMemMappedAccessOnWrite = true;

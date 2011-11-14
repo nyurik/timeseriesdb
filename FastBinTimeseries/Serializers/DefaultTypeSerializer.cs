@@ -2,14 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries;
 using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries.Serializers
 {
-    internal delegate int UnsafeActionDelegate<TStorage, TItem>(
+    internal delegate int UnsafeActionDelegate<in TStorage, in TItem>(
         TStorage storage, TItem[] buffer, int offset, int count, bool isWriting);
 
-    internal delegate bool UnsafeMemCompareDelegate<TItem>(
+    internal delegate bool UnsafeMemCompareDelegate<in TItem>(
         TItem[] buffer1, int offset1, TItem[] buffer2, int offset2, int count);
 }
 
@@ -19,8 +20,11 @@ namespace NYurik.FastBinTimeseries
 {
     public class DefaultTypeSerializer<T> : Initializable, IBinSerializer<T>
     {
+        // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
         private static readonly Version Version11 = new Version(1, 1);
+        // ReSharper restore StaticFieldInGenericType
+
         private readonly UnsafeMemCompareDelegate<T> _compareArrays;
         private readonly UnsafeActionDelegate<FileStream, T> _processFileStream;
         private readonly UnsafeActionDelegate<IntPtr, T> _processMemoryPtr;
@@ -128,8 +132,7 @@ namespace NYurik.FastBinTimeseries
                 var fileSig = new TypeExtensions.TypeInfo[fileSigCount];
                 for (int i = 0; i < fileSigCount; i++)
                 {
-                    fileSig[i].Level = reader.ReadInt32();
-                    fileSig[i].Type = reader.ReadType(typeMap);
+                    fileSig[i] = new TypeExtensions.TypeInfo(reader.ReadInt32(), reader.ReadType(typeMap));
                 }
 
                 if (typeMap == null)

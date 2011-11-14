@@ -7,9 +7,10 @@ namespace NYurik.FastBinTimeseries
     {
         public static UtcDateTime ValidateIndex(this IStoredUniformTimeseries timeseries, UtcDateTime timestamp)
         {
-            if (timestamp.Ticks % timeseries.ItemTimeSpan.Ticks != 0)
+            if (timestamp.Ticks%timeseries.ItemTimeSpan.Ticks != 0)
                 throw new ArgumentException(
-                    String.Format("The timestamp {0} must be aligned by the time slice {1}", timestamp, timeseries.ItemTimeSpan));
+                    String.Format("The timestamp {0} must be aligned by the time slice {1}", timestamp,
+                                  timeseries.ItemTimeSpan));
             return timestamp;
         }
 

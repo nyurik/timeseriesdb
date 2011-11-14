@@ -49,7 +49,7 @@ namespace NYurik.FastBinTimeseries.Test
             _files.TryGetValue(filename, out count);
             count++;
             _files[filename] = count;
-            
+
             filename = MakeFilename(filename, count);
             if (AllowCreate && File.Exists(filename))
                 File.Delete(filename);
@@ -61,7 +61,8 @@ namespace NYurik.FastBinTimeseries.Test
         {
             if (_stopwatch.IsRunning)
             {
-                Console.WriteLine("{0}: Total test time {1}", GetType().Name, _stopwatch.Elapsed);
+                TimeSpan elapsed = _stopwatch.Elapsed;
+                Console.WriteLine("{0}: Total test time {1}", GetType().Name, elapsed);
                 _stopwatch.Reset();
 //                GC.Collect();
 //                GC.WaitForFullGCComplete(300);

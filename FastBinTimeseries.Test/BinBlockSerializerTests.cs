@@ -71,29 +71,20 @@ namespace NYurik.FastBinTimeseries.Test
         public Hdr Header;
 
         public TradesBlock()
-        {}
+        {
+        }
 
         public TradesBlock(long i, int itemCount)
         {
             unchecked
             {
                 Items = new Item[itemCount];
-                Header = new Hdr
-                             {
-                                 ItemCount = (ushort) (itemCount - i%(itemCount/10)),
-                                 Timestamp = _firstTimeStamp.AddMinutes(i),
-                             };
+                Header = new Hdr((ushort) (itemCount - i%(itemCount/10)), _firstTimeStamp.AddMinutes(i));
 
                 for (int j = 0; j < Header.ItemCount; j++)
                 {
                     long tmp = i + j;
-                    Items[j] =
-                        new Item
-                            {
-                                ShiftInMilliseconds = (ushort) tmp,
-                                Value = 1d/tmp,
-                                Size = (int) tmp
-                            };
+                    Items[j] = new Item((ushort) tmp, 1d/tmp, (int) tmp);
                 }
             }
         }
@@ -115,8 +106,14 @@ namespace NYurik.FastBinTimeseries.Test
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct Hdr : IEquatable<Hdr>
         {
-            public ushort ItemCount;
-            public UtcDateTime Timestamp;
+            public readonly ushort ItemCount;
+            public readonly UtcDateTime Timestamp;
+
+            public Hdr(ushort itemCount, UtcDateTime timestamp)
+            {
+                ItemCount = itemCount;
+                Timestamp = timestamp;
+            }
 
             #region Implementation
 
@@ -155,9 +152,16 @@ namespace NYurik.FastBinTimeseries.Test
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct Item : IEquatable<Item>
         {
-            public double Value;
-            public int Size;
-            public ushort ShiftInMilliseconds;
+            public readonly double Value;
+            public readonly int Size;
+            public readonly ushort ShiftInMilliseconds;
+
+            public Item(ushort shiftInMilliseconds, double value, int size)
+            {
+                Value = value;
+                Size = size;
+                ShiftInMilliseconds = shiftInMilliseconds;
+            }
 
             #region Implementation
 

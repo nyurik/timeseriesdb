@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Linq;
+using NYurik.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries.Serializers
 {
@@ -17,9 +17,7 @@ namespace NYurik.FastBinTimeseries.Serializers
             if (binSerializerType == null)
                 throw new ArgumentNullException("binSerializerType");
 
-            _itemType = (from i in binSerializerType.GetInterfaces()
-                         where i.IsGenericType && i.GetGenericTypeDefinition() == typeof (IBinSerializer<>)
-                         select i.GetGenericArguments()[0]).FirstOrDefault();
+            _itemType = binSerializerType.GetInterfaces().FindGenericArgument1(typeof (IBinSerializer<>));
 
             if (_itemType == null)
                 throw new ArgumentOutOfRangeException("binSerializerType", binSerializerType,

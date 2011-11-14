@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace NYurik.EmitExtensions
@@ -8,6 +9,38 @@ namespace NYurik.EmitExtensions
     {
         public const BindingFlags AllInstanceMembers =
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        /// <summary>
+        /// In the list of types, find a generic type with the specified generic type definition,
+        /// and return the generic type arguments.
+        /// </summary>
+        /// <param name="types">List of types to search in</param>
+        /// <param name="genericType">Generic type to search for, e.g. IEnumerable&lt;&gt;</param>
+        /// <returns>List of arguments</returns>
+        public static Type[] FindGenericArguments(this IEnumerable<Type> types, Type genericType)
+        {
+            if (types == null) throw new ArgumentNullException("types");
+            if (genericType == null) throw new ArgumentNullException("genericType");
+            if (!genericType.IsGenericTypeDefinition)
+                throw new ArgumentOutOfRangeException("genericType", genericType, "Must be a generic type definition");
+
+            return (from i in types
+                    where i.IsGenericType && i.GetGenericTypeDefinition() == genericType
+                    select i.GetGenericArguments()).SingleOrDefault();
+        }
+
+        /// <summary>
+        /// In the list of types, find a generic one argument type with the specified generic type definition,
+        /// and return the first generic type argument.
+        /// </summary>
+        /// <param name="types">List of types to search in</param>
+        /// <param name="genericType">Generic type to search for, e.g. IEnumerable&lt;&gt;</param>
+        /// <returns>Generic Argument</returns>
+        public static Type FindGenericArgument1(this IEnumerable<Type> types, Type genericType)
+        {
+            Type[] args = types.FindGenericArguments(genericType);
+            return args == null ? null : args[0];
+        }
 
         /// <summary>
         /// Gets a value indicating whether a type (or type's element type)
@@ -72,11 +105,7 @@ namespace NYurik.EmitExtensions
 
             if (parent.IsInterface)
             {
-                Type[] interfaces = child.GetInterfaces();
-
-                foreach (Type t in interfaces)
-                    if (t == parent)
-                        return true;
+                return child.GetInterfaces().Any(t => t == parent);
             }
 
             return false;
@@ -127,7 +156,7 @@ namespace NYurik.EmitExtensions
 
         private static void GenerateTypeSignature(Type subItemType, ICollection<TypeInfo> result, int level)
         {
-            result.Add(new TypeInfo {Type = subItemType, Level = level});
+            result.Add(new TypeInfo(level, subItemType));
 
             FieldInfo[] fields = subItemType.GetFields(AllInstanceMembers);
             if (fields.Length == 1 && fields[0].FieldType == subItemType)
@@ -145,8 +174,14 @@ namespace NYurik.EmitExtensions
 
         public struct TypeInfo : IEquatable<TypeInfo>
         {
-            public int Level;
-            public Type Type;
+            public readonly int Level;
+            public readonly Type Type;
+
+            public TypeInfo(int level, Type type)
+            {
+                Level = level;
+                Type = type;
+            }
 
             #region IEquatable<TypeInfo> Members
 

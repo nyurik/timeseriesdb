@@ -19,14 +19,15 @@ namespace NYurik.FastBinTimeseries.Serializers
         private readonly ConcurrentDictionary<Type, BinSerializerInfo> _serializers =
             new ConcurrentDictionary<Type, BinSerializerInfo>();
 
-        private readonly ConcurrentDictionary<Type, FieldInfo> _tsFieldsCache =
-            new ConcurrentDictionary<Type, FieldInfo>();
-
         private readonly ConcurrentDictionary<FieldInfo, Delegate> _tsAccessorCache =
             new ConcurrentDictionary<FieldInfo, Delegate>();
 
+        private readonly ConcurrentDictionary<Type, FieldInfo> _tsFieldsCache =
+            new ConcurrentDictionary<Type, FieldInfo>();
+
         private DynamicCodeFactory()
-        {}
+        {
+        }
 
         private static MethodInfo GetMethodInfo(Type baseType, string methodName)
         {
@@ -184,7 +185,6 @@ namespace NYurik.FastBinTimeseries.Serializers
                 //.conv_u() //          L_0017: conv.u 
                 //.stloc(bufPtr) //     L_0018: stloc.0 
                 //.ret() //             L_0019: ret 
-
                 .stloc(retVal) //     L_0016: stloc.1 
                 .leave_s(l0019) //    L_0017: leave.s L_0019
                 .MarkLabelExt(l0019)
@@ -276,9 +276,20 @@ namespace NYurik.FastBinTimeseries.Serializers
         /// </summary>
         public FieldInfo GetTimestampField(Type type)
         {
-            if (type == null) throw new ArgumentNullException("type");
+            FieldInfo res = FindTimestampField(type);
+            if (res == null)
+                throw new InvalidOperationException(
+                    "No field of type UtcDateTime was found in type " + type.FullName);
+            return res;
+        }
 
-            return _tsFieldsCache.GetOrAdd(
+        /// <summary>
+        /// Find default timestamp field's <see cref="FieldInfo"/> for <param name="type"/>, or null if not found.
+        /// </summary>
+        public FieldInfo FindTimestampField(Type type)
+        {
+            if (type == null) throw new ArgumentNullException("type");
+            FieldInfo res = _tsFieldsCache.GetOrAdd(
                 type,
                 t =>
                     {
@@ -313,13 +324,11 @@ namespace NYurik.FastBinTimeseries.Serializers
                             throw new InvalidOperationException(
                                 "Must explicitly specify the fieldInfo because there is more than one UtcDateTime field in type " +
                                 t.FullName);
-                        if (result == null)
-                            throw new InvalidOperationException("No field of type UtcDateTime was found in type " +
-                                                                t.FullName);
 
                         return result;
                     }
                 );
+            return res;
         }
 
         /// <summary>

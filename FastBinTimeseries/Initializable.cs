@@ -9,7 +9,8 @@ namespace NYurik.FastBinTimeseries
         public bool IsInitialized
         {
             get { return _isInitialized; }
-            protected set
+            // todo: make protected
+            set
             {
                 ThrowOnInitialized();
                 _isInitialized = value;

@@ -286,58 +286,32 @@ namespace NYurik.FastBinTimeseries.Test
         [Test]
         public void IncrementalAddition()
         {
-            FileIncrementalAddition<byte>(TestUtils.NewByte);
-            FileIncrementalAddition<_3Byte_noAttr>(_3Byte_noAttr.New);
-            FileIncrementalAddition<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New);
-            FileIncrementalAddition<_IntBool_SeqPk1>(_IntBool_SeqPk1.New);
-            FileIncrementalAddition<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New);
-            FileIncrementalAddition<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New);
-            FileIncrementalAddition<_LongBool_SeqPk1>(_LongBool_SeqPk1.New);
-            FileIncrementalAddition<_LongByte_SeqPk1>(_LongByte_SeqPk1.New);
-            FileIncrementalAddition<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New);
-            FileIncrementalAddition<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New);
+            FileIncrementalAddition(TestUtils.NewByte);
+            FileIncrementalAddition(_3Byte_noAttr.New);
+            FileIncrementalAddition(_3Byte_2Shrt_ExplPk1.New);
+            FileIncrementalAddition(_IntBool_SeqPk1.New);
+            FileIncrementalAddition(_DatetimeByte_SeqPk1.New);
+            FileIncrementalAddition(_DatetimeBool_SeqPk1.New);
+            FileIncrementalAddition(_LongBool_SeqPk1.New);
+            FileIncrementalAddition(_LongByte_SeqPk1.New);
+            FileIncrementalAddition(_BoolLongBool_SeqPk1.New);
+            FileIncrementalAddition(_ByteLongByte_SeqPk1.New);
         }
 
         [Test]
-        public void PageCheckMmf()
+        public void PageCheckMmf(
+            [Values(true, false)] bool enableMemoryMappedAccess)
         {
-            const bool enableMemoryMappedAccess = true;
-            PageBorderOperations<byte>(TestUtils.NewByte, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-            PageBorderOperations<_IntBool_SeqPk1>(_IntBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-            PageBorderOperations<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-            PageBorderOperations<_LongBool_SeqPk1>(_LongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_LongByte_SeqPk1>(_LongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-            PageBorderOperations<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-        }
-
-        [Test]
-        public void PageCheckStream()
-        {
-            const bool enableMemoryMappedAccess = false;
-            PageBorderOperations<byte>(TestUtils.NewByte, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_3Byte_noAttr>(_3Byte_noAttr.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(_3Byte_2Shrt_ExplPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-            PageBorderOperations<_IntBool_SeqPk1>(_IntBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-            PageBorderOperations<_DatetimeBool_SeqPk1>(_DatetimeBool_SeqPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-            PageBorderOperations<_LongBool_SeqPk1>(_LongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_LongByte_SeqPk1>(_LongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations<_BoolLongBool_SeqPk1>(_BoolLongBool_SeqPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
-            PageBorderOperations<_ByteLongByte_SeqPk1>(_ByteLongByte_SeqPk1.New, enableMemoryMappedAccess,
-                                                       EnableLongerTests);
+            PageBorderOperations(TestUtils.NewByte, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_3Byte_noAttr.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_3Byte_2Shrt_ExplPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_IntBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_DatetimeByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_DatetimeBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_LongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_LongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_BoolLongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_ByteLongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
         }
 
         [Test]

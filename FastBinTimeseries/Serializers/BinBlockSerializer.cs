@@ -15,7 +15,10 @@ namespace NYurik.FastBinTimeseries.Serializers
         where THeader : struct
         where TItem : struct
     {
+        // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
+        // ReSharper restore StaticFieldInGenericType
+
         private IBinSerializer<TItem> _dataSerializer;
         private IBinSerializer<THeader> _headerSerializer;
         private int _itemCount;
@@ -186,7 +189,7 @@ namespace NYurik.FastBinTimeseries.Serializers
         }
 
         private int Process(FileStream fileStream, IntPtr memPtr, ArraySegment<TObject> buffer,
-                             bool isWriting)
+                            bool isWriting)
         {
             bool useMmf = fileStream == null;
             var hdrArray = new THeader[1];
@@ -225,7 +228,7 @@ namespace NYurik.FastBinTimeseries.Serializers
                 }
                 else
                 {
-                    var cnt = _headerSerializer.ProcessFileStream(fileStream, hdrSegment, isWriting);
+                    int cnt = _headerSerializer.ProcessFileStream(fileStream, hdrSegment, isWriting);
                     if (!isWriting && cnt == 0)
                         return i - buffer.Offset;
                 }
@@ -241,9 +244,9 @@ namespace NYurik.FastBinTimeseries.Serializers
                 }
                 else
                 {
-                    var cnt = _dataSerializer.ProcessFileStream(fileStream, new ArraySegment<TItem>(items), isWriting);
+                    int cnt = _dataSerializer.ProcessFileStream(fileStream, new ArraySegment<TItem>(items), isWriting);
                     if (!isWriting && cnt < ItemCount)
-                        return i - buffer.Offset;   // We cave incomplete file, ignore this item
+                        return i - buffer.Offset; // We cave incomplete file, ignore this item
                 }
             }
 
