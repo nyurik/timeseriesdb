@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
+using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.CommonCode
 {
@@ -15,72 +17,99 @@ namespace NYurik.FastBinTimeseries.CommonCode
         private readonly string _formatStr;
         private readonly bool _useFormat;
 
-        private FormattedException(bool useFormat, Exception inner, string message, params object[] args)
+        [StringFormatMethod("message")]
+        private FormattedException(bool useFormat, Exception inner, string message, object[] args)
             : base(message, inner)
         {
             _useFormat = useFormat;
             _formatStr = message;
             _arguments = args;
+
+            if (useFormat && args != null)
+            {
+                // In case any of the arguments are non-basic types, convert to string
+                // Otherwise their state might change by the time FormatString() is called.
+                Assembly coreAssmbly = typeof (object).Assembly;
+                foreach (object arg in args)
+                {
+                    if (arg != null && arg.GetType().Assembly != coreAssmbly)
+                    {
+                        _formatStr = FormatString();
+                        _useFormat = false;
+                        _arguments = null;
+                        break;
+                    }
+                }
+            }
         }
 
         public FormattedException()
             : this(false, null, null, null)
-        {}
+        {
+        }
 
         public FormattedException(string message)
             : this(false, null, message, null)
-        {}
+        {
+        }
 
+        [StringFormatMethod("message")]
         public FormattedException(string message, params object[] args)
             : this(true, null, message, args)
-        {}
+        {
+        }
 
         public FormattedException(Exception inner, string message)
             : this(false, inner, message, null)
-        {}
+        {
+        }
 
+        [StringFormatMethod("message")]
         public FormattedException(Exception inner, string message, params object[] args)
             : this(true, inner, message, args)
-        {}
+        {
+        }
 
         public override string Message
         {
-            get
+            get { return FormatString(); }
+        }
+
+        private string FormatString()
+        {
+            if (!_useFormat)
+                return _formatStr;
+
+            try
             {
-                if (!_useFormat)
-                    return _formatStr;
+                return string.Format(_formatStr, _arguments);
+            }
+            catch (Exception ex)
+            {
+                var sb = new StringBuilder();
 
-                try
+                sb.Append("Error formatting exception: ");
+                sb.Append(ex.Message);
+                sb.Append("\nFormat string: ");
+                sb.Append(_formatStr);
+                if (_arguments != null && _arguments.Length > 0)
                 {
-                    return string.Format(_formatStr, _arguments);
-                }
-                catch (Exception ex)
-                {
-                    var sb = new StringBuilder();
-
-                    sb.Append("Error formatting exception: ");
-                    sb.Append(ex.Message);
-                    sb.Append("\nFormat string: ");
-                    sb.Append(_formatStr);
-                    if (_arguments != null && _arguments.Length > 0)
+                    sb.Append("\nArguments: ");
+                    for (int i = 0; i < _arguments.Length; i++)
                     {
-                        sb.Append("\nArguments: ");
-                        for (int i = 0; i < _arguments.Length; i++)
+                        if (i > 0) sb.Append(", ");
+                        try
                         {
-                            if (i > 0) sb.Append(", ");
-                            try
-                            {
-                                sb.Append(_arguments[i]);
-                            }
-                            catch (Exception ex2)
-                            {
-                                sb.AppendFormat("(Argument #{0} cannot be shown: {1})", i, ex2.Message);
-                            }
+                            sb.Append(_arguments[i]);
+                        }
+                        catch (Exception ex2)
+                        {
+                            sb.AppendFormat("(Argument #{0} cannot be shown: {1})", i, ex2.Message);
                         }
                     }
-
-                    return sb.ToString();
                 }
+
+                return sb.ToString();
             }
         }
 
