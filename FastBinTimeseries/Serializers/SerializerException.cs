@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
-using NYurik.FastBinTimeseries.CommonCode;
 using JetBrains.Annotations;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries.Serializers
 {

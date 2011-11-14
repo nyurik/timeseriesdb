@@ -41,16 +41,21 @@ namespace NYurik.FastBinTimeseries.Test
             for (int i = 0; i < bufSize; i++) buf2[i] = buf1[i] = (byte) (i & 0xFF);
 
             TestUtils.AreEqual(buf1All, buf2All, "compare byte 0,1,2,3,...,255,0,...");
-            TestUtils.AreNotEqual(new ArraySegment<byte>(buf1, 255, bufSize - 255),
-                                  new ArraySegment<byte>(buf2, 0, bufSize - 255));
-            TestUtils.AreEqual(new ArraySegment<byte>(buf1, 256, bufSize - 256),
-                               new ArraySegment<byte>(buf2, 0, bufSize - 256));
-            TestUtils.AreNotEqual(new ArraySegment<byte>(buf1, 257, bufSize - 257),
-                                  new ArraySegment<byte>(buf2, 0, bufSize - 257));
-            TestUtils.AreEqual(new ArraySegment<byte>(buf1, 255, bufSize - 511),
-                               new ArraySegment<byte>(buf2, 511, bufSize - 511));
-            TestUtils.AreEqual(new ArraySegment<byte>(buf1, 257, bufSize - 257),
-                               new ArraySegment<byte>(buf2, 1, bufSize - 257));
+            TestUtils.AreNotEqual(
+                new ArraySegment<byte>(buf1, 255, bufSize - 255),
+                new ArraySegment<byte>(buf2, 0, bufSize - 255));
+            TestUtils.AreEqual(
+                new ArraySegment<byte>(buf1, 256, bufSize - 256),
+                new ArraySegment<byte>(buf2, 0, bufSize - 256));
+            TestUtils.AreNotEqual(
+                new ArraySegment<byte>(buf1, 257, bufSize - 257),
+                new ArraySegment<byte>(buf2, 0, bufSize - 257));
+            TestUtils.AreEqual(
+                new ArraySegment<byte>(buf1, 255, bufSize - 511),
+                new ArraySegment<byte>(buf2, 511, bufSize - 511));
+            TestUtils.AreEqual(
+                new ArraySegment<byte>(buf1, 257, bufSize - 257),
+                new ArraySegment<byte>(buf2, 1, bufSize - 257));
 
             for (int i = 0; i < 1000; i++)
             {
@@ -103,7 +108,8 @@ namespace NYurik.FastBinTimeseries.Test
                     f.BaseVersion = new Version(1, 1);
                     f.BaseVersion = new Version(1, 2);
                     TestUtils.AssertException<ArgumentNullException>(() => { f.BaseVersion = null; });
-                    TestUtils.AssertException<IncompatibleVersionException>(() => { f.BaseVersion = new Version(0, 0); });
+                    TestUtils.AssertException<IncompatibleVersionException>(
+                        () => { f.BaseVersion = new Version(0, 0); });
                     f.BaseVersion = curBaseVer;
 
 
@@ -190,7 +196,7 @@ namespace NYurik.FastBinTimeseries.Test
         public void MappingTest()
         {
             string fileName = GetBinFileName();
-            var data = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(_DatetimeByte_SeqPk1.New, 1, 10);
+            _DatetimeByte_SeqPk1[] data = TestUtils.GenerateData(_DatetimeByte_SeqPk1.New, 1, 10);
             if (AllowCreate)
             {
                 using (var f = new BinIndexedFile<_DatetimeByte_SeqPk1>(fileName))
@@ -201,7 +207,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
 
             using (
-                var f = BinaryFile.Open(
+                BinaryFile f = BinaryFile.Open(
                     fileName, false,
                     new Dictionary<string, Type>
                         {
@@ -209,7 +215,7 @@ namespace NYurik.FastBinTimeseries.Test
                         }))
             {
                 var p = (BinIndexedFile<_LongByte_SeqPk1>) f;
-                
+
                 var data2 = new _LongByte_SeqPk1[1];
                 p.ReadData(0, new ArraySegment<_LongByte_SeqPk1>(data2));
 

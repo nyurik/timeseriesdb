@@ -89,9 +89,10 @@ namespace NYurik.EmitExtensions
             Type returnType,
             Type[] parameterTypes)
         {
-            return MethodBuilderHelper(typeBuilder,
-                                       typeBuilder.DefineMethod(name, attributes, callingConvention), genericArguments,
-                                       returnType, parameterTypes);
+            return MethodBuilderHelper(
+                typeBuilder,
+                typeBuilder.DefineMethod(name, attributes, callingConvention), genericArguments,
+                returnType, parameterTypes);
         }
 
         /// <summary>

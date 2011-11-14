@@ -170,10 +170,10 @@ namespace NYurik.FastBinTimeseries
 
             var instance = Activator.CreateInstance(type, nonPublic) as T;
             if (instance == null)
-                throw new InvalidOperationException(
-                    String.Format("Type {0}{1} cannot be cast into {2}", type.AssemblyQualifiedName,
-                                  !typeRemapped ? "" : " (re-mapped from " + typeName + ")",
-                                  typeof (T).AssemblyQualifiedName));
+                throw new BinaryFileException(
+                    "Type {0}{1} cannot be cast into {2}", type.AssemblyQualifiedName,
+                    !typeRemapped ? "" : " (re-mapped from " + typeName + ")",
+                    typeof (T).AssemblyQualifiedName);
             return instance;
         }
 

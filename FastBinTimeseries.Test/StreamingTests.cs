@@ -7,6 +7,11 @@ namespace NYurik.FastBinTimeseries.Test
     [TestFixture]
     public class StreamingTests : TestsBase
     {
+        private static byte NewByte(long i)
+        {
+            return (byte) (i%byte.MaxValue);
+        }
+
         [Test]
         public void StreamingTest()
         {
@@ -41,11 +46,6 @@ namespace NYurik.FastBinTimeseries.Test
                 b2.ReadData(0, new ArraySegment<byte>(data2));
                 CollectionAssert.AreEqual(TestUtils.GenerateData(NewByte, data.Length/2, data.Length/2), data2);
             }
-        }
-
-        private static byte NewByte(long i)
-        {
-            return (byte) (i%byte.MaxValue);
         }
     }
 }

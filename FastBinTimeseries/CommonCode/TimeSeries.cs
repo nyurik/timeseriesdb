@@ -103,6 +103,11 @@ namespace NYurik.FastBinTimeseries.CommonCode
             get { return _values; }
         }
 
+        public TimeSpan ItemSpan
+        {
+            get { return _itemSpan; }
+        }
+
         #region ITimeSeries<T> Members
 
         public int Count
@@ -118,11 +123,6 @@ namespace NYurik.FastBinTimeseries.CommonCode
         object ISeries.GetValueSlow(int index)
         {
             return _values[index];
-        }
-
-        public TimeSpan ItemSpan
-        {
-            get { return _itemSpan; }
         }
 
         public int BinarySearch(UtcDateTime timestamp)
@@ -156,8 +156,9 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         public override string ToString()
         {
-            return string.Format("{0} {1} values starting at {2} every {3}", Count, typeof (T).Name, FirstTimestamp,
-                                 ItemSpan);
+            return string.Format(
+                "{0} {1} values starting at {2} every {3}", Count, typeof (T).Name, FirstTimestamp,
+                ItemSpan);
         }
     }
 }

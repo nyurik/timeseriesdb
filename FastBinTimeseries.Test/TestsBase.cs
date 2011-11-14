@@ -9,7 +9,7 @@ namespace NYurik.FastBinTimeseries.Test
 {
     public class TestsBase
     {
-        private const Mode InitRunMode = Mode.OneTime;
+        private const Mode InitRunMode = Mode.Verify;
         private const string StoreDir = "Stored3";
         private const string TestFileSuffix = ".testbsd";
 

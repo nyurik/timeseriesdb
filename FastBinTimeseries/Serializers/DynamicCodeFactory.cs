@@ -22,6 +22,9 @@ namespace NYurik.FastBinTimeseries.Serializers
         private readonly ConcurrentDictionary<FieldInfo, Delegate> _tsAccessorCache =
             new ConcurrentDictionary<FieldInfo, Delegate>();
 
+//        private readonly ConcurrentDictionary<Type, Delegate> _tsComparatorCache =
+//            new ConcurrentDictionary<Type, Delegate>();
+//
         private readonly ConcurrentDictionary<Type, FieldInfo> _tsFieldsCache =
             new ConcurrentDictionary<Type, FieldInfo>();
 
@@ -33,8 +36,8 @@ namespace NYurik.FastBinTimeseries.Serializers
         {
             MethodInfo methodToCall = baseType.GetMethod(methodName, TypeExtensions.AllInstanceMembers);
             if (methodToCall == null)
-                throw new ArgumentOutOfRangeException(
-                    "methodName", methodName, "Method not found in the base type " + baseType.FullName);
+                throw new SerializerException(
+                    "Method {0} not found in the base type {1}", methodName, baseType.FullName);
             return methodToCall;
         }
 
@@ -66,18 +69,17 @@ namespace NYurik.FastBinTimeseries.Serializers
             if (!type.IsPrimitive && !type.IsEnum && !type.IsPointer)
                 for (Type p = type.DeclaringType; p != null; p = p.DeclaringType)
                     if (p.IsGenericTypeDefinition)
-                        throw new ArgumentException(
-                            String.Format("Type {0} contains a generic type definition declaring type {1}",
-                                          type.FullName, p.FullName));
+                        throw new SerializerException(
+                            "Type {0} contains a generic type definition declaring type {1}", type.FullName, p.FullName);
             if (type.StructLayoutAttribute == null
                 || (type.StructLayoutAttribute.Value != LayoutKind.Explicit
                     && type.StructLayoutAttribute.Value != LayoutKind.Sequential)
                 || type.StructLayoutAttribute.Pack == 0
                 )
             {
-                throw new ArgumentOutOfRangeException(
-                    "type", type.FullName,
-                    "The type does not have a StructLayout attribute, or is set to Auto, or the Pack is 0");
+                throw new SerializerException(
+                    "The type {0} does not have a StructLayout attribute, or is set to Auto, or the Pack is 0",
+                    type.FullName);
             }
 
             try
@@ -92,8 +94,7 @@ namespace NYurik.FastBinTimeseries.Serializers
             }
             catch (Exception ex)
             {
-                throw new ArgumentException(
-                    String.Format("Error in subtype of type {0}. See InnerException.", type.FullName), ex);
+                throw new SerializerException(ex, "Error in subtype of type {0}. See InnerException.", type.FullName);
             }
             finally
             {
@@ -261,32 +262,31 @@ namespace NYurik.FastBinTimeseries.Serializers
 
         #endregion
 
-        #region Timestamp Field and Accessor
+        #region Index Field and Accessor
 
         /// <summary>
         /// Find default timestamp field's <see cref="FieldInfo"/> for type T.
         /// </summary>
-        public FieldInfo GetTimestampField<T>()
+        public FieldInfo GetIndexField<T>()
         {
-            return GetTimestampField(typeof (T));
+            return GetIndexField(typeof (T));
         }
 
         /// <summary>
         /// Find default timestamp field's <see cref="FieldInfo"/> for <param name="type"/>.
         /// </summary>
-        public FieldInfo GetTimestampField(Type type)
+        public FieldInfo GetIndexField(Type type)
         {
-            FieldInfo res = FindTimestampField(type);
+            FieldInfo res = FindIndexField(type);
             if (res == null)
-                throw new InvalidOperationException(
-                    "No field of type UtcDateTime was found in type " + type.FullName);
+                throw new SerializerException("No field of indexable type was found in type {0}", type.FullName);
             return res;
         }
 
         /// <summary>
         /// Find default timestamp field's <see cref="FieldInfo"/> for <param name="type"/>, or null if not found.
         /// </summary>
-        public FieldInfo FindTimestampField(Type type)
+        public FieldInfo FindIndexField(Type type)
         {
             if (type == null) throw new ArgumentNullException("type");
             FieldInfo res = _tsFieldsCache.GetOrAdd(
@@ -295,20 +295,22 @@ namespace NYurik.FastBinTimeseries.Serializers
                     {
                         FieldInfo[] fieldInfo = t.GetFields(TypeExtensions.AllInstanceMembers);
                         if (fieldInfo.Length < 1)
-                            throw new InvalidOperationException("No fields found in type " + t.FullName);
+                            throw new SerializerException("No fields found in type {0}", t.FullName);
 
                         FieldInfo result = null;
                         bool foundTsAttribute = false;
                         bool foundMultiple = false;
                         foreach (FieldInfo fi in fieldInfo)
-                            if (fi.FieldType == typeof (UtcDateTime))
+                        {
+                            bool hasAttr = fi.ExtractSingleAttribute<TimestampAttribute>() != null;
+                            if (hasAttr || fi.FieldType == typeof (UtcDateTime))
                             {
-                                if (fi.ExtractSingleAttribute<TimestampAttribute>() != null)
+                                if (hasAttr)
                                 {
                                     if (foundTsAttribute)
-                                        throw new InvalidOperationException(
-                                            "More than one field has an TimestampAttribute attached in type " +
-                                            t.FullName);
+                                        throw new SerializerException(
+                                            "More than one field has an attribute [{0}] attached in type {1}",
+                                            typeof (TimestampAttribute).Name, t.FullName);
                                     foundTsAttribute = true;
                                     result = fi;
                                 }
@@ -319,6 +321,7 @@ namespace NYurik.FastBinTimeseries.Serializers
                                     result = fi;
                                 }
                             }
+                        }
 
                         if (foundMultiple)
                             throw new InvalidOperationException(
@@ -332,32 +335,28 @@ namespace NYurik.FastBinTimeseries.Serializers
         }
 
         /// <summary>
-        /// Create a delegate that extracts a timestamp from the struct of type T.
+        /// Create a delegate that extracts a long index value from the struct of type T.
         /// </summary>
-        /// <param name="tsField">Optionally provide timestamp field, otherwise will attempt to find default.</param>
-        public Func<T, UtcDateTime> GetTimestampAccessor<T>(FieldInfo tsField = null)
+        /// <param name="tsField">Optionally provide the index field, otherwise will attempt to find default.</param>
+        public Func<T, TInd> GetIndexAccessor<T, TInd>(FieldInfo tsField = null)
         {
             return
-                (Func<T, UtcDateTime>)
+                (Func<T, TInd>)
                 _tsAccessorCache.GetOrAdd(
-                    tsField ?? GetTimestampField<T>(),
+                    tsField ?? GetIndexField<T>(),
                     fi =>
                         {
                             Type itemType = typeof (T);
                             if (fi.DeclaringType != itemType)
                                 throw new InvalidOperationException(
-                                    String.Format("The field {0} does not belong to type {1}",
-                                                  fi.Name, itemType.FullName));
-                            if (fi.FieldType != typeof (UtcDateTime))
-                                throw new InvalidOperationException(
-                                    String.Format("The field {0} in type {1} is not a UtcDateTime",
-                                                  fi.Name, itemType.FullName));
+                                    String.Format(
+                                        "The field {0} does not belong to type {1}",
+                                        fi.Name, itemType.FullName));
 
                             ParameterExpression vParam = Expression.Parameter(itemType, "v");
-                            Expression<Func<T, UtcDateTime>> exprLambda = Expression.Lambda<Func<T, UtcDateTime>>(
-                                Expression.Field(vParam, fi), vParam);
+                            Expression expr = Expression.Field(vParam, fi);
 
-                            return exprLambda.Compile();
+                            return Expression.Lambda<Func<T, TInd>>(expr, vParam).Compile();
                         }
                     );
         }

@@ -36,7 +36,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
         public static readonly UtcDateTime MinValue =
             (UtcDateTime) DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
 
-        private readonly long _value;
+        [Timestamp] private readonly long _value;
 
         public UtcDateTime(long ticks)
         {
@@ -54,7 +54,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
         }
 
         public UtcDateTime(int year, int month, int day, int hour, int minute, int second, int millisecond)
-            : this(new DateTime(year, month, day, hour, minute, second, millisecond,  DateTimeKind.Utc))
+            : this(new DateTime(year, month, day, hour, minute, second, millisecond, DateTimeKind.Utc))
         {
         }
 
@@ -242,11 +242,11 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         object IConvertible.ToType(Type conversionType, IFormatProvider provider)
         {
-            if (conversionType == typeof(UtcDateTime))
+            if (conversionType == typeof (UtcDateTime))
                 return this;
-            if (conversionType == typeof(DateTime))
+            if (conversionType == typeof (DateTime))
                 return (DateTime) this;
-            if (conversionType == typeof(string))
+            if (conversionType == typeof (string))
                 return ToString(provider);
             throw new InvalidCastException("Cannot convert to " + conversionType);
         }
@@ -275,7 +275,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
             switch (format)
             {
                 case "L":
-                    
+
                     if (value != value.Date)
                     {
                         value = ToLocalTime();

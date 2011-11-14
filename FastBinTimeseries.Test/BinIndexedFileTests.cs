@@ -184,19 +184,23 @@ namespace NYurik.FastBinTimeseries.Test
                 for (int i = 1; i < 5; i++)
                     PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
 
-                PageBorderOperations(converter, enableMemoryMappedAccess,
-                                     BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
+                PageBorderOperations(
+                    converter, enableMemoryMappedAccess,
+                    BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
                 PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MaxLargePageSize);
-                PageBorderOperations(converter, enableMemoryMappedAccess,
-                                     BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
+                PageBorderOperations(
+                    converter, enableMemoryMappedAccess,
+                    BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
 
                 if (enableLargePages)
                 {
-                    PageBorderOperations(converter, enableMemoryMappedAccess,
-                                         2*BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
+                    PageBorderOperations(
+                        converter, enableMemoryMappedAccess,
+                        2*BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
                     PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MaxLargePageSize);
-                    PageBorderOperations(converter, enableMemoryMappedAccess,
-                                         2*BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
+                    PageBorderOperations(
+                        converter, enableMemoryMappedAccess,
+                        2*BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
                 }
 
                 TestStop<T>(testName, sw);
@@ -264,8 +268,9 @@ namespace NYurik.FastBinTimeseries.Test
         {
             int marshalSizeOf = Marshal.SizeOf(typeof (T));
             Console.WriteLine("Marshal.SizeOf({0}) = {1}", typeof (T).Name, marshalSizeOf);
-            Console.WriteLine("sizeof({0})         = {1}{2}\n", typeof (T).Name, size,
-                              marshalSizeOf != size ? " ****" : "");
+            Console.WriteLine(
+                "sizeof({0})         = {1}{2}\n", typeof (T).Name, size,
+                marshalSizeOf != size ? " ****" : "");
         }
 
         [Test]

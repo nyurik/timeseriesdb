@@ -20,8 +20,9 @@ namespace NYurik.FastBinTimeseries.Serializers
             _itemType = binSerializerType.GetInterfaces().FindGenericArgument1(typeof (IBinSerializer<>));
 
             if (_itemType == null)
-                throw new ArgumentOutOfRangeException("binSerializerType", binSerializerType,
-                                                      "Type does not implement IBinSerializer<T>");
+                throw new ArgumentOutOfRangeException(
+                    "binSerializerType", binSerializerType,
+                    "Type does not implement IBinSerializer<T>");
 
             _binSerializerType = binSerializerType;
         }

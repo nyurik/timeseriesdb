@@ -107,13 +107,15 @@ namespace NYurik.FastBinTimeseries.Test
         public static void AssertException<TEx>(Action operation)
             where TEx : Exception
         {
-            AssertException<TEx>(() =>
-                                     {
-                                         operation();
-                                         Assert.Fail("Should have thrown an {0}, but completed successfully instead",
-                                                     typeof (TEx).Name);
-                                         return null;
-                                     });
+            AssertException<TEx>(
+                () =>
+                    {
+                        operation();
+                        Assert.Fail(
+                            "Should have thrown an {0}, but completed successfully instead",
+                            typeof (TEx).Name);
+                        return null;
+                    });
         }
 
         public static void AssertException<TEx>(Func<object> operation)
@@ -125,7 +127,8 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.Fail("Should have thrown an {0}, but {1} was returned instead", typeof (TEx).Name, o);
             }
             catch (TEx)
-            {}
+            {
+            }
         }
 
         #region Nested type: CacheItem

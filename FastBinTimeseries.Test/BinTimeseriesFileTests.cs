@@ -1,8 +1,6 @@
 using System;
-using System.Diagnostics.Contracts;
-using System.IO;
-using System.Reflection;
-using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
 
@@ -33,18 +31,31 @@ namespace NYurik.FastBinTimeseries.Test
                 _DatetimeByte_SeqPk1[] res = f.ReadData(UtcDateTime.MinValue, UtcDateTime.MaxValue, int.MaxValue);
                 TestUtils.AreEqual(newData, res);
 
+                CollectionAssert.AreEqual(newData, f.Stream(UtcDateTime.MinValue));
+
+                Array.Reverse(newData);
+                CollectionAssert.AreEqual(newData, f.Stream(UtcDateTime.MaxValue, inReverse: true));
+
                 if (itemCount > 0)
                 {
-                    for (int i = 0; i < repeatRuns; i++)
+                    for (int i = 0; i < Math.Min(repeatRuns, itemCount); i++)
                     {
-                        res = f.ReadData(
-                            _DatetimeByte_SeqPk1.New(itemCount - 1).a,
-                            _DatetimeByte_SeqPk1.New(itemCount).a,
-                            int.MaxValue);
+                        UtcDateTime from = _DatetimeByte_SeqPk1.New(itemCount - i).a;
+                        UtcDateTime until = _DatetimeByte_SeqPk1.New(itemCount).a;
 
-                        TestUtils.AreEqual(
-                            TestUtils.GenerateData(
-                                _DatetimeByte_SeqPk1.New, 1, itemCount - 1), res);
+                        res = f.ReadData(from, until, int.MaxValue);
+
+                        _DatetimeByte_SeqPk1[] expected = TestUtils.GenerateData(
+                            _DatetimeByte_SeqPk1.New, i, itemCount - i);
+                        TestUtils.AreEqual(expected, res);
+
+                        List<_DatetimeByte_SeqPk1> res1 = f.Stream(@from, until.AddTicks(1)).ToList();
+                        CollectionAssert.AreEqual(expected, res1);
+
+                        Array.Reverse(expected);
+
+                        List<_DatetimeByte_SeqPk1> res2 = f.Stream(until, @from, inReverse: true).ToList();
+                        CollectionAssert.AreEqual(expected, res2);
                     }
                 }
             }
@@ -88,7 +99,7 @@ namespace NYurik.FastBinTimeseries.Test
         public void VariousLengthNonDuplTimeseries([Values(true, false)] bool uniqueTimestamps,
                                                    [Values(true, false)] bool enableCache)
         {
-            const int repeatRuns = 5;
+            const int repeatRuns = 10;
             RunTest(0, repeatRuns, uniqueTimestamps, enableCache);
             RunTest(1, repeatRuns, uniqueTimestamps, enableCache);
             RunTest(10, repeatRuns, uniqueTimestamps, enableCache);

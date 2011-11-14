@@ -89,10 +89,10 @@ namespace NYurik.FastBinTimeseries
             {
                 ThrowOnInitialized();
                 if (value > TimeSpan.FromDays(1))
-                    throw new IOException(String.Format("Time slice {0} is > 1 day", value));
+                    throw new BinaryFileException("Time slice {0} is > 1 day", value);
                 if (TimeSpan.TicksPerDay%value.Ticks != 0)
-                    throw new IOException(String.Format("TimeSpan.TicksPerDay must be divisible by time slice {0} ",
-                                                        value));
+                    throw new BinaryFileException(
+                        "TimeSpan.TicksPerDay must be divisible by time slice {0} ", value);
                 _itemTimeSpan = value;
             }
         }
@@ -181,10 +181,12 @@ namespace NYurik.FastBinTimeseries
         /// <returns>The total number of items read.</returns>
         public int ReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive, ArraySegment<T> buffer)
         {
-            if (buffer.Array == null) throw new ArgumentNullException("buffer");
+            if (buffer.Array == null)
+                throw new ArgumentNullException("buffer");
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-            PerformFileAccess(rng.Item1,
-                              new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)), false);
+            PerformFileAccess(
+                rng.Item1,
+                new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)), false);
             return rng.Item2;
         }
 
@@ -208,17 +210,21 @@ namespace NYurik.FastBinTimeseries
         /// <param name="buffer">Array of values to be written into a file.</param>
         public void WriteData(UtcDateTime firstItemIndex, ArraySegment<T> buffer)
         {
-            if (buffer.Array == null) throw new ArgumentException("buffer");
+            if (buffer.Array == null)
+                throw new ArgumentException("buffer");
 
-            if (!CanWrite) throw new InvalidOperationException("The file was opened as readonly");
+            if (!CanWrite)
+                throw new InvalidOperationException("The file was opened as readonly");
 
             if (firstItemIndex < FirstTimestamp)
-                throw new ArgumentOutOfRangeException("firstItemIndex", firstItemIndex,
-                                                      "Must be >= FirstTimestamp (" + FirstTimestamp + ")");
+                throw new ArgumentOutOfRangeException(
+                    "firstItemIndex", firstItemIndex,
+                    "Must be >= FirstTimestamp (" + FirstTimestamp + ")");
             if (firstItemIndex > FirstUnavailableTimestamp)
-                throw new ArgumentOutOfRangeException("firstItemIndex", firstItemIndex,
-                                                      "Must be <= FirstUnavailableTimestamp (" +
-                                                      FirstUnavailableTimestamp + ")");
+                throw new ArgumentOutOfRangeException(
+                    "firstItemIndex", firstItemIndex,
+                    "Must be <= FirstUnavailableTimestamp (" +
+                    FirstUnavailableTimestamp + ")");
 
             long itemLong = this.IndexToLong(firstItemIndex);
 

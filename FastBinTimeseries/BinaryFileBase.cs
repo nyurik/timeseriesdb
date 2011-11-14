@@ -193,7 +193,8 @@ namespace NYurik.FastBinTimeseries
             set
             {
                 ThrowOnInitialized();
-                if (value == null) throw new ArgumentNullException("value");
+                if (value == null)
+                    throw new ArgumentNullException("value");
                 if (!KnownVersions.Contains(value))
                     throw new IncompatibleVersionException(GetType(), value);
                 _baseVersion = value;
@@ -275,7 +276,8 @@ namespace NYurik.FastBinTimeseries
         /// </param>
         public static BinaryFile Open(Stream stream, IDictionary<string, Type> typeMap)
         {
-            if (stream == null) throw new ArgumentNullException("stream");
+            if (stream == null)
+                throw new ArgumentNullException("stream");
 
             bool canSeek = stream.CanSeek;
             if (canSeek)
@@ -309,8 +311,7 @@ namespace NYurik.FastBinTimeseries
 
             int typeSize = inst.NonGenericSerializer.TypeSize;
             if (typeSize <= 0)
-                throw new ArgumentOutOfRangeException(
-                    "TypeSize" + "", typeSize, "Element size given by the serializer must be > 0");
+                throw new BinaryFileException("Element size given by the serializer is {0}, but must be > 0", typeSize);
 
             inst._enableMemMappedAccessOnRead = false;
             inst._enableMemMappedAccessOnWrite = false;
@@ -565,7 +566,7 @@ namespace NYurik.FastBinTimeseries
                 throw new IOException(string.Format("File {0} already exists", path));
 
             string dir = Path.GetDirectoryName(path);
-            if(dir == null)
+            if (dir == null)
                 throw new IOException(string.Format("Filename '{0}' is not valid", path));
 
             if (dir != "" && !Directory.Exists(dir))
@@ -654,9 +655,8 @@ namespace NYurik.FastBinTimeseries
             var headerBuffer = new byte[bufferSize];
             int bytesRead = EnsureStreamRead(stream, new ArraySegment<byte>(headerBuffer));
             if (bytesRead < bufferSize)
-                throw new IOException(
-                    String.Format("Unable to read a block of size {0}: only {1} bytes were available", bufferSize,
-                                  bytesRead));
+                throw new BinaryFileException(
+                    "Unable to read a block of size {0}: only {1} bytes were available", bufferSize, bytesRead);
             return headerBuffer;
         }
 
@@ -684,15 +684,16 @@ namespace NYurik.FastBinTimeseries
         public override string ToString()
         {
             var fileStream = _stream as FileStream;
-            return string.Format("{0} file {1} of type {2}{3}",
-                                 IsDisposed ? "Disposed" : (IsInitialized ? "Open" : "Uninitialized"),
-                                 _stream == null
-                                     ? "(unknown)"
-                                     : (fileStream == null ? _stream.ToString() : fileStream.Name),
-                                 GetType().FullName,
-                                 fileStream != null && IsOpen && fileStream.CanSeek
-                                     ? string.Format(" with {0} items", Count)
-                                     : "");
+            return string.Format(
+                "{0} file {1} of type {2}{3}",
+                IsDisposed ? "Disposed" : (IsInitialized ? "Open" : "Uninitialized"),
+                _stream == null
+                    ? "(unknown)"
+                    : (fileStream == null ? _stream.ToString() : fileStream.Name),
+                GetType().FullName,
+                fileStream != null && IsOpen && fileStream.CanSeek
+                    ? string.Format(" with {0} items", Count)
+                    : "");
         }
 
         /// <summary> Override to read custom header info. Must match the <see cref="WriteCustomHeader"/>. </summary>
@@ -719,10 +720,9 @@ namespace NYurik.FastBinTimeseries
 
             // Just in case, hope this will never happen
             if (newCount != Count)
-                throw new IOException(
-                    string.Format(
-                        "Internal error: the new file should have had {0} items, but was calculated to have {1}",
-                        newCount, Count));
+                throw new BinaryFileException(
+                    "Internal error: the new file should have had {0} items, but was calculated to have {1}",
+                    newCount, Count);
         }
 
         public static IBinSerializer<T> GetDefaultSerializer<T>()
@@ -737,9 +737,9 @@ namespace NYurik.FastBinTimeseries
 
                 var ser = Activator.CreateInstance(typeSer) as IBinSerializer<T>;
                 if (ser == null)
-                    throw new ArgumentException(
-                        string.Format("Custom binary serializer for type {0} does not implement IBinSerializer<{0}>",
-                                      typeT.Name));
+                    throw new SerializerException(
+                        "Custom binary serializer for type {0} does not implement IBinSerializer<{0}>",
+                        typeT.Name);
                 return ser;
             }
 

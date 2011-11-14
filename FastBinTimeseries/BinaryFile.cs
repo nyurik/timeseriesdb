@@ -91,8 +91,9 @@ namespace NYurik.FastBinTimeseries
             bool canSeek = BaseStream.CanSeek;
 
             if (!canSeek && firstItemIdx != 0)
-                throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx,
-                                                      "Must be 0 when the base stream is not seekable");
+                throw new ArgumentOutOfRangeException(
+                    "firstItemIdx", firstItemIdx,
+                    "Must be 0 when the base stream is not seekable");
 
             if (canSeek && (firstItemIdx < 0 || firstItemIdx > Count))
                 throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx, "Must be >= 0 and <= Count");
@@ -139,13 +140,12 @@ namespace NYurik.FastBinTimeseries
             {
                 long expectedStreamPos = fileOffset + buffer.Count*ItemSize;
                 if (expectedStreamPos != BaseStream.Position)
-                    throw new InvalidOperationException(
-                        String.Format(
-                            "Possible loss of data or file corruption detected.\n" +
-                            "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
-                            "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
-                            isWriting ? "writing" : "reading",
-                            buffer.Count, fileOffset, expectedStreamPos, BaseStream.Position));
+                    throw new BinaryFileException(
+                        "Possible loss of data or file corruption detected.\n" +
+                        "Unexpected position in the data stream: after {0} {1} items, position should have moved " +
+                        "from 0x{2:X} to 0x{3:X}, but instead is now at 0x{4:X}.",
+                        isWriting ? "writing" : "reading",
+                        buffer.Count, fileOffset, expectedStreamPos, BaseStream.Position);
             }
 
             return count;
@@ -160,7 +160,8 @@ namespace NYurik.FastBinTimeseries
             int count = buffer.Count;
 
             int itemSize = ItemSize;
-            int tempBufSize = Math.Min((int) FastBinFileUtils.RoundUpToMultiple(maxBufferSize, itemSize), count*itemSize);
+            int tempBufSize = Math.Min(
+                (int) FastBinFileUtils.RoundUpToMultiple(maxBufferSize, itemSize), count*itemSize);
             var tempBuf = new byte[tempBufSize];
             int tempSize = tempBuf.Length/itemSize;
 
@@ -216,10 +217,9 @@ namespace NYurik.FastBinTimeseries
                 long fileSize = BaseStream.Length;
                 long fileCount = CalculateItemCountFromFilePosition(fileSize, out isAligned);
                 if (!isAligned && isWriting)
-                    throw new IOException(
-                        String.Format(
-                            "Cannot write to a file when its length does not align to item size ({0})",
-                            ToString()));
+                    throw new BinaryFileException(
+                        "Cannot write to a file when its length does not align to item size ({0})",
+                        ToString());
 
                 long idxToStopAt = firstItemIdx + buffer.Count;
 
@@ -317,8 +317,9 @@ namespace NYurik.FastBinTimeseries
             else
             {
                 if (!canSeek && firstItemIdx != 0)
-                    throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx,
-                                                          "Must be 0 when the base stream is not seekable");
+                    throw new ArgumentOutOfRangeException(
+                        "firstItemIdx", firstItemIdx,
+                        "Must be 0 when the base stream is not seekable");
 
                 idx = Math.Max(firstItemIdx, 0);
                 if (canSeek && idx >= Count)

@@ -22,6 +22,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
         /// <param name="timestamp">The timestamp.</param>
         /// <returns>The zero-based index of item, if item is found; otherwise, a negative number that is the bitwise complement of the index of the next element that is larger than item or, if there is no larger element, the bitwise complement of <see cref="ISeries.Count"/>.</returns>
         int BinarySearch(UtcDateTime timestamp);
+
         UtcDateTime GetTimestamp(int index);
     }
 

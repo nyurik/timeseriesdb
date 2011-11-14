@@ -14,8 +14,9 @@ namespace NYurik.FastBinTimeseries.CommonCode
         public static UtcDateTime DbToUtc(this DateTime dateTime)
         {
             if (dateTime.Kind != DateTimeKind.Unspecified)
-                throw new ArgumentOutOfRangeException("dateTime", dateTime,
-                                                      "Unexpected - database always stores DateTimes as Unspecified");
+                throw new ArgumentOutOfRangeException(
+                    "dateTime", dateTime,
+                    "Unexpected - database always stores DateTimes as Unspecified");
             return (UtcDateTime) DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
         }
 
@@ -25,8 +26,9 @@ namespace NYurik.FastBinTimeseries.CommonCode
         public static UtcDateTime DbLocalToUtc(this DateTime dateTime)
         {
             if (dateTime.Kind != DateTimeKind.Unspecified)
-                throw new ArgumentOutOfRangeException("dateTime", dateTime,
-                                                      "Unexpected - database always stores DateTimes as Unspecified");
+                throw new ArgumentOutOfRangeException(
+                    "dateTime", dateTime,
+                    "Unexpected - database always stores DateTimes as Unspecified");
             return DateTime.SpecifyKind(dateTime, DateTimeKind.Local).ToUtc();
         }
 

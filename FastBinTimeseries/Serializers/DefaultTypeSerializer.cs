@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using JetBrains.Annotations;
 using NYurik.EmitExtensions;
-using NYurik.FastBinTimeseries;
 using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries.Serializers
@@ -183,10 +183,9 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-// ReSharper disable UnusedMember.Local
+        [UsedImplicitly]
         private unsafe int ProcessFileStreamPtr(FileStream fileStream, void* bufPtr, int offset, int count,
                                                 bool isWriting)
-// ReSharper restore UnusedMember.Local
         {
             byte* byteBufPtr = (byte*) bufPtr + offset*_typeSize;
             int byteCount = count*_typeSize;
@@ -207,9 +206,8 @@ namespace NYurik.FastBinTimeseries
             return bytesProcessed/_typeSize;
         }
 
-// ReSharper disable UnusedMember.Local
+        [UsedImplicitly]
         private unsafe int ProcessMemoryMapPtr(IntPtr memMapPtr, void* bufPtr, int offset, int count, bool isWriting)
-// ReSharper restore UnusedMember.Local
         {
             byte* byteBufPtr = (byte*) bufPtr + offset*_typeSize;
             int byteCount = count*_typeSize;
@@ -222,9 +220,8 @@ namespace NYurik.FastBinTimeseries
             return count;
         }
 
-// ReSharper disable UnusedMember.Local
+        [UsedImplicitly]
         private unsafe bool CompareMemoryPtr(void* bufPtr1, int offset1, void* bufPtr2, int offset2, int count)
-// ReSharper restore UnusedMember.Local
         {
             byte* byteBufPtr1 = (byte*) bufPtr1 + offset1*_typeSize;
             byte* byteBufPtr2 = (byte*) bufPtr2 + offset2*_typeSize;

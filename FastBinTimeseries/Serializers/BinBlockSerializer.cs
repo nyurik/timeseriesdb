@@ -169,8 +169,9 @@ namespace NYurik.FastBinTimeseries.Serializers
                     if (items1 == null || items2 == null || items1.Length != items2.Length)
                         return false;
                     if (
-                        !_dataSerializer.BinaryArrayCompare(new ArraySegment<TItem>(items1),
-                                                            new ArraySegment<TItem>(items2)))
+                        !_dataSerializer.BinaryArrayCompare(
+                            new ArraySegment<TItem>(items1),
+                            new ArraySegment<TItem>(items2)))
                         return false;
                 }
 
