@@ -68,10 +68,10 @@ namespace NYurik.FastBinTimeseries.Test
                 _DatetimeByte_SeqPk1.New, 10000, 0);
 
             string fileName = GetBinFileName();
-            using (BinTimeseriesFile<_DatetimeByte_SeqPk1> f =
+            using (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1> f =
                 AllowCreate
-                    ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = false}
-                    : (BinTimeseriesFile<_DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false))
+                    ? new BinSeriesFile<UtcDateTime,_DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = false}
+                    : (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>)BinaryFile.Open(fileName, false))
             {
                 if (AllowCreate)
                 {
