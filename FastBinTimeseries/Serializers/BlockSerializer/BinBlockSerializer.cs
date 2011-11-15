@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace NYurik.FastBinTimeseries.Serializers
+namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public interface IBinBlockSerializer : IBinSerializer
     {

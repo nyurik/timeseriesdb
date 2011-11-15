@@ -71,6 +71,7 @@
     <Compile Include="BinBlockSerializerTests.cs" />
     <Compile Include="BinIndexedFileCoreTests.cs" />
     <Compile Include="ConfigurableStream.cs" />
+    <Compile Include="FieldSerializerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StreamingTests.cs" />
     <Compile Include="TestsBase.cs" />

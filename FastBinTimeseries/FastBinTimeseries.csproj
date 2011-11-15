@@ -129,8 +129,10 @@
     <Compile Include="BinaryFileException.cs" />
     <Compile Include="IncompatibleVersionException.cs" />
     <Compile Include="Initializable.cs" />
+    <Compile Include="Serializers\BlockSerializer\BinBlockSerializer.cs" />
+    <Compile Include="Serializers\BlockSerializer\FieldSerializer.cs" />
+    <Compile Include="Serializers\BlockSerializer\IBinBlock.cs" />
     <Compile Include="Serializers\SerializerException.cs" />
-    <Compile Include="Serializers\BinBlockSerializer.cs" />
     <Compile Include="FastBinFileUtils.cs" />
     <Compile Include="IBinaryFile.cs" />
     <Compile Include="IBinTimeseriesFile.cs" />
@@ -147,7 +149,6 @@
     <Compile Include="CommonCode\DynamicSyncDictionary.cs" />
     <Compile Include="CommonCode\TypeUtils.cs" />
     <Compile Include="CommonCode\UtcDateTime.cs" />
-    <Compile Include="Serializers\IBinBlock.cs" />
     <Compile Include="StoredSeriesExtensions.cs" />
     <Compile Include="TimestampAttribute.cs" />
   </ItemGroup>

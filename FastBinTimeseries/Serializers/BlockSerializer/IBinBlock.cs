@@ -1,4 +1,4 @@
-﻿namespace NYurik.FastBinTimeseries.Serializers
+﻿namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public interface IBinBlock<THeader, TItem>
     {

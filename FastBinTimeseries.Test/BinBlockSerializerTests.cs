@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers;
+using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
 namespace NYurik.FastBinTimeseries.Test
 {
