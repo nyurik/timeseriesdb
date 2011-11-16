@@ -5,7 +5,7 @@ using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
-namespace NYurik.FastBinTimeseries.Test
+namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 {
     [TestFixture]
     public class BinBlockSerializerTests : TestsBase

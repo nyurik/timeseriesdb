@@ -4,11 +4,24 @@ using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
-namespace NYurik.FastBinTimeseries.Test
+namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 {
-    [TestFixture]
-    public class FieldSerializerTests : TestsBase
+    internal class FieldSerializer
     {
+        [Test, Ignore]
+        public void Serialize()
+        {
+            var data = new Strct[100];
+            var buffer = new byte[50];
+
+            var sr = new FieldSerializer<Strct>();
+
+            int count = sr.Serialize(data, 0, buffer);
+            count = sr.Deserialize(data, 0, buffer);
+        }
+
+        #region Nested type: Strct
+
         private struct Strct
         {
             [Field] private int _a;
@@ -19,7 +32,8 @@ namespace NYurik.FastBinTimeseries.Test
 
             private class UtcDateTimeSerializer : TypeSerializer
             {
-                public UtcDateTimeSerializer(byte index, FieldInfo field) : base(index, field)
+                public UtcDateTimeSerializer(byte index, FieldInfo field)
+                    : base(index, field)
                 {
                 }
 
@@ -44,16 +58,6 @@ namespace NYurik.FastBinTimeseries.Test
             #endregion
         }
 
-        [Test]
-        public void Serialize()
-        {
-            var data = new Strct[100];
-            var buffer = new byte[50];
-
-            var sr = new FieldSerializer<Strct>();
-
-            int count = sr.Serialize(data, 0, buffer);
-            count = sr.Deserialize(data, 0, buffer);
-        }
+        #endregion
     }
 }

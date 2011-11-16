@@ -6,10 +6,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public abstract class TypeSerializer
     {
-        public static readonly ParameterExpression FldSerializerExp = Expression.Parameter(typeof (FieldSerializer));
+        public static readonly ParameterExpression FldSerializerExp = Expression.Parameter(typeof (StreamCodec));
         public readonly FieldInfo Field;
-        public readonly ConstantExpression IndexExp;
         public readonly MemberExpression FieldExp;
+        public readonly ConstantExpression IndexExp;
 
         protected TypeSerializer(byte index, FieldInfo field)
         {
@@ -25,7 +25,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         protected abstract Expression GetSerializerExpr();
 
-        public  Expression GetDeSerializerExpr2()
+        public Expression GetDeSerializerExpr2()
         {
             return Expression.Assign(FieldExp, GetDeSerializerExpr());
         }
@@ -52,8 +52,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         protected override Expression GetDeSerializerExpr()
         {
             return
-                Expression.Call(FldSerializerExp, FldSerializerExp.Type.GetMethod("Read" + Field.FieldType.Name),
-                                IndexExp);
+                Expression.Call(
+                    FldSerializerExp, FldSerializerExp.Type.GetMethod("Read" + Field.FieldType.Name),
+                    IndexExp);
         }
     }
 
@@ -81,9 +82,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         protected override Expression GetDeSerializerExpr()
         {
             return Expression.Divide(
-                    Expression.Call(
-                        FldSerializerExp, FldSerializerExp.Type.GetMethod("ReadInt64"), IndexExp),
-                    PrescisionMultExp);
+                Expression.Call(
+                    FldSerializerExp, FldSerializerExp.Type.GetMethod("ReadInt64"), IndexExp),
+                PrescisionMultExp);
         }
     }
 
@@ -102,29 +103,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         public Type Serializer { get; private set; }
     }
 
-    public class FieldSerializer
-    {
-        private FieldInfo _field;
-
-        private void GenerateSerializer(Type valueType, params TypeSerializer[] values)
-        {
-            byte i = 0;
-            foreach (TypeSerializer value in values)
-            {
-                Expression exp = value.GetSerializerExpr();
-                i++;
-            }
-        }
-
-        public void WriteInt64(byte index, long value)
-        {
-        }
-
-        public void WriteInt32(byte index, int value)
-        {
-        }
-    }
-    
     public class FieldSerializer<T>
     {
         public int Serialize(T[] data, int i, byte[] buffer)
