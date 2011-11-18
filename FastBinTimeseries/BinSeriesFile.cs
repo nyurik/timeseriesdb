@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Runtime.Serialization;
+using JetBrains.Annotations;
 using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
 
@@ -346,52 +348,87 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Add new items at the end of the existing file
         /// </summary>
+        [Obsolete("Use overloaded method")]
         public void AppendData(ArraySegment<TVal> buffer)
         {
             if (buffer.Array == null)
                 throw new ArgumentNullException("buffer");
-            if (buffer.Count == 0)
-                return;
+            AppendData(new[] {buffer});
+        }
+        
+        /// <summary>
+        /// Add new items at the end of the existing file
+        /// </summary>
+        public void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false, object allowFileTruncations)
+        {
+            if (bufferStream == null)
+                throw new ArgumentNullException("bufferStream");
+            PerformWriteStreaming(ProcessWriteStream(bufferStream, allowFileTruncations))
+        }
 
-            TInd firstBufferTs = IndexAccessor(buffer.Array[buffer.Offset]);
-            TInd newTs = firstBufferTs;
+        /// <summary>
+        /// Add new items at the end of the existing file
+        /// </summary>
+        public IEnumerable<ArraySegment<TVal>> ProcessWriteStream([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
+        {
+            var isFirstSeg = true;
+
             TInd lastTs = LastFileIndex ?? default(TInd);
-
+            int segInd = 0;
             bool isEmptyFile = Count == 0;
-            if (!isEmptyFile)
-            {
-                // Make sure new data goes after the last item
-                if (newTs.CompareTo(lastTs) < 0)
-                    throw new BinaryFileException(
-                        "Last file index ({0}) is greater than the first new item's index ({1})", lastTs, newTs);
-                if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
-                    throw new BinaryFileException(
-                        "Last file index ({0}) equals to the first new item's index (enfocing uniqueness)", lastTs);
-            }
 
-            lastTs = newTs;
-
-            // Validate new data
-            int lastOffset = buffer.Offset + buffer.Count;
-            for (int i = buffer.Offset + 1; i < lastOffset; i++)
+            foreach (ArraySegment<TVal> buffer in bufferStream)
             {
-                newTs = IndexAccessor(buffer.Array[i]);
-                if (newTs.CompareTo(lastTs) < 0)
-                    throw new BinaryFileException(
-                        "New item's index at #{0} ({1}) is greater than index of the following item #{2} ({3})",
-                        i - 1, lastTs, i, newTs);
-                if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
-                    throw new BinaryFileException(
-                        "New item's index at #{0} ({1}) equals the index of the following item #{2} (enforcing uniqueness)",
-                        i - 1, lastTs, i);
+                if (buffer.Array == null)
+                    throw new SerializationException("BufferStream may not contain ArraySegments with null Array");
+                if (buffer.Count == 0)
+                    continue;
+
+                TInd firstBufferTs = IndexAccessor(buffer.Array[buffer.Offset]);
+                TInd newTs = firstBufferTs;
+
+                if (!isEmptyFile)
+                {
+                    // Make sure new data goes after the last item
+                    if (newTs.CompareTo(lastTs) < 0)
+                    {
+                        if (!allowFileTruncations)
+                            throw new BinaryFileException(
+                                "Last index in {2} ({0}) is greater than the first new item's index ({1})",
+                                lastTs, newTs, isFirstSeg ? "file" : "segment");
+                    } else if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
+                        throw new BinaryFileException(
+                            "Last index in {1} ({0}) equals to the first new item's index (enfocing uniqueness)",
+                            lastTs, isFirstSeg ? "file" : "segment");
+                }
+
                 lastTs = newTs;
+
+                // Validate new data
+                int lastOffset = buffer.Offset + buffer.Count;
+                for (int i = buffer.Offset + 1; i < lastOffset; i++)
+                {
+                    newTs = IndexAccessor(buffer.Array[i]);
+                    if (newTs.CompareTo(lastTs) < 0)
+                        throw new BinaryFileException(
+                            "Segment {4}, new item's index at #{0} ({1}) is greater than index of the following item #{2} ({3})",
+                            i - 1, lastTs, i, newTs, segInd);
+                    if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
+                        throw new BinaryFileException(
+                            "Segment {4} new item's index at #{0} ({1}) equals the index of the following item #{2} (enforcing uniqueness)",
+                            i - 1, lastTs, i, segInd);
+                    lastTs = newTs;
+                }
+
+                yield return buffer;
+
+                if (isEmptyFile)
+                    _firstIndex = firstBufferTs;
+                _lastIndex = lastTs;
+                isEmptyFile = false;
+                isFirstSeg = false;
+                segInd++;
             }
-
-            PerformFileAccess(Count, buffer, true);
-
-            if (isEmptyFile)
-                _firstIndex = firstBufferTs;
-            _lastIndex = lastTs;
         }
 
         /// <summary>
