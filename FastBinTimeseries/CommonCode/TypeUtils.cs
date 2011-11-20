@@ -24,20 +24,19 @@ namespace NYurik.FastBinTimeseries.CommonCode
         {
             // If we were unable to resolve type object - possibly because of the version change
             // Try to load using just the assembly name, without any version/culture/public key info
-            ResolveEventHandler assemblyResolve = OnAssemblyResolve;
-
-            try
-            {
-                // Attach our custom assembly name resolver, attempt to resolve again, and detach it
-                AppDomain.CurrentDomain.AssemblyResolve += assemblyResolve;
-                _isGetTypeRunningOnThisThread = true;
-                return Type.GetType(typeName);
-            }
-            finally
-            {
-                _isGetTypeRunningOnThisThread = false;
-                AppDomain.CurrentDomain.AssemblyResolve -= assemblyResolve;
-            }
+            return Type.GetType(typeName,
+                                an =>
+                                    {
+                                        try
+                                        {
+                                            return Assembly.Load(new AssemblyName(an.FullName).Name);
+                                        }
+                                        catch
+                                        {
+                                            return null;
+                                        }
+                                    },
+                                null);
         }
 
         /// <summary>
@@ -70,27 +69,5 @@ namespace NYurik.FastBinTimeseries.CommonCode
             return Array.ConvertAll(
                 type.GetCustomAttributes(typeof (TAttribute), inherit), i => (TAttribute) i);
         }
-
-        #region Helper methods
-
-        [ThreadStatic] private static bool _isGetTypeRunningOnThisThread;
-
-        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            Assembly assembly = null;
-
-            // Only process events from the thread that started it, not any other thread
-            if (_isGetTypeRunningOnThisThread)
-            {
-                // Extract assembly name, and checking it's the same as args.Name to prevent an infinite loop
-                var an = new AssemblyName(args.Name);
-                if (an.Name != args.Name)
-                    assembly = ((AppDomain) sender).Load(an.Name);
-            }
-
-            return assembly;
-        }
-
-        #endregion
     }
 }

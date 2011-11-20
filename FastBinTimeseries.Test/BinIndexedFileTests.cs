@@ -286,6 +286,7 @@ namespace NYurik.FastBinTimeseries.Test
             EmptyFile<_LongByte_SeqPk1>(9);
             EmptyFile<_BoolLongBool_SeqPk1>(10);
             EmptyFile<_ByteLongByte_SeqPk1>(10);
+            EmptyFile<_FixedByteBuff3>(3);
         }
 
         [Test]
@@ -301,6 +302,7 @@ namespace NYurik.FastBinTimeseries.Test
             FileIncrementalAddition(_LongByte_SeqPk1.New);
             FileIncrementalAddition(_BoolLongBool_SeqPk1.New);
             FileIncrementalAddition(_ByteLongByte_SeqPk1.New);
+            FileIncrementalAddition(_FixedByteBuff3.New);
         }
 
         [Test]
@@ -317,6 +319,7 @@ namespace NYurik.FastBinTimeseries.Test
             PageBorderOperations(_LongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
             PageBorderOperations(_BoolLongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
             PageBorderOperations(_ByteLongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations(_FixedByteBuff3.New, enableMemoryMappedAccess, EnableLongerTests);
         }
 
         [Test]
@@ -332,6 +335,7 @@ namespace NYurik.FastBinTimeseries.Test
             PrintSize<_LongByte_SeqPk1>(sizeof (_LongByte_SeqPk1));
             PrintSize<_BoolLongBool_SeqPk1>(sizeof (_BoolLongBool_SeqPk1));
             PrintSize<_ByteLongByte_SeqPk1>(sizeof (_ByteLongByte_SeqPk1));
+            PrintSize<_FixedByteBuff3>(sizeof (_FixedByteBuff3));
         }
     }
 }

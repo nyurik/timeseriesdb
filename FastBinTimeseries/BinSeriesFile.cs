@@ -359,11 +359,12 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Add new items at the end of the existing file
         /// </summary>
-        public void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false, object allowFileTruncations)
+        public void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
         {
             if (bufferStream == null)
                 throw new ArgumentNullException("bufferStream");
-            PerformWriteStreaming(ProcessWriteStream(bufferStream, allowFileTruncations))
+            foreach (var seg in ProcessWriteStream(bufferStream, allowFileTruncation))
+                PerformFileAccess(Count, seg, true);
         }
 
         /// <summary>

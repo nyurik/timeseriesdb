@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
@@ -9,6 +10,7 @@ namespace NYurik.FastBinTimeseries
     {
         private const int MinReqSizeToUseMapView = 4*1024; // 4 KB
 
+        private readonly ThreadLocal<T[]> _streamBuffer = new ThreadLocal<T[]>();
         private IBinSerializer<T> _serializer;
 
         /// <summary>
@@ -327,7 +329,19 @@ namespace NYurik.FastBinTimeseries
             }
 
             bool autogrow = bufferSize == 0;
-            var buffer = new T[autogrow ? 16*MinPageSize/ItemSize : bufferSize];
+
+            T[] buffer;
+            int initBufSize = autogrow ? 16*MinPageSize/ItemSize : bufferSize;
+
+            if (!_streamBuffer.IsValueCreated)
+                _streamBuffer.Value = buffer = new T[initBufSize];
+            else
+            {
+                buffer = _streamBuffer.Value;
+                if (buffer.Length < initBufSize)
+                    _streamBuffer.Value = buffer = new T[initBufSize];
+            }
+
             int iterations = 0;
 
             while (true)
@@ -339,8 +353,11 @@ namespace NYurik.FastBinTimeseries
 
                 if (autogrow && iterations++ > 10)
                 {
-                    // switch to larger blocks
-                    buffer = new T[Math.Min(MaxLargePageSize/ItemSize, itemsLeft)];
+                    if (itemsLeft > buffer.Length)
+                    {
+                        // switch to larger blocks
+                        _streamBuffer.Value = buffer = new T[Math.Min(MaxLargePageSize/ItemSize, itemsLeft)];
+                    }
                     autogrow = false;
                 }
 

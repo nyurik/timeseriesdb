@@ -416,4 +416,68 @@ namespace NYurik.FastBinTimeseries.Test
 
         #endregion
     }
+
+//    /// Uncommenting this struct makes the _FixedByteBuff3 test fail if file was created without _FixedByteBuff4 present
+//    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+//    public struct _FixedByteBuff4
+//    {
+//        private const int ArrayLen = 4;
+//        public unsafe fixed byte a [ArrayLen];
+//    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct _FixedByteBuff3 : IEquatable<_FixedByteBuff3>
+    {
+        private const int ArrayLen = 3;
+        public unsafe fixed byte a [ArrayLen];
+
+        #region Implementation
+
+        public override unsafe string ToString()
+        {
+            fixed (byte* pa = a)
+                return string.Format("{0}{1}{2}", pa[0], pa[1], pa[2]);
+        }
+
+        public unsafe bool Equals(_FixedByteBuff3 other)
+        {
+            fixed (byte* pa = a)
+                for (int i = 0; i < ArrayLen; i++)
+                    if (pa[i] != other.a[i])
+                        return false;
+            return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (obj.GetType() != typeof (_FixedByteBuff3)) return false;
+            return Equals((_FixedByteBuff3) obj);
+        }
+
+        public override unsafe int GetHashCode()
+        {
+            unchecked
+            {
+                fixed (byte* pa = a)
+                {
+                    int result = pa[0].GetHashCode();
+                    result = (result*397) ^ pa[1].GetHashCode();
+                    result = (result*397) ^ pa[2].GetHashCode();
+                    return result;
+                }
+            }
+        }
+
+        public static unsafe _FixedByteBuff3 New(long i)
+        {
+            var v = new _FixedByteBuff3();
+            v.a[0] = (byte) i;
+            v.a[1] = (byte) (i + 1);
+            v.a[2] = (byte) (i + 2);
+            return v;
+        }
+
+        #endregion
+    }
 }

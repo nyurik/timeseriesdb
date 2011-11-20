@@ -40,9 +40,9 @@ namespace NYurik.FastBinTimeseries
         /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
         /// </summary>
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
-        /// <param name="indexFieldInfo">Field containing the UtcDateTime timestamp, or null to get default</param>
-        public BinTimeseriesFile(string fileName, FieldInfo indexFieldInfo = null)
-            : base(fileName, indexFieldInfo)
+        /// <param name="timestampFieldInfo">Field containing the UtcDateTime timestamp, or null to get default</param>
+        public BinTimeseriesFile(string fileName, FieldInfo timestampFieldInfo = null)
+            : base(fileName, timestampFieldInfo)
         {
         }
 
@@ -58,7 +58,6 @@ namespace NYurik.FastBinTimeseries
         {
             get { return FirstFileIndex; }
         }
-
 
         public UtcDateTime? LastFileTS
         {
