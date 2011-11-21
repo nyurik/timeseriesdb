@@ -6,6 +6,27 @@ namespace NYurik.FastBinTimeseries
 {
     public static class EnumerableFeedExtensions
     {
+//        [Obsolete("Use Stream<TInd, TVal>() instead")]
+//        public static IEnumerable<T> Stream<T>(this IEnumerableFeed<T> feed, UtcDateTime from, UtcDateTime? until = null,
+//                                               bool inReverse = false, int bufferSize = 0)
+//        {
+//            return ((IEnumerableFeed<UtcDateTime, T>) feed).Stream(from, until, inReverse, bufferSize);
+//        }
+
+        [Obsolete("Use Stream<TInd, TVal>() instead")]
+        public static IEnumerable<T> Stream<T>(Func<IEnumerableFeed<T>> feedFactory,
+                                               UtcDateTime from, UtcDateTime? until = null,
+                                               bool inReverse = false, int bufferSize = 0,
+                                               Action<IEnumerableFeed<T>> onDispose = null)
+        {
+            return Stream(
+                () => (IEnumerableFeed<UtcDateTime, T>) feedFactory(),
+                from, until, inReverse, bufferSize,
+                onDispose != null
+                    ? f => onDispose((IEnumerableFeed<T>) f)
+                    : (Action<IEnumerableFeed<UtcDateTime, T>>) null);
+        }
+
         public static IEnumerable<TVal> Stream<TInd, TVal>(
             this IEnumerableFeed<TInd, TVal> feed,
             TInd from, TInd? until = null, bool inReverse = false, int bufferSize = 0)
@@ -43,6 +64,20 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+//        [Obsolete("Use StreamSegments<TInd, TVal>() instead")]
+//        public static IEnumerable<ArraySegment<TVal>> StreamSegments<TVal>(
+//            this IEnumerableFeed<TVal> feed,
+//            UtcDateTime from, UtcDateTime? until = null, bool inReverse = false, int bufferSize = 0)
+//        {
+//            if (feed == null)
+//                throw new ArgumentNullException("feed");
+//
+//            return until == null
+//                       ? feed.StreamSegments(from, inReverse, bufferSize)
+//                       : StreamSegmentsUntil(
+//                           (IEnumerableFeed<UtcDateTime, TVal>) feed, from, until.Value, inReverse, bufferSize);
+//        }
+//
         public static IEnumerable<ArraySegment<TVal>> StreamSegments<TInd, TVal>(
             this IEnumerableFeed<TInd, TVal> feed,
             TInd from, TInd? until = null, bool inReverse = false, int bufferSize = 0)

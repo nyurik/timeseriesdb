@@ -63,15 +63,17 @@ namespace NYurik.FastBinTimeseries
             get { return typeof (T); }
         }
 
+        [Obsolete("Use streaming methods instead")]
         Array IStoredSeries.GenericReadData(long firstItemIdx, int count)
         {
-            if (firstItemIdx < 0 || firstItemIdx > Count)
+            long fileCount = Count;
+            if (firstItemIdx < 0 || firstItemIdx > fileCount)
                 throw new ArgumentOutOfRangeException(
-                    "firstItemIdx", firstItemIdx, string.Format("Accepted range [0:{0}]", Count));
+                    "firstItemIdx", firstItemIdx, string.Format("Accepted range [0:{0}]", fileCount));
             if (count < 0)
                 throw new ArgumentOutOfRangeException("count", count, "Must be non-negative");
 
-            var result = new T[(int) Math.Min(Count - firstItemIdx, count)];
+            var result = new T[(int) Math.Min(fileCount - firstItemIdx, count)];
 
             PerformFileAccess(firstItemIdx, new ArraySegment<T>(result), false);
 
@@ -86,6 +88,7 @@ namespace NYurik.FastBinTimeseries
             _serializer = (IBinSerializer<T>) nonGenericSerializer;
         }
 
+        [Obsolete("Use streaming methods instead")]
         protected int PerformFileAccess(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             ThrowOnNotInitialized();
@@ -109,7 +112,7 @@ namespace NYurik.FastBinTimeseries
                 && ((isWriting && EnableMemMappedAccessOnWrite) || (!isWriting && EnableMemMappedAccessOnRead))
                 && ItemIdxToOffset(buffer.Count) > MinReqSizeToUseMapView)
             {
-                ret = ProcessMemoryMappedFile(firstItemIdx, buffer, isWriting);
+                ret = ProcessMemoryMappedFile(firstItemIdx, buffer, isWriting, BaseStream.Length);
             }
             else
             {
@@ -210,13 +213,12 @@ namespace NYurik.FastBinTimeseries
             return buffer.Count;
         }
 
-        private int ProcessMemoryMappedFile(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
+        private int ProcessMemoryMappedFile(long firstItemIdx, ArraySegment<T> buffer, bool isWriting, long fileSize)
         {
             SafeMapHandle hMap = null;
             try
             {
                 bool isAligned;
-                long fileSize = BaseStream.Length;
                 long fileCount = CalculateItemCountFromFilePosition(fileSize, out isAligned);
                 if (!isAligned && isWriting)
                     throw new BinaryFileException(
@@ -306,13 +308,21 @@ namespace NYurik.FastBinTimeseries
             if (bufferSize < 0)
                 throw new ArgumentOutOfRangeException("bufferSize", bufferSize, "Must be >= 0");
 
-            long idx;
             bool canSeek = BaseStream.CanSeek;
+            long fileSize = 0, fileCount = long.MaxValue;
+            if (canSeek)
+            {
+                fileSize = BaseStream.Length;
+                bool isAligned;
+                fileCount = CalculateItemCountFromFilePosition(fileSize, out isAligned);
+            }
+
+            long idx;
             if (enumerateInReverse)
             {
                 if (!canSeek)
                     throw new NotSupportedException("Reverse enumeration is not supported when Stream.CanSeek == false");
-                idx = Math.Min(firstItemIdx, Count - 1);
+                idx = Math.Min(firstItemIdx, fileCount - 1);
                 if (idx < 0)
                     yield break;
             }
@@ -324,7 +334,7 @@ namespace NYurik.FastBinTimeseries
                         "Must be 0 when the base stream is not seekable");
 
                 idx = Math.Max(firstItemIdx, 0);
-                if (canSeek && idx >= Count)
+                if (canSeek && idx >= fileCount)
                     yield break;
             }
 
@@ -343,10 +353,11 @@ namespace NYurik.FastBinTimeseries
             }
 
             int iterations = 0;
+            bool? useMemMappedAccess = null;
 
             while (true)
             {
-                long itemsLeft = !canSeek ? long.MaxValue : (enumerateInReverse ? idx + 1 : Count - idx);
+                long itemsLeft = !canSeek ? long.MaxValue : (enumerateInReverse ? idx + 1 : fileCount - idx);
 
                 if (itemsLeft <= 0)
                     yield break;
@@ -364,9 +375,15 @@ namespace NYurik.FastBinTimeseries
                 var readSize = (int) Math.Min(itemsLeft, buffer.Length);
                 var block = new ArraySegment<T>(buffer, 0, readSize);
 
+                long readBlockFrom = enumerateInReverse ? idx - readSize + 1 : idx;
+
+                if (useMemMappedAccess == null)
+                    useMemMappedAccess = UseMemoryMappedAccess(block.Count, false);
+
+                int read = PerformUnsafeBlockAccess(readBlockFrom, false, block, fileSize, useMemMappedAccess.Value);
+
                 if (enumerateInReverse)
                 {
-                    int read = PerformFileAccess(idx - readSize + 1, block, false);
                     if (read != block.Count)
                         throw new SerializerException(
                             "Unexpected number of items read during reverse traversal. {0} was expected, {1} returned",
@@ -377,7 +394,6 @@ namespace NYurik.FastBinTimeseries
                 }
                 else
                 {
-                    int read = PerformFileAccess(idx, block, false);
                     if (read == 0)
                         yield break;
 
@@ -387,6 +403,66 @@ namespace NYurik.FastBinTimeseries
                         idx += readSize;
                 }
             }
+        }
+
+        protected int PerformUnsafeBlockAccess(long firstItemIdx, bool isWriting, ArraySegment<T> buffer, long fileSize,
+                                             bool useMemMappedAccess)
+        {
+            return useMemMappedAccess
+                       ? ProcessMemoryMappedFile(firstItemIdx, buffer, isWriting, fileSize)
+                       : ProcessStream(firstItemIdx, buffer, isWriting);
+        }
+
+        /// Return true if it is recomended to use memory mapped access for blocks of the given size
+        protected bool UseMemoryMappedAccess(int blockSize, bool isWriting)
+        {
+            return IsFileStream
+                   && EnableMemMappedAccessOnRead
+                   && ItemIdxToOffset(blockSize) > MinReqSizeToUseMapView;
+        }
+
+        /// <summary>
+        /// Write segment stream to internal stream, optionally truncating the file so that <paramref name="firstItemIdx"/> would be the first written item.
+        /// </summary>
+        /// <param name="stream">The stream of array segments to write</param>
+        /// <param name="firstItemIdx">The index of the first element in the stream. The file will be truncated if the value is less than or equal to Count</param>
+        protected void PerformWriteStreaming(IEnumerable<ArraySegment<T>> stream, long firstItemIdx = long.MaxValue)
+        {
+            ThrowOnNotInitialized();
+            if (firstItemIdx < long.MaxValue)
+                PerformTruncateFile(firstItemIdx);
+
+            bool canSeek = BaseStream.CanSeek;
+            long fileSize = 0, itemIdx = 0;
+            if (canSeek)
+            {
+                fileSize = BaseStream.Length;
+                bool isAligned;
+                itemIdx = CalculateItemCountFromFilePosition(fileSize, out isAligned);
+            }
+
+            bool? useMemMappedAccess = null;
+
+            // Have to call Count on every access 
+            foreach (var seg in stream)
+            {
+                if (seg.Count == 0)
+                    continue;
+
+                if (useMemMappedAccess == null)
+                    useMemMappedAccess = UseMemoryMappedAccess(seg.Count, true);
+
+                int read = PerformUnsafeBlockAccess(itemIdx, true, seg, fileSize, useMemMappedAccess.Value);
+
+                if (canSeek)
+                {
+                    itemIdx += read;
+                    fileSize += read*ItemSize;
+                }
+            }
+
+            if (useMemMappedAccess == false)
+                BaseStream.Flush();
         }
     }
 }

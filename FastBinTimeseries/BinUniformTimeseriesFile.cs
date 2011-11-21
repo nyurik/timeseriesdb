@@ -122,11 +122,13 @@ namespace NYurik.FastBinTimeseries
             return (int) len;
         }
 
+        [Obsolete("Use streaming methods instead")]
         Array IStoredUniformTimeseries.GenericReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive)
         {
             return ReadData(fromInclusive, toExclusive);
         }
 
+        [Obsolete("Use streaming methods instead")]
         Array IStoredUniformTimeseries.GenericReadData(UtcDateTime fromInclusive, int count)
         {
             long firstItemIdx = this.IndexToLong(fromInclusive);
@@ -138,6 +140,7 @@ namespace NYurik.FastBinTimeseries
             return buffer.Array;
         }
 
+        [Obsolete("Use streaming methods instead")]
         void IBinUniformTimeseriesFile.GenericWriteData(UtcDateTime firstItemIndex, Array buffer, int offset, int count)
         {
             WriteData(firstItemIndex, new ArraySegment<T>((T[]) buffer, offset, count));
@@ -150,11 +153,14 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
+        // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
         private static readonly Version Version11 = new Version(1, 1);
+        // ReSharper restore StaticFieldInGenericType
 
         #region IBinaryFile<T> Members
 
+        [Obsolete("Use streaming methods instead")]
         public void ReadData(long firstItemIdx, ArraySegment<T> buffer)
         {
             PerformFileAccess(firstItemIdx, buffer, false);
@@ -179,6 +185,7 @@ namespace NYurik.FastBinTimeseries
         /// Read data starting at <paramref name="fromInclusive"/>, up to, but not including <paramref name="toExclusive"/>.
         /// </summary>
         /// <returns>The total number of items read.</returns>
+        [Obsolete("Use streaming methods instead")]
         public int ReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive, ArraySegment<T> buffer)
         {
             if (buffer.Array == null)
@@ -193,6 +200,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Read data starting at <paramref name="fromInclusive"/>, up to, but not including <paramref name="toExclusive"/>.
         /// </summary>
+        [Obsolete("Use streaming methods instead")]
         public T[] ReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive)
         {
             Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
@@ -208,6 +216,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="firstItemIndex">The index of the first value in the <paramref name="buffer"/> array.</param>
         /// <param name="buffer">Array of values to be written into a file.</param>
+        [Obsolete("Use streaming methods instead")]
         public void WriteData(UtcDateTime firstItemIndex, ArraySegment<T> buffer)
         {
             if (buffer.Array == null)

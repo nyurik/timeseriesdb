@@ -39,6 +39,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="firstItemIndex">Index of the item to start from.</param>
         /// <param name="buffer">Array of values to be written into a file.</param>
+        [Obsolete("Use streaming methods instead")]
         public void ReadData(long firstItemIndex, ArraySegment<T> buffer)
         {
             PerformFileAccess(firstItemIndex, buffer, false);
@@ -49,6 +50,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="firstItemIndex">The index of the first value in the <paramref name="buffer"/> array.</param>
         /// <param name="buffer">Array of values to be written into a file.</param>
+        [Obsolete("Use streaming methods instead")]
         public void WriteData(long firstItemIndex, ArraySegment<T> buffer)
         {
             PerformFileAccess(firstItemIndex, buffer, true);
@@ -63,6 +65,16 @@ namespace NYurik.FastBinTimeseries
         public IEnumerable<ArraySegment<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse, int bufferSize)
         {
             return PerformStreaming(firstItemIdx, enumerateInReverse, bufferSize);
+        }
+
+        /// <summary>
+        /// Write segment stream to internal stream, optionally truncating the file so that <paramref name="firstItemIdx"/> would be the first written item.
+        /// </summary>
+        /// <param name="stream">The stream of array segments to write</param>
+        /// <param name="firstItemIdx">The index of the first element in the stream. The file will be truncated if the value is less than or equal to Count</param>
+        public void WriteStream(IEnumerable<ArraySegment<T>> stream, long firstItemIdx = long.MaxValue)
+        {
+            PerformWriteStreaming(stream, firstItemIdx);
         }
 
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)

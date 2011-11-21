@@ -708,21 +708,23 @@ namespace NYurik.FastBinTimeseries
         protected void PerformTruncateFile(long newCount)
         {
             ThrowOnNotInitialized();
-            if (newCount < 0 || newCount > Count)
+            long fileCount = Count;
+            if (newCount < 0 || newCount > fileCount)
                 throw new ArgumentOutOfRangeException("newCount", newCount, "Must be >= 0 and <= Count");
 
             // Optimize empty requests
-            if (Count == newCount)
+            if (fileCount == newCount)
                 return;
 
             BaseStream.SetLength(ItemIdxToOffset(newCount));
             BaseStream.Flush();
 
             // Just in case, hope this will never happen
-            if (newCount != Count)
+            fileCount = Count;
+            if (newCount != fileCount)
                 throw new BinaryFileException(
                     "Internal error: the new file should have had {0} items, but was calculated to have {1}",
-                    newCount, Count);
+                    newCount, fileCount);
         }
 
         public static IBinSerializer<T> GetDefaultSerializer<T>()

@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using JetBrains.Annotations;
 using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
+using System.Linq;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -124,9 +125,9 @@ namespace NYurik.FastBinTimeseries
 
                 if (_firstIndex == null && count > 0)
                 {
-                    var oneElementBuff = new TVal[1];
-                    PerformFileAccess(0, new ArraySegment<TVal>(oneElementBuff), false);
-                    _firstIndex = IndexAccessor(oneElementBuff[0]);
+                    var seg = PerformStreaming(0, false, 1).FirstOrDefault();
+                    if (seg.Array != null && seg.Count > 0)
+                        _firstIndex = IndexAccessor(seg.Array[seg.Offset]);
                 }
                 return _firstIndex;
             }
@@ -141,9 +142,9 @@ namespace NYurik.FastBinTimeseries
 
                 if (_lastIndex == null && count > 0)
                 {
-                    var oneElementBuff = new TVal[1];
-                    PerformFileAccess(count - 1, new ArraySegment<TVal>(oneElementBuff), false);
-                    _lastIndex = IndexAccessor(oneElementBuff[0]);
+                    var seg = PerformStreaming(count - 1, false, 1).FirstOrDefault();
+                    if (seg.Array != null && seg.Count > 0)
+                        _lastIndex = IndexAccessor(seg.Array[seg.Offset]);
                 }
                 return _lastIndex;
             }
@@ -177,6 +178,7 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
+        [Obsolete("Use streaming methods instead")]
         public void ReadData(long firstItemIdx, ArraySegment<TVal> buffer)
         {
             PerformFileAccess(firstItemIdx, buffer, false);
@@ -219,6 +221,8 @@ namespace NYurik.FastBinTimeseries
                     cache.Clear();
             }
 
+            var useMma = UseMemoryMappedAccess(1, false);
+
             while (start <= end)
             {
                 long mid = start + ((end - start) >> 1);
@@ -235,7 +239,9 @@ namespace NYurik.FastBinTimeseries
                         || !cache.TryGetValue(mid, out timeAtMid)
                         || !cache.TryGetValue(mid + 1, out timeAtMid2))
                     {
-                        PerformFileAccess(mid, new ArraySegment<TVal>(buff), false);
+                        if (PerformUnsafeBlockAccess(mid, false, new ArraySegment<TVal>(buff), count * ItemSize, useMma) < 2)
+                            throw new BinaryFileException("Unable to read two blocks");
+
                         timeAtMid = IndexAccessor(buff[0]);
                         timeAtMid2 = IndexAccessor(buff[1]);
                         if (cache != null)
@@ -249,8 +255,9 @@ namespace NYurik.FastBinTimeseries
                 {
                     if (cache == null || !cache.TryGetValue(mid, out timeAtMid))
                     {
-                        PerformFileAccess(mid, oneElementSegment, false);
-                        timeAtMid = IndexAccessor(buff[0]);
+                        if (PerformUnsafeBlockAccess(mid, false, oneElementSegment, count * ItemSize, useMma) < 1)
+                            throw new BinaryFileException("Unable to read index block");
+                        timeAtMid = IndexAccessor(oneElementSegment.Array[0]);
                         if (cache != null)
                             cache.TryAdd(mid, timeAtMid);
                     }
@@ -302,13 +309,14 @@ namespace NYurik.FastBinTimeseries
 
         public void TruncateFile(long newCount)
         {
-            if (newCount == Count)
+            long fileCount = Count;
+            if (newCount == fileCount)
                 return;
 
             PerformTruncateFile(newCount);
 
             // Invalidate index
-            if (Count == 0)
+            if (newCount == 0)
                 _firstIndex = null;
             _lastIndex = null;
         }
@@ -363,8 +371,8 @@ namespace NYurik.FastBinTimeseries
         {
             if (bufferStream == null)
                 throw new ArgumentNullException("bufferStream");
-            foreach (var seg in ProcessWriteStream(bufferStream, allowFileTruncation))
-                PerformFileAccess(Count, seg, true);
+
+            PerformWriteStreaming(ProcessWriteStream(bufferStream, allowFileTruncation));
         }
 
         /// <summary>
@@ -438,6 +446,7 @@ namespace NYurik.FastBinTimeseries
         /// No more than buffer.Count items will be read.
         /// </summary>
         /// <returns>The total number of items read.</returns>
+        [Obsolete("Use streaming methods instead")]
         public int ReadData(TInd fromInclusive, TInd toExclusive, ArraySegment<TVal> buffer)
         {
             if (buffer.Array == null)
@@ -457,6 +466,7 @@ namespace NYurik.FastBinTimeseries
         /// but not including <paramref name="toExclusive"/>.
         /// </summary>
         /// <returns>An array of items no bigger than <paramref name="maxItemsToRead"/></returns>
+        [Obsolete("Use streaming methods instead")]
         public TVal[] ReadData(TInd fromInclusive, TInd toExclusive, int maxItemsToRead)
         {
             if (maxItemsToRead < 0)
@@ -473,6 +483,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Read all available data begining at a given index
         /// </summary>
+        [Obsolete("Use streaming methods instead")]
         public TVal[] ReadDataToEnd(TInd fromInclusive)
         {
             long firstItemIdx = FirstIndexToPos(fromInclusive);
@@ -482,6 +493,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Read all available data begining at a given index
         /// </summary>
+        [Obsolete("Use streaming methods instead")]
         public TVal[] ReadDataToEnd(long firstItemIdx)
         {
             int reqSize = (Count - firstItemIdx).ToIntCountChecked();
