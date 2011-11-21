@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using NYurik.FastBinTimeseries.CommonCode;
 
 // ReSharper disable InconsistentNaming
@@ -417,7 +418,7 @@ namespace NYurik.FastBinTimeseries.Test
         #endregion
     }
 
-//    /// Uncommenting this struct makes the _FixedByteBuff3 test fail if file was created without _FixedByteBuff4 present
+//    /// Uncommenting this struct makes the _FixedByteBuff7 test fail if file was created without _FixedByteBuff4 present
 //    [StructLayout(LayoutKind.Sequential, Pack = 1)]
 //    public struct _FixedByteBuff4
 //    {
@@ -426,24 +427,38 @@ namespace NYurik.FastBinTimeseries.Test
 //    }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct _FixedByteBuff3 : IEquatable<_FixedByteBuff3>
+    public struct _FixedByteBuff7 : IEquatable<_FixedByteBuff7>
     {
-        private const int ArrayLen = 3;
-        public unsafe fixed byte a [ArrayLen];
+        private const int ArrayLenA = 3;
+        private const int ArrayLenB = 4;
+        public unsafe fixed byte a [ArrayLenA];
+        private unsafe fixed byte b [ArrayLenB];
 
         #region Implementation
 
         public override unsafe string ToString()
         {
+            var sb = new StringBuilder();
             fixed (byte* pa = a)
-                return string.Format("{0}{1}{2}", pa[0], pa[1], pa[2]);
+                for (int i = 0; i < ArrayLenA; i++)
+                    sb.AppendFormat("{0},", pa[i]);
+            fixed (byte* pb = b)
+                for (int i = 0; i < ArrayLenB; i++)
+                    sb.AppendFormat("{0},", pb[i]);
+
+            sb.Remove(sb.Length - 1, 1);
+            return sb.ToString();
         }
 
-        public unsafe bool Equals(_FixedByteBuff3 other)
+        public unsafe bool Equals(_FixedByteBuff7 other)
         {
             fixed (byte* pa = a)
-                for (int i = 0; i < ArrayLen; i++)
+                for (int i = 0; i < ArrayLenA; i++)
                     if (pa[i] != other.a[i])
+                        return false;
+            fixed (byte* pb = b)
+                for (int i = 0; i < ArrayLenB; i++)
+                    if (pb[i] != other.b[i])
                         return false;
             return true;
         }
@@ -451,30 +466,33 @@ namespace NYurik.FastBinTimeseries.Test
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
-            if (obj.GetType() != typeof (_FixedByteBuff3)) return false;
-            return Equals((_FixedByteBuff3) obj);
+            if (obj.GetType() != typeof (_FixedByteBuff7)) return false;
+            return Equals((_FixedByteBuff7) obj);
         }
 
         public override unsafe int GetHashCode()
         {
             unchecked
             {
-                fixed (byte* pa = a)
+                fixed (byte* pa = a, pb = b)
                 {
-                    int result = pa[0].GetHashCode();
-                    result = (result*397) ^ pa[1].GetHashCode();
-                    result = (result*397) ^ pa[2].GetHashCode();
+                    int result = 0;
+                    for (int i = 0; i < ArrayLenA; i++)
+                        result = (result*397) ^ pa[i].GetHashCode();
+                    for (int i = 0; i < ArrayLenB; i++)
+                        result = (result*397) ^ pb[i].GetHashCode();
                     return result;
                 }
             }
         }
 
-        public static unsafe _FixedByteBuff3 New(long i)
+        public static unsafe _FixedByteBuff7 New(long j)
         {
-            var v = new _FixedByteBuff3();
-            v.a[0] = (byte) i;
-            v.a[1] = (byte) (i + 1);
-            v.a[2] = (byte) (i + 2);
+            var v = new _FixedByteBuff7();
+            for (int i = 0; i < ArrayLenA; i++)
+                v.a[i] = (byte) j++;
+            for (int i = 0; i < ArrayLenB; i++)
+                v.b[i] = (byte) j++;
             return v;
         }
 
