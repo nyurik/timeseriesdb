@@ -105,7 +105,10 @@ namespace NYurik.FastBinTimeseries
                 foreach (TypeExtensions.TypeInfo s in sig)
                 {
                     writer.Write(s.Level);
-                    writer.WriteType(s.Type);
+                    if (s.Type == null)
+                        writer.Write("!" + s.FixedBufferSize);
+                    else
+                        writer.WriteType(s.Type);
                 }
             }
 
@@ -132,7 +135,17 @@ namespace NYurik.FastBinTimeseries
                 var fileSig = new TypeExtensions.TypeInfo[fileSigCount];
                 for (int i = 0; i < fileSigCount; i++)
                 {
-                    fileSig[i] = new TypeExtensions.TypeInfo(reader.ReadInt32(), reader.ReadType(typeMap));
+                    var level = reader.ReadInt32();
+
+                    string typeName;
+                    bool typeRemapped;
+                    int fixedBufferSize;
+                    var type = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
+
+                    fileSig[i] =
+                        type != null
+                            ? new TypeExtensions.TypeInfo(level, type)
+                            : new TypeExtensions.TypeInfo(level, fixedBufferSize);
                 }
 
                 if (typeMap == null)

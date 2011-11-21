@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
+using JetBrains.Annotations;
+using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers;
 
@@ -166,7 +170,8 @@ namespace NYurik.FastBinTimeseries
         {
             string typeName;
             bool typeRemapped;
-            Type type = ReadType(reader, typeMap, out typeName, out typeRemapped);
+            int fixedBufferSize;
+            Type type = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
 
             var instance = Activator.CreateInstance(type, nonPublic) as T;
             if (instance == null)
@@ -177,14 +182,22 @@ namespace NYurik.FastBinTimeseries
             return instance;
         }
 
-        private static Type ReadType(BinaryReader reader, IDictionary<string, Type> typeMap, out string typeName,
-                                     out bool typeRemapped)
+        public static Type ReadType(this BinaryReader reader, IDictionary<string, Type> typeMap, out string typeName,
+                                     out bool typeRemapped, out int fixedBufferSize)
         {
             if (reader == null) throw new ArgumentNullException("reader");
-
-            Type type;
-
             typeName = reader.ReadString();
+            
+            typeRemapped = false;
+            if(typeName.StartsWith("!"))
+            {
+                // Special case - possibly storing the size of the fixed buffer as an integer
+                if (int.TryParse(typeName.Substring(1), NumberStyles.None, null, out fixedBufferSize))
+                    return null;
+            }
+
+            fixedBufferSize = -1;
+            Type type;
             if (typeMap != null && typeMap.TryGetValue(typeName, out type))
                 typeRemapped = true;
             else
@@ -196,7 +209,7 @@ namespace NYurik.FastBinTimeseries
                         int startIndex = 0;
                         while (true)
                         {
-                            int pos = typeName.IndexOf(tm.Key, startIndex);
+                            int pos = typeName.IndexOf(tm.Key, startIndex, StringComparison.Ordinal);
                             if (pos < 0)
                                 break;
                             if (pos == 0 || typeName[pos - 1] == ' ' || typeName[pos - 1] == '['
@@ -204,7 +217,7 @@ namespace NYurik.FastBinTimeseries
                             {
                                 startIndex = pos + tm.Key.Length;
                                 typeName = typeName.Substring(0, pos) + tm.Value.AssemblyQualifiedName
-                                           + typeName.Substring(startIndex);
+                                                    + typeName.Substring(startIndex);
                             }
                             else
                                 startIndex = pos + 1;
@@ -212,26 +225,26 @@ namespace NYurik.FastBinTimeseries
                     }
                 }
                 type = TypeUtils.GetTypeFromAnyAssemblyVersion(typeName);
-                typeRemapped = false;
             }
 
             if (type == null)
+            {
+                // This file could have been created before FixedBuffer support, so check the type name if it looks like this:
+                // NYurik.FastBinTimeseries.Test._FixedByteBuff3+<a>e__FixedBuffer0, NYurik.FastBinTimeseries.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+                if (Regex.IsMatch(typeName, @"\+\<.*\>e__FixedBuffer[0-9]+"))
+                    return null;
+
                 throw new InvalidOperationException("Unable to find type " + typeName);
+            }
 
             return type;
         }
 
-        public static Type ReadType(this BinaryReader reader, IDictionary<string, Type> typeMap)
-        {
-            string typeName;
-            bool typeRemapped;
-            return ReadType(reader, typeMap, out typeName, out typeRemapped);
-        }
-
-        public static void WriteType(this BinaryWriter writer, Type type)
+        public static void WriteType(this BinaryWriter writer, [NotNull] Type type)
         {
             if (writer == null) throw new ArgumentNullException("writer");
             if (type == null) throw new ArgumentNullException("type");
+
             string aqn = type.AssemblyQualifiedName;
             if (aqn == null) throw new ArgumentOutOfRangeException("type", type, "AssemblyQualifiedName is null");
             writer.Write(aqn);

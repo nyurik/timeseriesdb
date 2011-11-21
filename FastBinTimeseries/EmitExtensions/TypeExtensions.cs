@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace NYurik.EmitExtensions
 {
@@ -147,26 +149,34 @@ namespace NYurik.EmitExtensions
             return type;
         }
 
-        public static List<TypeInfo> GenerateTypeSignature(this Type subItemType)
+        public static List<TypeInfo> GenerateTypeSignature(this Type itemType)
         {
             var result = new List<TypeInfo>();
-            GenerateTypeSignature(subItemType, result, 0);
+            GenerateTypeSignature(null, itemType, result, 0);
             return result;
         }
 
-        private static void GenerateTypeSignature(Type subItemType, ICollection<TypeInfo> result, int level)
+        private static void GenerateTypeSignature(FieldInfo fieldInfo, Type itemType, ICollection<TypeInfo> result, int level)
         {
-            result.Add(new TypeInfo(level, subItemType));
+            TypeInfo? ti = null;
+            if (itemType.IsNested && fieldInfo != null)
+            {
+                var ca = fieldInfo.GetCustomAttributes(typeof (FixedBufferAttribute), false);
+                if (ca.Length > 0)
+                    ti = new TypeInfo(level, ((FixedBufferAttribute) ca[0]).Length);
+            }
 
-            FieldInfo[] fields = subItemType.GetFields(AllInstanceMembers);
-            if (fields.Length == 1 && fields[0].FieldType == subItemType)
+            result.Add(ti ?? new TypeInfo(level, itemType));
+
+            FieldInfo[] fields = itemType.GetFields(AllInstanceMembers);
+            if (fields.Length == 1 && fields[0].FieldType == itemType)
                 return;
 
             foreach (FieldInfo fi in fields)
             {
-                if (fi.FieldType == subItemType)
-                    throw new InvalidOperationException("More than one field refers back to " + subItemType.FullName);
-                GenerateTypeSignature(fi.FieldType, result, level + 1);
+                if (fi.FieldType == itemType)
+                    throw new InvalidOperationException("More than one field refers back to " + itemType.FullName);
+                GenerateTypeSignature(fi, fi.FieldType, result, level + 1);
             }
         }
 
@@ -174,6 +184,7 @@ namespace NYurik.EmitExtensions
 
         public struct TypeInfo : IEquatable<TypeInfo>
         {
+            public readonly int FixedBufferSize;
             public readonly int Level;
             public readonly Type Type;
 
@@ -181,13 +192,24 @@ namespace NYurik.EmitExtensions
             {
                 Level = level;
                 Type = type;
+                FixedBufferSize = -1;
+            }
+
+            public TypeInfo(int level, int fixedBufferSize)
+            {
+                Level = level;
+                Type = null;
+                FixedBufferSize = fixedBufferSize;
             }
 
             #region IEquatable<TypeInfo> Members
 
             public bool Equals(TypeInfo other)
             {
-                return other.Level == Level && Equals(other.Type, Type);
+                return other.Level == Level
+                       && (other.Type == Type || Type == null || other.Type == null)
+                       &&
+                       (other.FixedBufferSize == FixedBufferSize || FixedBufferSize == -1 || other.FixedBufferSize == -1);
             }
 
             #endregion
@@ -213,13 +235,18 @@ namespace NYurik.EmitExtensions
             {
                 unchecked
                 {
-                    return (Level*397) ^ (Type != null ? Type.GetHashCode() : 0);
+                    int result = Level;
+                    // Do not include Type or FixedBufferSize -- see Equals() method
+                    return result;
                 }
             }
 
             public override string ToString()
             {
-                return string.Format("Type: {0}, Level: {1}", Type, Level);
+                return
+                    Type != null
+                        ? String.Format("Level: {0}, Type: {1}", Level, Type)
+                        : String.Format("Level: {0}, FixedBufferSize: {1}", Level, FixedBufferSize);
             }
         }
 

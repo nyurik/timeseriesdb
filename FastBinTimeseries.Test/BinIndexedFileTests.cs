@@ -276,16 +276,16 @@ namespace NYurik.FastBinTimeseries.Test
         [Test]
         public void EmptyFile()
         {
-//            EmptyFile<byte>(1);
-//            EmptyFile<_3Byte_noAttr>(3);
-//            EmptyFile<_3Byte_2Shrt_ExplPk1>(3);
-//            EmptyFile<_IntBool_SeqPk1>(5);
-//            EmptyFile<_DatetimeByte_SeqPk1>(9);
-//            EmptyFile<_DatetimeBool_SeqPk1>(9);
-//            EmptyFile<_LongBool_SeqPk1>(9);
-//            EmptyFile<_LongByte_SeqPk1>(9);
-//            EmptyFile<_BoolLongBool_SeqPk1>(10);
-//            EmptyFile<_ByteLongByte_SeqPk1>(10);
+            EmptyFile<byte>(1);
+            EmptyFile<_3Byte_noAttr>(3);
+            EmptyFile<_3Byte_2Shrt_ExplPk1>(3);
+            EmptyFile<_IntBool_SeqPk1>(5);
+            EmptyFile<_DatetimeByte_SeqPk1>(9);
+            EmptyFile<_DatetimeBool_SeqPk1>(9);
+            EmptyFile<_LongBool_SeqPk1>(9);
+            EmptyFile<_LongByte_SeqPk1>(9);
+            EmptyFile<_BoolLongBool_SeqPk1>(10);
+            EmptyFile<_ByteLongByte_SeqPk1>(10);
             EmptyFile<_FixedByteBuff7>(7);
         }
 
