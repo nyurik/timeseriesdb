@@ -33,11 +33,11 @@ namespace NYurik.FastBinTimeseries
     //[Obsolete("Use IEnumerableFeed<TInd, TVal> instead")]
     public interface IEnumerableFeed<T> : IEnumerableFeed<UtcDateTime, T>
     {
-        /// <summary>
-        /// Returns function that can extract timestamp from a given value T
-        /// </summary>
-        Func<T, UtcDateTime> TimestampAccessor { get; }
-
+//        /// <summary>
+//        /// Returns function that can extract timestamp from a given value T
+//        /// </summary>
+//        Func<T, UtcDateTime> TimestampAccessor { get; }
+//
 //
 //        /// <summary>
 //        /// Enumerate all items one block at a time using an internal buffer.

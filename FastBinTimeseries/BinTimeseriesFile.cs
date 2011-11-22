@@ -71,14 +71,5 @@ namespace NYurik.FastBinTimeseries
         }
 
         #endregion
-
-        #region IEnumerableFeed<T> Members
-
-        public Func<T, UtcDateTime> TimestampAccessor
-        {
-            get { return IndexAccessor; }
-        }
-
-        #endregion
     }
 }

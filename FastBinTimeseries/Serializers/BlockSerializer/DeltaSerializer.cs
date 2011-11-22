@@ -4,7 +4,7 @@ using System.IO;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    public class DeltaSerializer<T> : Initializable, IBinSerializer<T>
+    public class DeltaSerializer : Initializable, IBinSerializer<DeltaBlock>
     {
         // Always allocate a bit extra memory to avoid array bounds checks
         private const int BytePadding = 10;
@@ -36,7 +36,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
-        #region IBinSerializer<TObject> Members
+        #region IBinSerializer<DeltaBlock> Members
 
         public Version Version
         {
@@ -58,7 +58,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public Type ItemType
         {
-            get { return typeof (T); }
+            get { return typeof (DeltaBlock); }
         }
 
         public bool SupportsMemoryPtrOperations
@@ -100,21 +100,26 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             IsInitialized = true;
         }
 
-        public int ProcessFileStream(FileStream fileStream, ArraySegment<T> buffer, bool isWriting)
+        public int ProcessFileStream(FileStream fileStream, ArraySegment<DeltaBlock> buffer, bool isWriting)
         {
             throw new NotImplementedException();
         }
 
-        public void ProcessMemoryPtr(IntPtr memPointer, ArraySegment<T> buffer, bool isWriting)
+        public void ProcessMemoryPtr(IntPtr memPointer, ArraySegment<DeltaBlock> buffer, bool isWriting)
         {
             throw new NotImplementedException();
         }
 
-        public bool BinaryArrayCompare(ArraySegment<T> buffer1, ArraySegment<T> buffer2)
+        public bool BinaryArrayCompare(ArraySegment<DeltaBlock> buffer1, ArraySegment<DeltaBlock> buffer2)
         {
             throw new NotImplementedException();
         }
 
         #endregion
+    }
+
+    public struct DeltaBlock
+    {
+        public byte[] Buffer;
     }
 }

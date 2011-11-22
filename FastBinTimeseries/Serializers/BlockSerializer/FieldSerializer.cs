@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
+using NYurik.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
@@ -10,6 +12,13 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         public readonly FieldInfo Field;
         public readonly MemberExpression FieldExp;
         public readonly ConstantExpression IndexExp;
+        public static readonly MethodInfo WriteSignedValueMethod;
+
+        static TypeSerializer()
+        {
+            WriteSignedValueMethod = FldSerializerExp.Type.GetMethod(
+                "WriteSignedValue", TypeExtensions.AllInstanceMembers);
+        }
 
         protected TypeSerializer(byte index, FieldInfo field)
         {
@@ -18,12 +27,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             FieldExp = Expression.Field(Expression.Parameter(field.DeclaringType), Field);
         }
 
-        public Expression GetSerializerExpr2()
-        {
-            return GetSerializerExpr();
-        }
-
-        protected abstract Expression GetSerializerExpr();
+        protected internal abstract Tuple<Expression, Expression> GetSerializerExpr();
 
         public Expression GetDeSerializerExpr2()
         {
@@ -40,13 +44,14 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         {
         }
 
-        protected override Expression GetSerializerExpr()
+        protected internal override Tuple<Expression, Expression> GetSerializerExpr()
         {
-            return Expression.Call(
-                FldSerializerExp,
-                FldSerializerExp.Type.GetMethod("Write" + Field.FieldType.Name),
-                IndexExp,
-                FieldExp);
+            throw new NotImplementedException();
+//            return Expression.Call(
+//                FldSerializerExp,
+//                FldSerializerExp.Type.GetMethod("Write" + Field.FieldType.Name),
+//                IndexExp,
+//                FieldExp);
         }
 
         protected override Expression GetDeSerializerExpr()
@@ -65,25 +70,37 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         public FloatSerializer(byte index, FieldInfo field, int prescision)
             : base(index, field)
         {
-            PrescisionMultExp = Expression.Constant(Math.Pow(10, prescision));
+            PrescisionMultExp = Expression.Constant((float) prescision);
         }
 
-        protected override Expression GetSerializerExpr()
+        protected internal override Tuple<Expression,Expression> GetSerializerExpr()
         {
-            return Expression.Call(
-                FldSerializerExp, FldSerializerExp.Type.GetMethod("WriteInt64"),
-                Expression.Convert(
-                    Expression.Multiply(
-                        PrescisionMultExp,
-                        FieldExp),
-                    typeof (long)), IndexExp);
+            var getValExpr = Expression.Convert(Expression.Multiply(PrescisionMultExp, FieldExp), typeof (long));
+            var stateVarExpr = Expression.Variable(typeof (long), "float");
+            var stateVar2Expr = Expression.Variable(typeof (long), "float2");
+
+            Expression init =
+                Expression.Block(
+                    Expression.Assign(stateVarExpr, getValExpr),
+                    Expression.Call(FldSerializerExp, WriteSignedValueMethod, stateVarExpr));
+
+
+            Expression delta =
+                Expression.Block(
+                    Expression.Assign(stateVar2Expr, getValExpr),
+                    Expression.Call(FldSerializerExp, WriteSignedValueMethod,
+                                    Expression.Subtract(stateVar2Expr, stateVarExpr)),
+                    Expression.Assign(stateVarExpr, stateVar2Expr)
+                    );
+            
+
+            return Tuple.Create(delta, delta);
         }
 
         protected override Expression GetDeSerializerExpr()
         {
             return Expression.Divide(
-                Expression.Call(
-                    FldSerializerExp, FldSerializerExp.Type.GetMethod("ReadInt64"), IndexExp),
+                Expression.Call(FldSerializerExp, FldSerializerExp.Type.GetMethod("ReadInt64"), IndexExp),
                 PrescisionMultExp);
         }
     }
@@ -105,12 +122,12 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
     public class FieldSerializer<T>
     {
-        public int Serialize(T[] data, int i, byte[] buffer)
+        public IEnumerable<ArraySegment<DeltaBlock>> Serialize(DeltaBlock lastBlock, IEnumerable<ArraySegment<T>> newData)
         {
             throw new NotImplementedException();
         }
 
-        public int Deserialize(T[] data, int i, byte[] buffer)
+        public IEnumerable<ArraySegment<T>> Deserialize(IEnumerable<ArraySegment<DeltaBlock>> data)
         {
             throw new NotImplementedException();
         }
