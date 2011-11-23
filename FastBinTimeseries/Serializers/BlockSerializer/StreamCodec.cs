@@ -1,53 +1,53 @@
+using System;
+using System.Runtime.Serialization;
+
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    public class StreamCodec
+    internal class StreamCodec
     {
-        private readonly byte[] _buffer;
+        // All buffers are created slightly bigger than
+        private const int PaddingSize = 10;
+
+        public readonly byte[] Buffer;
+        public readonly int BufferSize;
         private int _bufferPos;
 
-        public StreamCodec(byte[] buffer)
+        public StreamCodec(int bufferSize)
         {
-            _buffer = buffer;
-        }
+            if(bufferSize<=0)
+                throw new ArgumentOutOfRangeException("bufferSize", bufferSize, "Must be positive");
 
-        public byte[] Buffer
-        {
-            get { return _buffer; }
+            BufferSize = bufferSize;
+            Buffer = new byte[bufferSize + PaddingSize];
         }
 
         public int BufferPos
         {
             get { return _bufferPos; }
-            set { _bufferPos = value; }
+            set
+            {
+                if (value < 0 || value >= BufferSize)
+                    throw new ArgumentOutOfRangeException("value", value, "Must be >= 0 && < BufferSize");
+                _bufferPos = value;
+            }
         }
-
-        //        private void GenerateSerializer(Type valueType, params TypeSerializer[] values)
-        //        {
-        //            byte i = 0;
-        //            foreach (TypeSerializer value in values)
-        //            {
-        //                //Expression exp = value.GetSerializerExpr();
-        //                i++;
-        //            }
-        //        }
-        //
-        //        public void WriteInt64(byte index, long value)
-        //        {
-        //        }
-        //
-        //        public void WriteInt32(byte index, int value)
-        //        {
-        //        }
-
 
         internal void WriteUnsignedValue(ulong value)
         {
+            ThrowIfNotEnoughSpace();
             while (value > 127)
             {
-                _buffer[_bufferPos++] = (byte) (value & 0x7F | 0x80);
+                Buffer[_bufferPos++] = (byte) (value & 0x7F | 0x80);
                 value >>= 7;
             }
-            _buffer[_bufferPos++] = (byte) value;
+            Buffer[_bufferPos++] = (byte) value;
+        }
+
+        private void ThrowIfNotEnoughSpace()
+        {
+            if (_bufferPos >= BufferSize + PaddingSize)
+                throw new SerializerException(
+                    "Unable to perform write operation - buffer[{0}] already has {1} bytes", BufferSize, BufferPos);
         }
 
         internal static unsafe void UnsafeWriteUnsignedValue(byte* buff, ref int pos, ulong value)
@@ -62,8 +62,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             pos = p;
         }
 
-        internal void WriteSignedValue(long value)
+        internal bool WriteSignedValue(long value)
         {
+            ThrowIfNotEnoughSpace();
+            int pos = _bufferPos;
+
             if (value < 0)
             {
                 while (true)
@@ -73,10 +76,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
                     // Shifting a signed value right fills leftmost positions with 1s
                     if (value != ~0 || (v & 0x40) == 0)
-                        _buffer[_bufferPos++] = (byte) (v | 0x80);
+                        Buffer[pos++] = (byte) (v | 0x80);
                     else
                     {
-                        _buffer[_bufferPos++] = v;
+                        Buffer[pos++] = v;
                         break;
                     }
                 }
@@ -89,14 +92,20 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     value = value >> 7;
 
                     if (value != 0 || (v & 0x40) != 0)
-                        _buffer[_bufferPos++] = (byte) (v | 0x80);
+                        Buffer[pos++] = (byte) (v | 0x80);
                     else
                     {
-                        _buffer[_bufferPos++] = v;
+                        Buffer[pos++] = v;
                         break;
                     }
                 }
             }
+
+            if (pos > BufferSize)
+                return false;
+
+            _bufferPos = pos;
+            return true;
         }
 
         internal static unsafe long ReadSignedValue(byte* buff, ref int pos)

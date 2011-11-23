@@ -55,6 +55,11 @@ namespace NYurik.FastBinTimeseries
                                  typeof (UnsafeMemCompareDelegate<>).MakeGenericType(typeof (T)), this);
         }
 
+        public static DefaultTypeSerializer<T> CreateInitialized()
+        {
+            return new DefaultTypeSerializer<T> {IsInitialized = true};
+        }
+
         #region IBinSerializer<T> Members
 
         public Version Version
@@ -135,12 +140,12 @@ namespace NYurik.FastBinTimeseries
                 var fileSig = new TypeExtensions.TypeInfo[fileSigCount];
                 for (int i = 0; i < fileSigCount; i++)
                 {
-                    var level = reader.ReadInt32();
+                    int level = reader.ReadInt32();
 
                     string typeName;
                     bool typeRemapped;
                     int fixedBufferSize;
-                    var type = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
+                    Type type = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
 
                     fileSig[i] =
                         type != null

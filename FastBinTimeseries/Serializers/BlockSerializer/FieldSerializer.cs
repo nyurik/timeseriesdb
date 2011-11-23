@@ -8,43 +8,34 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public abstract class TypeSerializer
     {
-        public static readonly ParameterExpression FldSerializerExp = Expression.Parameter(typeof (StreamCodec));
-        public readonly FieldInfo Field;
-        public readonly MemberExpression FieldExp;
-        public readonly ConstantExpression IndexExp;
         public static readonly MethodInfo WriteSignedValueMethod;
+        public readonly FieldInfo Field;
 
         static TypeSerializer()
         {
-            WriteSignedValueMethod = FldSerializerExp.Type.GetMethod(
+            WriteSignedValueMethod = typeof (StreamCodec).GetMethod(
                 "WriteSignedValue", TypeExtensions.AllInstanceMembers);
         }
 
-        protected TypeSerializer(byte index, FieldInfo field)
+        protected TypeSerializer(FieldInfo field)
         {
-            IndexExp = Expression.Constant(index);
             Field = field;
-            FieldExp = Expression.Field(Expression.Parameter(field.DeclaringType), Field);
         }
 
-        protected internal abstract Tuple<Expression, Expression> GetSerializerExpr();
+        protected internal abstract Expression GetSerializerExp(
+            Expression valueT, ParameterExpression codec, List<ParameterExpression> stateVariables, List<Expression> initBlock);
 
-        public Expression GetDeSerializerExpr2()
-        {
-            return Expression.Assign(FieldExp, GetDeSerializerExpr());
-        }
-
-        protected abstract Expression GetDeSerializerExpr();
+        protected abstract Expression GetDeSerializerExp();
     }
 
     internal class IntSerializer : TypeSerializer
     {
-        public IntSerializer(byte index, FieldInfo field)
-            : base(index, field)
+        public IntSerializer(FieldInfo field)
+            : base(field)
         {
         }
 
-        protected internal override Tuple<Expression, Expression> GetSerializerExpr()
+        protected internal override Expression GetSerializerExp(Expression valueT, ParameterExpression codec, List<ParameterExpression> stateVariables, List<Expression> initBlock)
         {
             throw new NotImplementedException();
 //            return Expression.Call(
@@ -54,54 +45,78 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 //                FieldExp);
         }
 
-        protected override Expression GetDeSerializerExpr()
+        protected override Expression GetDeSerializerExp()
         {
-            return
-                Expression.Call(
-                    FldSerializerExp, FldSerializerExp.Type.GetMethod("Read" + Field.FieldType.Name),
-                    IndexExp);
+            throw new NotImplementedException();
+//            return
+//                Expression.Call(
+//                    FldSerializerExp, FldSerializerExp.Type.GetMethod("Read" + Field.FieldType.Name),
+//                    IndexExp);
         }
     }
 
     internal class FloatSerializer : TypeSerializer
     {
-        public readonly ConstantExpression PrescisionMultExp;
+        public readonly int Multiplier;
 
-        public FloatSerializer(byte index, FieldInfo field, int prescision)
-            : base(index, field)
+        public FloatSerializer(FieldInfo field, int multiplier)
+            : base(field)
         {
-            PrescisionMultExp = Expression.Constant((float) prescision);
+           Multiplier = multiplier;
         }
 
-        protected internal override Tuple<Expression,Expression> GetSerializerExpr()
+        protected internal override Expression GetSerializerExp(Expression valueT, ParameterExpression codec, List<ParameterExpression> stateVariables, List<Expression> initBlock)
         {
-            var getValExpr = Expression.Convert(Expression.Multiply(PrescisionMultExp, FieldExp), typeof (long));
-            var stateVarExpr = Expression.Variable(typeof (long), "float");
-            var stateVar2Expr = Expression.Variable(typeof (long), "float2");
+            //
+            // long stateVar;
+            //
+            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state_" + Field.Name);
+            stateVariables.Add(stateVarExp);
 
-            Expression init =
+            //
+            // valueGetter(): (long)(T.Field * Multiplier)
+            //
+            UnaryExpression getValExp = Expression.Convert(
+                Expression.Multiply(
+                    Expression.Field(valueT, Field), Expression.Constant((float) Multiplier)),
+                typeof (long));
+
+            //
+            // stateVar = valueGetter();
+            // codec.WriteSignedValue(stateVar);
+            //
+            initBlock.Add(Expression.Assign(stateVarExp, getValExp));
+            // ReSharper disable PossiblyMistakenUseOfParamsMethod
+            initBlock.Add(Expression.Call(codec, WriteSignedValueMethod, stateVarExp));
+            // ReSharper restore PossiblyMistakenUseOfParamsMethod
+
+            //
+            // stateVar2 = valueGetter();
+            // delta = stateVar2 - stateVar
+            // stateVar = stateVar2;
+            // return codec.WriteSignedValue(delta);
+            //
+            ParameterExpression stateVar2Exp = Expression.Variable(typeof (long), "state2_" + Field.Name);
+            ParameterExpression deltaExp = Expression.Variable(typeof(long), "delta_" + Field.Name);
+            return
                 Expression.Block(
-                    Expression.Assign(stateVarExpr, getValExpr),
-                    Expression.Call(FldSerializerExp, WriteSignedValueMethod, stateVarExpr));
-
-
-            Expression delta =
-                Expression.Block(
-                    Expression.Assign(stateVar2Expr, getValExpr),
-                    Expression.Call(FldSerializerExp, WriteSignedValueMethod,
-                                    Expression.Subtract(stateVar2Expr, stateVarExpr)),
-                    Expression.Assign(stateVarExpr, stateVar2Expr)
+                    typeof (bool),
+                    new[] {stateVar2Exp, deltaExp},
+                    Expression.Assign(stateVar2Exp, getValExp),
+                    Expression.Assign(deltaExp, Expression.Subtract(stateVar2Exp, stateVarExp)),
+                    Expression.Assign(stateVarExp, stateVar2Exp),
+                    // ReSharper disable PossiblyMistakenUseOfParamsMethod
+                    Expression.Call(codec, WriteSignedValueMethod, deltaExp)
+                    // ReSharper restore PossiblyMistakenUseOfParamsMethod
                     );
-            
-
-            return Tuple.Create(delta, delta);
         }
 
-        protected override Expression GetDeSerializerExpr()
+        protected override Expression GetDeSerializerExp()
         {
-            return Expression.Divide(
-                Expression.Call(FldSerializerExp, FldSerializerExp.Type.GetMethod("ReadInt64"), IndexExp),
-                PrescisionMultExp);
+            throw new NotImplementedException();
+//            return Expression.Divide(
+//                Expression.Call(FldSerializerExp, FldSerializerExp.Type.GetMethod("ReadInt64"), IndexExp),
+//                MultiplierExp);
         }
     }
 
@@ -122,7 +137,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
     public class FieldSerializer<T>
     {
-        public IEnumerable<ArraySegment<DeltaBlock>> Serialize(DeltaBlock lastBlock, IEnumerable<ArraySegment<T>> newData)
+        public IEnumerable<ArraySegment<DeltaBlock>> Serialize(DeltaBlock lastBlock,
+                                                               IEnumerable<ArraySegment<T>> newData)
         {
             throw new NotImplementedException();
         }

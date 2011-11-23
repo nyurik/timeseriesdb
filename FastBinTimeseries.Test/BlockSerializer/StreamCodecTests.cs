@@ -120,8 +120,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             const int valCount = bufSize/10;
             const int runs = 100;
 
-            var buffer = new byte[bufSize];
-            var codec = new StreamCodec(buffer);
+            var codec = new StreamCodec(bufSize);
 
             ulong[] valList = TestValuesGenerator().Take(valCount).ToArray();
             foreach (ulong val in valList)
@@ -163,7 +162,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         [Test]
         public unsafe void OneValueTest()
         {
-            var codec = new StreamCodec(new byte[10]);
+            var codec = new StreamCodec(10);
             const long signedVal = unchecked((long) 0xFFFFFFFFFF000000UL);
             codec.BufferPos = 0;
             codec.WriteSignedValue(signedVal);
@@ -181,7 +180,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         [Test]
         public unsafe void SignedValues()
         {
-            var codec = new StreamCodec(new byte[BufferSize]);
+            var codec = new StreamCodec(BufferSize);
 
             foreach (var valList in BatchGroup(TestValuesGenerator(), codec.Buffer.Length/10))
             {
@@ -203,7 +202,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         [Test]
         public unsafe void UnsignedValues()
         {
-            var codec = new StreamCodec(new byte[BufferSize]);
+            var codec = new StreamCodec(BufferSize);
 
             foreach (var valList in BatchGroup(TestValuesGenerator(), codec.Buffer.Length/10))
             {
