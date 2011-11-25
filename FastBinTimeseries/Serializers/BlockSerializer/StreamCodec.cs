@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.Serialization;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
@@ -14,9 +13,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public StreamCodec(int bufferSize)
         {
-            if(bufferSize<=0)
+            if (bufferSize <= 0)
                 throw new ArgumentOutOfRangeException("bufferSize", bufferSize, "Must be positive");
-
             BufferSize = bufferSize;
             Buffer = new byte[bufferSize + PaddingSize];
         }
@@ -32,6 +30,42 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
+        #region Header
+
+        private const int HeaderSize = 4;
+
+        internal void DebugLong(long v)
+        {
+            
+        }
+
+        internal void DebugFloat(float v)
+        {
+            
+        }
+
+        internal int ReadHeader()
+        {
+            int count = BitConverter.ToInt32(Buffer, 0);
+            SkipHeader();
+            return count;
+        }
+
+        internal void SkipHeader()
+        {
+            _bufferPos = HeaderSize;
+        }
+
+        internal void WriteHeader(int count)
+        {
+            byte[] tmp = BitConverter.GetBytes(count);
+            Array.Copy(tmp, Buffer, HeaderSize);
+        }
+
+        #endregion
+
+        #region Reading/Writing values
+
         internal void WriteUnsignedValue(ulong value)
         {
             ThrowIfNotEnoughSpace();
@@ -43,25 +77,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             Buffer[_bufferPos++] = (byte) value;
         }
 
-        private void ThrowIfNotEnoughSpace()
-        {
-            if (_bufferPos >= BufferSize + PaddingSize)
-                throw new SerializerException(
-                    "Unable to perform write operation - buffer[{0}] already has {1} bytes", BufferSize, BufferPos);
-        }
-
-        internal static unsafe void UnsafeWriteUnsignedValue(byte* buff, ref int pos, ulong value)
-        {
-            int p = pos;
-            while (value > 127)
-            {
-                buff[p++] = (byte) (value & 0x7F | 0x80);
-                value >>= 7;
-            }
-            buff[p++] = (byte) value;
-            pos = p;
-        }
-
         internal bool WriteSignedValue(long value)
         {
             ThrowIfNotEnoughSpace();
@@ -71,7 +86,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             {
                 while (true)
                 {
-                    var v = (byte)(value & 0x7F);
+                    var v = (byte) (value & 0x7F);
                     value = value >> 7;
 
                     // Shifting a signed value right fills leftmost positions with 1s
@@ -108,7 +123,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return true;
         }
 
-        internal static unsafe long ReadSignedValue(byte* buff, ref int pos)
+        internal static unsafe long ReadSignedValueUnsafe(byte* buff, ref int pos)
         {
             int p = pos;
 
@@ -233,7 +248,133 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return res64;
         }
 
-        internal static unsafe ulong ReadUnsignedValue(byte* buff, ref int pos)
+        internal long ReadSignedValue()
+        {
+            int p = _bufferPos;
+            var buff = Buffer;
+
+            long tmp64 = buff[p];
+            if (tmp64 < 128)
+            {
+                const long mask = 1 << 7*1 - 1;
+                if ((tmp64 & mask) != 0)
+                    tmp64 |= -mask;
+                _bufferPos++;
+                return tmp64;
+            }
+
+            long res64 = tmp64 & 0x7f;
+            if ((tmp64 = buff[p + 1]) < 128)
+            {
+                p += 2;
+                res64 |= tmp64 << 7*1;
+                const long mask = 1 << 7*2 - 1;
+                if ((res64 & mask) != 0)
+                    res64 |= -mask;
+            }
+            else
+            {
+                res64 |= (tmp64 & 0x7f) << 7*1;
+                if ((tmp64 = buff[p + 2]) < 128)
+                {
+                    p += 3;
+                    res64 |= tmp64 << 7*2;
+                    const long mask = 1 << 7*3 - 1;
+                    if ((res64 & mask) != 0)
+                        res64 |= -mask;
+                }
+                else
+                {
+                    res64 |= (tmp64 & 0x7f) << 7*2;
+                    if ((tmp64 = buff[p + 3]) < 128)
+                    {
+                        p += 4;
+                        res64 |= tmp64 << 7*3;
+                        const long mask = 1 << 7*4 - 1;
+                        if ((res64 & mask) != 0)
+                            res64 |= -mask;
+                    }
+                    else
+                    {
+                        res64 = res64 | (tmp64 & 0x7f) << 7*3;
+                        if ((tmp64 = buff[p + 4]) < 128)
+                        {
+                            p += 5;
+                            res64 |= tmp64 << 7*4;
+                            const long mask = 1L << 7*5 - 1;
+                            if ((res64 & mask) != 0)
+                                res64 |= -mask;
+                        }
+                        else
+                        {
+                            res64 |= (tmp64 & 0x7f) << 7*4;
+                            if ((tmp64 = buff[p + 5]) < 128)
+                            {
+                                p += 6;
+                                res64 |= tmp64 << 7*5;
+                                const long mask = 1L << 7*6 - 1;
+                                if ((res64 & mask) != 0)
+                                    res64 |= -mask;
+                            }
+                            else
+                            {
+                                res64 |= (tmp64 & 0x7f) << 7*5;
+                                if ((tmp64 = buff[p + 6]) < 128)
+                                {
+                                    p += 7;
+                                    res64 |= tmp64 << 7*6;
+                                    const long mask = 1L << 7*7 - 1;
+                                    if ((res64 & mask) != 0)
+                                        res64 |= -mask;
+                                }
+                                else
+                                {
+                                    res64 |= (tmp64 & 0x7f) << 7*6;
+                                    if ((tmp64 = buff[p + 7]) < 128)
+                                    {
+                                        p += 8;
+                                        res64 |= tmp64 << 7*7;
+                                        const long mask = 1L << 7*8 - 1;
+                                        if ((res64 & mask) != 0)
+                                            res64 |= -mask;
+                                    }
+                                    else
+                                    {
+                                        res64 |= (tmp64 & 0x7f) << 7*7;
+                                        if ((tmp64 = buff[p + 8]) < 128)
+                                        {
+                                            p += 9;
+                                            res64 |= tmp64 << 7*8;
+                                            const long mask = 1L << 7*9 - 1;
+                                            if ((res64 & mask) != 0)
+                                                res64 |= -mask;
+                                        }
+                                        else
+                                        {
+                                            res64 |= (tmp64 & 0x7f) << 7*8;
+                                            if ((tmp64 = buff[p + 9]) > 127)
+                                            {
+                                                _bufferPos = p + 10;
+                                                ThrowOverflow();
+                                                return 0;
+                                            }
+
+                                            p += 10;
+                                            res64 |= tmp64 << 7*9;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            _bufferPos = p;
+            return res64;
+        }
+
+        internal static unsafe ulong ReadUnsignedValueUnsafe(byte* buff, ref int pos)
         {
             int p = pos;
             int tmp32 = buff[p];
@@ -334,9 +475,22 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return (uint) res32;
         }
 
+        #endregion
+
+        #region Exceptions
+
+        private void ThrowIfNotEnoughSpace()
+        {
+            if (_bufferPos >= BufferSize + PaddingSize)
+                throw new SerializerException(
+                    "Unable to perform write operation - buffer[{0}] already has {1} bytes", BufferSize, BufferPos);
+        }
+
         private static void ThrowOverflow()
         {
             throw new SerializerException("64bit value read overflow");
         }
+
+        #endregion
     }
 }

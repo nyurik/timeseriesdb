@@ -11,6 +11,9 @@ namespace NYurik.EmitExtensions
         public const BindingFlags AllInstanceMembers =
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
+        public const BindingFlags AllStaticMembers =
+            BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+
         /// <summary>
         /// In the list of types, find a generic type with the specified generic type definition,
         /// and return the generic type arguments.
@@ -155,12 +158,13 @@ namespace NYurik.EmitExtensions
             return result;
         }
 
-        private static void GenerateTypeSignature(FieldInfo fieldInfo, Type itemType, ICollection<TypeInfo> result, int level)
+        private static void GenerateTypeSignature(FieldInfo fieldInfo, Type itemType, ICollection<TypeInfo> result,
+                                                  int level)
         {
             TypeInfo? ti = null;
             if (itemType.IsNested && fieldInfo != null)
             {
-                var ca = fieldInfo.GetCustomAttributes(typeof (FixedBufferAttribute), false);
+                object[] ca = fieldInfo.GetCustomAttributes(typeof (FixedBufferAttribute), false);
                 if (ca.Length > 0)
                     ti = new TypeInfo(level, ((FixedBufferAttribute) ca[0]).Length);
             }

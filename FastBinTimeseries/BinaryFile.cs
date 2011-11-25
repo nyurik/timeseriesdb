@@ -406,7 +406,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         protected int PerformUnsafeBlockAccess(long firstItemIdx, bool isWriting, ArraySegment<T> buffer, long fileSize,
-                                             bool useMemMappedAccess)
+                                               bool useMemMappedAccess)
         {
             return useMemMappedAccess
                        ? ProcessMemoryMappedFile(firstItemIdx, buffer, isWriting, fileSize)

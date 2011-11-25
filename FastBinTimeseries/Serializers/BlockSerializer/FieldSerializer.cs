@@ -6,6 +6,20 @@ using NYurik.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
+    public class FieldSerializer<T>
+    {
+        public IEnumerable<ArraySegment<DeltaBlock>> Serialize(DeltaBlock lastBlock,
+                                                               IEnumerable<ArraySegment<T>> newData)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<ArraySegment<T>> Deserialize(IEnumerable<ArraySegment<DeltaBlock>> data)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public abstract class TypeSerializer
     {
         public static readonly MethodInfo WriteSignedValueMethod;
@@ -117,35 +131,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 //            return Expression.Divide(
 //                Expression.Call(FldSerializerExp, FldSerializerExp.Type.GetMethod("ReadInt64"), IndexExp),
 //                MultiplierExp);
-        }
-    }
-
-    [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
-    public sealed class FieldAttribute : Attribute
-    {
-        public FieldAttribute()
-        {
-        }
-
-        public FieldAttribute(Type serializer)
-        {
-            Serializer = serializer;
-        }
-
-        public Type Serializer { get; private set; }
-    }
-
-    public class FieldSerializer<T>
-    {
-        public IEnumerable<ArraySegment<DeltaBlock>> Serialize(DeltaBlock lastBlock,
-                                                               IEnumerable<ArraySegment<T>> newData)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<ArraySegment<T>> Deserialize(IEnumerable<ArraySegment<DeltaBlock>> data)
-        {
-            throw new NotImplementedException();
         }
     }
 }

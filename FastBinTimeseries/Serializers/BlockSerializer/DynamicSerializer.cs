@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Runtime.Serialization;
 using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
@@ -20,6 +21,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// bool Serialize(StreamCodec codec, IEnumerator&ltT> enumerator)
         /// {
         ///     bool moveNext;
+        ///     int count = 1;
+        ///     int codecPos;
         ///     T current = enumerator.Current;
         ///     
         ///     var state1, state2, ...;
@@ -34,67 +37,74 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         ///         if (!moveNext)
         ///             break;
         /// 
-        ///         int codecPos = codec.BufferPos;
+        ///         codecPos = codec.BufferPos;
         ///         if (! (codec.Write(delta1) && codec.Write(delta2) && ...) ) {
         ///             codec.BufferPos = codecPos;
         ///             break;
-        ///         } 
+        ///         }
+        /// 
+        ///         count++;
         ///     }
+        /// 
+        ///     codec.WriteHeader(count);
         /// 
         ///     return moveNext;
         /// }
-        public static Func<StreamCodec, IEnumerator<T>, bool> GenerateSerializer(
-            [NotNull] IEnumerable<TypeSerializer> fieldSerializers)
+        public static Func<StreamCodec, IEnumerator<T>, bool> GenerateSerializer([NotNull] BaseSerializer serializer)
         {
-            if (fieldSerializers == null) throw new ArgumentNullException("fieldSerializers");
+            if (serializer == null)
+                throw new ArgumentNullException("serializer");
+            if (typeof (T) != serializer.ValueType)
+                throw new SerializerException(
+                    "Serializer must be for type {0}, instead of {1}",
+                    typeof (T).FullName, serializer.ValueType.FullName);
 
             // param: codec
-            ParameterExpression codecExp = Expression.Parameter(typeof (StreamCodec), "codec");
+            ParameterExpression codecParam = Expression.Parameter(typeof (StreamCodec), "codec");
 
             // param: IEnumerator<T> data
-            ParameterExpression enumeratorExp = Expression.Parameter(typeof (IEnumerator<T>), "enumerator");
+            ParameterExpression enumeratorParam = Expression.Parameter(typeof (IEnumerator<T>), "enumerator");
 
             // bool moveNext;
-            ParameterExpression moveNextExp = Expression.Variable(typeof (bool), "moveNext");
+            ParameterExpression moveNextVar = Expression.Variable(typeof (bool), "moveNext");
+
+            // int count;
+            ParameterExpression countVar = Expression.Variable(typeof (int), "count");
 
             // T current;
-            ParameterExpression currentExp = Expression.Variable(typeof (T), "current");
+            ParameterExpression currentVar = Expression.Variable(typeof (T), "current");
 
             // current = enumerator.Current;
-            BinaryExpression setCurrentValue = Expression.Assign(
-                currentExp, Expression.PropertyOrField(enumeratorExp, "Current"));
+            BinaryExpression setCurrentExp = Expression.Assign(
+                currentVar, Expression.PropertyOrField(enumeratorParam, "Current"));
 
-            LabelTarget breakLabel = Expression.Label();
+            LabelTarget breakLabel = Expression.Label("loopBreak");
 
-            var stateVariables = new List<ParameterExpression> {currentExp, moveNextExp};
-            var initBlock = new List<Expression>();
+            var stateVariables = new List<ParameterExpression> {currentVar, countVar, moveNextVar};
+            var writeInitStates = new List<Expression>();
             var methodBody = new List<Expression>();
 
-            Expression orCondExp = null;
-            foreach (TypeSerializer srl in fieldSerializers)
-            {
-                Expression t = srl.GetSerializerExp(currentExp, codecExp, stateVariables, initBlock);
+            Expression writeDeltasExp = serializer.GetSerializer(
+                currentVar, codecParam, stateVariables, writeInitStates);
 
-                Expression exp = Expression.IsTrue(t);
-                orCondExp = orCondExp == null ? exp : Expression.And(orCondExp, exp);
-            }
-
-            if (orCondExp == null)
-                throw new SerializerException("No field serializers have been defined");
-
+            // count = 1;
+            methodBody.Add(Expression.Assign(countVar, Expression.Constant(1)));
 
             // current = enumerator.Current;
-            methodBody.Add(setCurrentValue);
+            methodBody.Add(setCurrentExp);
+
+            // codec.SkipHeader();
+            methodBody.Add(Expression.Call(codecParam, "SkipHeader", null));
 
             // var state1 = current.Field1; codec.Write(state1); ...
-            methodBody.AddRange(initBlock);
+            methodBody.AddRange(writeInitStates);
 
 
             // int codecPos;
             ParameterExpression codecPosExp = Expression.Parameter(typeof (int), "codecPos");
 
             // codec.BufferPos
-            MemberExpression codecBufferPos = Expression.PropertyOrField(codecExp, "BufferPos");
+            MemberExpression codecBufferPos = Expression.PropertyOrField(codecParam, "BufferPos");
 
             // while (true)
             methodBody.Add(
@@ -104,43 +114,47 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                             {
                                 // moveNext = enumerator.MoveNext();
                                 Expression.Assign(
-                                    moveNextExp,
-                                    Expression.Call(enumeratorExp, typeof (IEnumerator).GetMethod("MoveNext"))),
+                                    moveNextVar,
+                                    Expression.Call(enumeratorParam, typeof (IEnumerator).GetMethod("MoveNext"))),
                                 // if
                                 Expression.IfThen(
                                     // (!moveNext)
-                                    Expression.IsFalse(moveNextExp),
+                                    Expression.IsFalse(moveNextVar),
                                     // break;
                                     Expression.Break(breakLabel)),
                                 // current = enumerator.Current;
-                                setCurrentValue,
+                                setCurrentExp,
                                 Expression.Block(
                                     // int codecPos;
                                     new[] {codecPosExp},
                                     // codecPos = codec.BufferPos
                                     Expression.Assign(codecPosExp, codecBufferPos),
-                                    // if (!(delta1() && delta2() && ...))
+                                    // if (!writeDeltas)
                                     Expression.IfThen(
-                                        // ReSharper disable AssignNullToNotNullAttribute
-                                        Expression.Not(orCondExp),
-                                        // ReSharper restore AssignNullToNotNullAttribute
+                                        Expression.Not(writeDeltasExp),
                                         Expression.Block(
+                                            // codec.BufferPos = codecPos;
                                             Expression.Assign(codecBufferPos, codecPosExp),
+                                            // break;
                                             Expression.Break(breakLabel)
                                             )
-                                        ))
+                                        )),
+                                // count++;
+                                Expression.PreIncrementAssign(countVar)
                             }),
                     breakLabel));
 
+            methodBody.Add(Expression.Call(codecParam, "WriteHeader", null, countVar));
+
             // return moveNext;
-            methodBody.Add(moveNextExp);
+            methodBody.Add(moveNextVar);
 
             Expression<Func<StreamCodec, IEnumerator<T>, bool>> serializeExp =
                 Expression.Lambda<Func<StreamCodec, IEnumerator<T>, bool>>(
                     Expression.Block(stateVariables, methodBody),
                     "Serialize",
                     // parameter codec, IEnumerator<T>
-                    new[] {codecExp, enumeratorExp}
+                    new[] {codecParam, enumeratorParam}
                     );
 
             return serializeExp.Compile();
@@ -150,54 +164,162 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// Generated code:
         /// 
         /// * codec to read the values from
-        /// * resultBuffer will get all the generated values
+        /// * result will get all the generated values
         /// * maxItemCount - maximum number of items to be deserialized
         /// 
-        /// void DeSerialize(StreamCodec codec, Buff&lt;T> resultBuffer, int maxItemCount)
+        /// void DeSerialize(StreamCodec codec, Buff&lt;T> result, int maxItemCount)
         /// {
-        ///     int itemCount = codec.ItemCount;
-        ///     if (itemCount > maxItemCount)
-        ///         itemCount = maxItemCount;
+        ///     int count = codec.ReadHeader();
+        ///     if (count > maxItemCount)
+        ///         count = maxItemCount;
         ///     
         ///     var state1, state2, ...;
+        /// 
+        ///     T current = FormatterServices.GetUninitializedObject(typeof(T)); // if class
+        ///     T current = default(T); // if struct
         /// 
         ///     codec.Read(state1);
         ///     codec.Read(state2);
         ///     ...
+        ///     result.Add(current);
         /// 
         ///     while (true) {
         /// 
-        ///         itemCount--;
-        ///         if (itemCount == 0)
+        ///         count--;
+        ///         if (count == 0)
         ///             break;
         /// 
-        ///         @if T is a struct
-        ///             T newValue = new T();
-        ///         @else
-        ///             T newValue = FormatterServices.GetUninitializedObject(typeof(T)); 
+        ///         // only if T is a class
+        ///         T current = FormatterServices.GetUninitializedObject(typeof(T));
         /// 
-        ///         newValue.Field1 = ReadField1(codec, ref state1);
-        ///         newValue.Field2 = ReadField2(codec, ref state2);
+        ///         current.Field1 = ReadField1(codec, ref state1);
+        ///         current.Field2 = ReadField2(codec, ref state2);
         ///         ...
         /// 
-        ///         resultBuffer.Add(newValue);
+        ///         result.Add(current);
         ///     }
         /// }
         /// 
-        public static Action<StreamCodec, Buff<T>, int> DeSerialize(IEnumerable<TypeSerializer> serializers)
+        public static Action<StreamCodec, Buff<T>, int> GenerateDeSerializer([NotNull] BaseSerializer serializer)
         {
-            throw new NotImplementedException();
+            if (serializer == null) throw new ArgumentNullException("serializer");
+            if (typeof(T) != serializer.ValueType)
+                throw new SerializerException(
+                    "Serializer must be for type {0}, instead of {1}",
+                    typeof(T).FullName, serializer.ValueType.FullName);
+
+            // param: codec
+            ParameterExpression codecParam = Expression.Parameter(typeof (StreamCodec), "codec");
+
+            // param: Buff<T> result
+            ParameterExpression resultParam = Expression.Parameter(typeof (Buff<T>), "result");
+
+            // param: int maxItemCount
+            ParameterExpression maxItemCountParam = Expression.Parameter(typeof (int), "maxItemCount");
+
+            // int count;
+            ParameterExpression countVar = Expression.Variable(typeof (int), "count");
+
+            // T current;
+            ParameterExpression currentVar = Expression.Variable(typeof (T), "current");
+
+            LabelTarget breakLabel = Expression.Label("loopBreak");
+
+            var stateVariables = new List<ParameterExpression> {currentVar, countVar};
+            var initBlock = new List<Expression>();
+            var deltaBlock = new List<Expression>();
+            var methodBody = new List<Expression>();
+
+            serializer.GetDeSerializer(currentVar, codecParam, stateVariables, initBlock, deltaBlock);
+
+            // count = codec.ReadHeader();
+            methodBody.Add(
+                Expression.Assign(
+                    countVar,
+                    Expression.Call(codecParam, "ReadHeader", null)));
+
+            // if (maxItemCount < count)
+            //     count = maxItemCount;
+            methodBody.Add(
+                Expression.IfThen(
+                    Expression.LessThan(maxItemCountParam, countVar),
+                    Expression.Assign(countVar, maxItemCountParam)));
+
+            // (class)  T current = FormatterServices.GetUninitializedObject(typeof(T));
+            // (struct) T current = default(T);
+            BinaryExpression assignNewT = Expression.Assign(
+                currentVar,
+                typeof (T).IsValueType
+                    ? (Expression) Expression.Default(typeof (T))
+                    : Expression.Call(
+                        typeof (FormatterServices), "GetUninitializedObject", null,
+                        Expression.Constant(typeof (T))));
+            methodBody.Add(assignNewT);
+
+            // codec.Read(state1); codec.Read(state2); ...
+            methodBody.AddRange(initBlock);
+
+            // result.Add(current);
+            MethodCallExpression addCurrentToResultExp =
+                Expression.Call(resultParam, "Add", null, currentVar);
+            methodBody.Add(addCurrentToResultExp);
+
+            var loopBody =
+                new List<Expression>
+                    {
+                        // count--;
+                        Expression.PreDecrementAssign(countVar),
+                        // if (
+                        Expression.IfThen(
+                            // count == 0)
+                            Expression.Equal(countVar, Expression.Constant(0)),
+                            // break;
+                            Expression.Break(breakLabel))
+                    };
+
+            // (class) T current = FormatterServices.GetUninitializedObject(typeof(T));
+            if (!typeof (T).IsValueType)
+                loopBody.Add(assignNewT);
+
+
+            // current.Field1 = ReadField1(codec, ref state1);
+            // ...
+            loopBody.AddRange(deltaBlock);
+
+            // result.Add(current);
+            loopBody.Add(addCurrentToResultExp);
+
+            // while (true) { loopBody; }
+            methodBody.Add(
+                Expression.Loop(
+                    Expression.Block(loopBody),
+                    breakLabel));
+
+            Expression<Action<StreamCodec, Buff<T>, int>> deSerializeExp =
+                Expression.Lambda<Action<StreamCodec, Buff<T>, int>>(
+                    Expression.Block(stateVariables, methodBody),
+                    "DeSerialize",
+                    // parameter StreamCodec codec, Buff&lt;T> result, int maxItemCount
+                    new[] {codecParam, resultParam, maxItemCountParam}
+                    );
+
+            return deSerializeExp.Compile();
         }
     }
 
     internal class Buff<T>
     {
-        private int _count;
         private T[] _buffer;
+        private int _count;
 
         public Buff()
         {
             _buffer = new T[4];
+        }
+
+        public ArraySegment<T> Buffer
+        {
+            get { return new ArraySegment<T>(_buffer, 0, _count); }
         }
 
         public void Add(T value)
@@ -209,11 +331,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 _buffer = tmp;
             }
             _buffer[_count++] = value;
-        }
-
-        public ArraySegment<T> Buffer
-        {
-            get { return new ArraySegment<T>(_buffer, 0, _count); }
         }
 
         public void Reset()

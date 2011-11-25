@@ -2,12 +2,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using JetBrains.Annotations;
 using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
-using System.Linq;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -125,7 +125,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_firstIndex == null && count > 0)
                 {
-                    var seg = PerformStreaming(0, false, 1).FirstOrDefault();
+                    ArraySegment<TVal> seg = PerformStreaming(0, false, 1).FirstOrDefault();
                     if (seg.Array != null && seg.Count > 0)
                         _firstIndex = IndexAccessor(seg.Array[seg.Offset]);
                 }
@@ -142,7 +142,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_lastIndex == null && count > 0)
                 {
-                    var seg = PerformStreaming(count - 1, false, 1).FirstOrDefault();
+                    ArraySegment<TVal> seg = PerformStreaming(count - 1, false, 1).FirstOrDefault();
                     if (seg.Array != null && seg.Count > 0)
                         _lastIndex = IndexAccessor(seg.Array[seg.Offset]);
                 }
@@ -221,7 +221,7 @@ namespace NYurik.FastBinTimeseries
                     cache.Clear();
             }
 
-            var useMma = UseMemoryMappedAccess(1, false);
+            bool useMma = UseMemoryMappedAccess(1, false);
 
             while (start <= end)
             {
@@ -255,7 +255,7 @@ namespace NYurik.FastBinTimeseries
                 {
                     if (cache == null || !cache.TryGetValue(mid, out timeAtMid))
                     {
-                        if (PerformUnsafeBlockAccess(mid, false, oneElementSegment, count * ItemSize, useMma) < 1)
+                        if (PerformUnsafeBlockAccess(mid, false, oneElementSegment, count*ItemSize, useMma) < 1)
                             throw new BinaryFileException("Unable to read index block");
                         timeAtMid = IndexAccessor(oneElementSegment.Array[0]);
                         if (cache != null)
@@ -363,7 +363,7 @@ namespace NYurik.FastBinTimeseries
                 throw new ArgumentNullException("buffer");
             AppendData(new[] {buffer});
         }
-        
+
         /// <summary>
         /// Add new items at the end of the existing file
         /// </summary>
@@ -378,15 +378,16 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Add new items at the end of the existing file
         /// </summary>
-        public IEnumerable<ArraySegment<TVal>> ProcessWriteStream([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
+        public IEnumerable<ArraySegment<TVal>> ProcessWriteStream(
+            [NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
         {
-            var isFirstSeg = true;
+            bool isFirstSeg = true;
 
             TInd lastTs = LastFileIndex ?? default(TInd);
             int segInd = 0;
             bool isEmptyFile = Count == 0;
 
-            foreach (ArraySegment<TVal> buffer in bufferStream)
+            foreach (var buffer in bufferStream)
             {
                 if (buffer.Array == null)
                     throw new SerializationException("BufferStream may not contain ArraySegments with null Array");

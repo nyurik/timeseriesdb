@@ -55,11 +55,6 @@ namespace NYurik.FastBinTimeseries
                                  typeof (UnsafeMemCompareDelegate<>).MakeGenericType(typeof (T)), this);
         }
 
-        public static DefaultTypeSerializer<T> CreateInitialized()
-        {
-            return new DefaultTypeSerializer<T> {IsInitialized = true};
-        }
-
         #region IBinSerializer<T> Members
 
         public Version Version
@@ -200,6 +195,11 @@ namespace NYurik.FastBinTimeseries
         }
 
         #endregion
+
+        public static DefaultTypeSerializer<T> CreateInitialized()
+        {
+            return new DefaultTypeSerializer<T> {IsInitialized = true};
+        }
 
         [UsedImplicitly]
         private unsafe int ProcessFileStreamPtr(FileStream fileStream, void* bufPtr, int offset, int count,

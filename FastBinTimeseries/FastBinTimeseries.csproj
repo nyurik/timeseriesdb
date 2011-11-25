@@ -132,8 +132,13 @@
     <Compile Include="Serializers\BlockSerializer\BinBlockSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\DeltaSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\DynamicSerializer.cs" />
+    <Compile Include="Serializers\BlockSerializer\FieldAttribute.cs" />
+    <Compile Include="Serializers\BlockSerializer\BaseSerializer.cs" />
+    <Compile Include="Serializers\BlockSerializer\DeltaWithMultiplierSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\FieldSerializer.cs" />
+    <Compile Include="Serializers\BlockSerializer\FieldsSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\IBinBlock.cs" />
+    <Compile Include="Serializers\BlockSerializer\MemberSerializerInfo.cs" />
     <Compile Include="Serializers\BlockSerializer\StreamCodec.cs" />
     <Compile Include="Serializers\SerializerException.cs" />
     <Compile Include="FastBinFileUtils.cs" />

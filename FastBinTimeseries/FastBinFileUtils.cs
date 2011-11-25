@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
-using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers;
 
@@ -183,13 +182,13 @@ namespace NYurik.FastBinTimeseries
         }
 
         public static Type ReadType(this BinaryReader reader, IDictionary<string, Type> typeMap, out string typeName,
-                                     out bool typeRemapped, out int fixedBufferSize)
+                                    out bool typeRemapped, out int fixedBufferSize)
         {
             if (reader == null) throw new ArgumentNullException("reader");
             typeName = reader.ReadString();
-            
+
             typeRemapped = false;
-            if(typeName.StartsWith("!"))
+            if (typeName.StartsWith("!"))
             {
                 // Special case - possibly storing the size of the fixed buffer as an integer
                 if (int.TryParse(typeName.Substring(1), NumberStyles.None, null, out fixedBufferSize))
@@ -217,7 +216,7 @@ namespace NYurik.FastBinTimeseries
                             {
                                 startIndex = pos + tm.Key.Length;
                                 typeName = typeName.Substring(0, pos) + tm.Value.AssemblyQualifiedName
-                                                    + typeName.Substring(startIndex);
+                                           + typeName.Substring(startIndex);
                             }
                             else
                                 startIndex = pos + 1;

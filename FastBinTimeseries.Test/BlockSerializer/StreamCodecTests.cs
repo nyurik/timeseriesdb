@@ -130,8 +130,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             fixed (byte* buff2 = codec.Buffer)
             {
                 int pos = 0;
-                StreamCodec.ReadSignedValue(buff2, ref pos);
-                StreamCodec.ReadUnsignedValue(buff2, ref pos);
+                StreamCodec.ReadSignedValueUnsafe(buff2, ref pos);
+                StreamCodec.ReadUnsignedValueUnsafe(buff2, ref pos);
             }
 
             Stopwatch sw = Stopwatch.StartNew();
@@ -141,10 +141,10 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 {
                     int pos = 0;
                     for (int r = 0; r < valCount; r++)
-                        StreamCodec.ReadSignedValue(pbuff, ref pos);
+                        StreamCodec.ReadSignedValueUnsafe(pbuff, ref pos);
                 }
             }
-            Console.WriteLine("{0} ReadSignedValue() time", sw.Elapsed);
+            Console.WriteLine("{0} ReadSignedValueUnsafe() time", sw.Elapsed);
 
             sw.Restart();
             for (int i = 0; i < runs; i++)
@@ -153,10 +153,10 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 {
                     int pos = 0;
                     for (int r = 0; r < valCount; r++)
-                        StreamCodec.ReadUnsignedValue(pbuff, ref pos);
+                        StreamCodec.ReadUnsignedValueUnsafe(pbuff, ref pos);
                 }
             }
-            Console.WriteLine("{0} ReadUnsignedValue() time", sw.Elapsed);
+            Console.WriteLine("{0} ReadUnsignedValueUnsafe() time", sw.Elapsed);
         }
 
         [Test]
@@ -170,7 +170,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             fixed (byte* pbuf = codec.Buffer)
             {
                 int pos = 0;
-                long v = StreamCodec.ReadSignedValue(pbuf, ref pos);
+                long v = StreamCodec.ReadSignedValueUnsafe(pbuf, ref pos);
 
                 if (signedVal != v)
                     Assert.Fail("Failed signed long {0:X}", signedVal);
@@ -192,7 +192,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 {
                     int pos = 0;
                     foreach (long val in valList)
-                        if (val != StreamCodec.ReadSignedValue(pbuf, ref pos))
+                        if (val != StreamCodec.ReadSignedValueUnsafe(pbuf, ref pos))
                             Assert.Fail("Failed ulong {0:X}", val);
                     codec.BufferPos = pos;
                 }
@@ -206,15 +206,15 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
             foreach (var valList in BatchGroup(TestValuesGenerator(), codec.Buffer.Length/10))
             {
+                codec.BufferPos = 0;
+                foreach (ulong val in valList)
+                    codec.WriteUnsignedValue(val);
+
                 fixed (byte* pbuf = codec.Buffer)
                 {
                     int pos = 0;
                     foreach (ulong val in valList)
-                        StreamCodec.UnsafeWriteUnsignedValue(pbuf, ref pos, val);
-
-                    pos = 0;
-                    foreach (ulong val in valList)
-                        if (val != StreamCodec.ReadUnsignedValue(pbuf, ref pos))
+                        if (val != StreamCodec.ReadUnsignedValueUnsafe(pbuf, ref pos))
                             Assert.Fail("Failed ulong {0:X}", val);
                     codec.BufferPos = pos;
                 }
