@@ -24,8 +24,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             get { return _bufferPos; }
             set
             {
-                if (value < 0 || value >= BufferSize)
-                    throw new ArgumentOutOfRangeException("value", value, "Must be >= 0 && < BufferSize");
+                if (value < 0 || value > BufferSize)
+                    throw new ArgumentOutOfRangeException("value", value, "Must be >= 0 && <= BufferSize");
                 _bufferPos = value;
             }
         }
@@ -33,16 +33,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         #region Header
 
         private const int HeaderSize = 4;
-
-        internal void DebugLong(long v)
-        {
-            
-        }
-
-        internal void DebugFloat(float v)
-        {
-            
-        }
 
         internal int ReadHeader()
         {
@@ -64,6 +54,28 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         #endregion
 
+        #region Debug
+
+#if DEBUG
+        private const int DebugHistLength = 10;
+        private readonly float[] _debugFloatHist = new float[DebugHistLength];
+        private readonly long[] _debugLongHist = new long[DebugHistLength];
+
+        internal void DebugLong(long v)
+        {
+            Array.Copy(_debugLongHist, 0, _debugLongHist, 1, _debugLongHist.Length - 1);
+            _debugLongHist[0] = v;
+        }
+
+        internal void DebugFloat(float v)
+        {
+            Array.Copy(_debugFloatHist, 0, _debugFloatHist, 1, _debugFloatHist.Length - 1);
+            _debugFloatHist[0] = v;
+        }
+#endif
+
+        #endregion
+
         #region Reading/Writing values
 
         internal void WriteUnsignedValue(ulong value)
@@ -75,6 +87,16 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 value >>= 7;
             }
             Buffer[_bufferPos++] = (byte) value;
+        }
+
+        internal bool WriteByte(byte value)
+        {
+            ThrowIfNotEnoughSpace();
+            if (_bufferPos >= BufferSize)
+                return false;
+
+            Buffer[_bufferPos++] = value;
+            return true;
         }
 
         internal bool WriteSignedValue(long value)
@@ -248,10 +270,15 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return res64;
         }
 
+        internal byte ReadByte()
+        {
+            return Buffer[_bufferPos++];
+        }
+
         internal long ReadSignedValue()
         {
             int p = _bufferPos;
-            var buff = Buffer;
+            byte[] buff = Buffer;
 
             long tmp64 = buff[p];
             if (tmp64 < 128)

@@ -1,37 +1,64 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
 using JetBrains.Annotations;
-using NYurik.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public abstract class BaseSerializer : Initializable
     {
-        public static readonly MethodInfo WriteSignedValueMethod;
-        public static readonly MethodInfo ReadSignedValueMethod;
-        public static readonly MethodInfo DebugLongMethod, DebugFloatMethod;
+        private string _name;
 
-        static BaseSerializer()
-        {
-            WriteSignedValueMethod = typeof (StreamCodec).GetMethod(
-                "WriteSignedValue", TypeExtensions.AllInstanceMembers);
-            ReadSignedValueMethod = typeof (StreamCodec).GetMethod(
-                "ReadSignedValue", TypeExtensions.AllInstanceMembers);
-            DebugLongMethod = typeof (StreamCodec).GetMethod("DebugLong", TypeExtensions.AllInstanceMembers);
-            DebugFloatMethod = typeof (StreamCodec).GetMethod("DebugFloat", TypeExtensions.AllInstanceMembers);
-        }
-
-        protected BaseSerializer([NotNull] Type valueType)
+        /// <param name="valueType">Type of value to store</param>
+        /// <param name="name">Name of the value (for debugging)</param>
+        protected BaseSerializer([NotNull] Type valueType, string name = null)
         {
             if (valueType == null)
                 throw new ArgumentNullException("valueType");
 
             ValueType = valueType;
+            _name = name;
         }
 
         public Type ValueType { get; private set; }
+
+        public string Name
+        {
+            get { return _name; }
+            set
+            {
+                ThrowOnInitialized();
+                _name = value;
+            }
+        }
+
+        protected MethodCallExpression WriteSignedValue(Expression codec, Expression value)
+        {
+            return Expression.Call(codec, "WriteSignedValue", null, value);
+        }
+
+        protected MethodCallExpression ReadSignedValue(Expression codec)
+        {
+            return Expression.Call(codec, "ReadSignedValue", null);
+        }
+
+        public static Expression DebugLong(Expression codec, Expression value)
+        {
+#if DEBUG
+            return Expression.Call(codec, "DebugLong", null, value);
+#else
+            return Expression.Empty();
+#endif
+        }
+
+        public static Expression DebugFloat(Expression codec, Expression value)
+        {
+#if DEBUG
+            return Expression.Call(codec, "DebugFloat", null, value);
+#else
+            return Expression.Empty();
+#endif
+        }
 
         public virtual void Validate()
         {

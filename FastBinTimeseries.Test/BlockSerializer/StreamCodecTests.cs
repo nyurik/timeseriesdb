@@ -12,7 +12,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
     {
         private const int BufferSize = 10000000;
 
-        private IEnumerable<ulong> TestValuesGenerator()
+        public static IEnumerable<ulong> TestValuesGenerator(bool sixBits = true, bool sevenBits = true, bool eightBits = true)
         {
             var vals6Bit = new byte[] {0x00, 0x01, 0x20, 0x21, 0x3F};
             var vals6BitHigh = new byte[] {0x00, 0x01, 0x08, 0x09, 0x0F}; // like a 4-bit value
@@ -24,62 +24,64 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 Assert.Less(v, 64);
             foreach (byte v in vals7Bit)
                 Assert.Less(v, 128);
+            if (sixBits)
+                foreach (byte val10 in vals6BitHigh)
+                    foreach (byte val9 in vals6Bit)
+                        foreach (byte val8 in vals6Bit)
+                            foreach (byte val7 in vals6Bit)
+                                foreach (byte val6 in vals6Bit)
+                                    foreach (byte val5 in vals6Bit)
+                                        foreach (byte val4 in vals6Bit)
+                                            foreach (byte val3 in vals6Bit)
+                                                foreach (byte val2 in vals6Bit)
+                                                    foreach (byte val1 in vals6Bit)
+                                                        foreach (byte val0 in vals6Bit)
+                                                        {
+                                                            ulong value = (ulong) val10 << 6*10 | (ulong) val9 << 6*9
+                                                                          | (ulong) val8 << 6*8 | (ulong) val7 << 6*7
+                                                                          | (ulong) val6 << 6*6 | (ulong) val5 << 6*5
+                                                                          | (ulong) val4 << 6*4 | (ulong) val3 << 6*3
+                                                                          | (ulong) val2 << 6*2 | (ulong) val1 << 6*1
+                                                                          | (ulong) val0 << 6*0;
+                                                            yield return value;
+                                                        }
 
-            foreach (byte val10 in vals6BitHigh)
-                foreach (byte val9 in vals6Bit)
-                    foreach (byte val8 in vals6Bit)
-                        foreach (byte val7 in vals6Bit)
-                            foreach (byte val6 in vals6Bit)
-                                foreach (byte val5 in vals6Bit)
-                                    foreach (byte val4 in vals6Bit)
-                                        foreach (byte val3 in vals6Bit)
-                                            foreach (byte val2 in vals6Bit)
-                                                foreach (byte val1 in vals6Bit)
-                                                    foreach (byte val0 in vals6Bit)
+            if (sevenBits)
+                foreach (byte val9 in vals7BitHigh)
+                    foreach (byte val8 in vals7Bit)
+                        foreach (byte val7 in vals7Bit)
+                            foreach (byte val6 in vals7Bit)
+                                foreach (byte val5 in vals7Bit)
+                                    foreach (byte val4 in vals7Bit)
+                                        foreach (byte val3 in vals7Bit)
+                                            foreach (byte val2 in vals7Bit)
+                                                foreach (byte val1 in vals7Bit)
+                                                    foreach (byte val0 in vals7Bit)
                                                     {
-                                                        ulong value = (ulong) val10 << 6*10 | (ulong) val9 << 6*9
-                                                                      | (ulong) val8 << 6*8 | (ulong) val7 << 6*7
-                                                                      | (ulong) val6 << 6*6 | (ulong) val5 << 6*5
-                                                                      | (ulong) val4 << 6*4 | (ulong) val3 << 6*3
-                                                                      | (ulong) val2 << 6*2 | (ulong) val1 << 6*1
-                                                                      | (ulong) val0 << 6*0;
+                                                        ulong value = (ulong) val9 << 7*9 | (ulong) val8 << 7*8
+                                                                      | (ulong) val7 << 7*7 | (ulong) val6 << 7*6
+                                                                      | (ulong) val5 << 7*5 | (ulong) val4 << 7*4
+                                                                      | (ulong) val3 << 7*3 | (ulong) val2 << 7*2
+                                                                      | (ulong) val1 << 7*1 | (ulong) val0 << 7*0;
                                                         yield return value;
                                                     }
 
-            foreach (byte val9 in vals7BitHigh)
-                foreach (byte val8 in vals7Bit)
-                    foreach (byte val7 in vals7Bit)
-                        foreach (byte val6 in vals7Bit)
-                            foreach (byte val5 in vals7Bit)
-                                foreach (byte val4 in vals7Bit)
-                                    foreach (byte val3 in vals7Bit)
-                                        foreach (byte val2 in vals7Bit)
-                                            foreach (byte val1 in vals7Bit)
-                                                foreach (byte val0 in vals7Bit)
-                                                {
-                                                    ulong value = (ulong) val9 << 7*9 | (ulong) val8 << 7*8
-                                                                  | (ulong) val7 << 7*7 | (ulong) val6 << 7*6
-                                                                  | (ulong) val5 << 7*5 | (ulong) val4 << 7*4
-                                                                  | (ulong) val3 << 7*3 | (ulong) val2 << 7*2
-                                                                  | (ulong) val1 << 7*1 | (ulong) val0 << 7*0;
-                                                    yield return value;
-                                                }
-
-            foreach (byte val7 in valsByte)
-                foreach (byte val6 in valsByte)
-                    foreach (byte val5 in valsByte)
-                        foreach (byte val4 in valsByte)
-                            foreach (byte val3 in valsByte)
-                                foreach (byte val2 in valsByte)
-                                    foreach (byte val1 in valsByte)
-                                        foreach (byte val0 in valsByte)
-                                        {
-                                            ulong value = (ulong) val7 << 8*7 | (ulong) val6 << 8*6
-                                                          | (ulong) val5 << 8*5 | (ulong) val4 << 8*4
-                                                          | (ulong) val3 << 8*3 | (ulong) val2 << 8*2
-                                                          | (ulong) val1 << 8*1 | (ulong) val0 << 8*0;
-                                            yield return value;
-                                        }
+            if (eightBits)
+                foreach (byte val7 in valsByte)
+                    foreach (byte val6 in valsByte)
+                        foreach (byte val5 in valsByte)
+                            foreach (byte val4 in valsByte)
+                                foreach (byte val3 in valsByte)
+                                    foreach (byte val2 in valsByte)
+                                        foreach (byte val1 in valsByte)
+                                            foreach (byte val0 in valsByte)
+                                            {
+                                                ulong value = (ulong) val7 << 8*7 | (ulong) val6 << 8*6
+                                                              | (ulong) val5 << 8*5 | (ulong) val4 << 8*4
+                                                              | (ulong) val3 << 8*3 | (ulong) val2 << 8*2
+                                                              | (ulong) val1 << 8*1 | (ulong) val0 << 8*0;
+                                                yield return value;
+                                            }
         }
 
         /// <summary>

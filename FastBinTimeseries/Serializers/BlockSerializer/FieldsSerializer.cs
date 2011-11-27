@@ -13,47 +13,52 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
     {
         private IList<MemberSerializerInfo> _memberSerializers;
 
-        public FieldsSerializer([NotNull] Type valueType)
-            : base(valueType)
+        public FieldsSerializer([NotNull] Type valueType, string name = null)
+            : base(valueType, name)
         {
+            if (valueType.IsArray || valueType.IsPrimitive)
+                throw new SerializerException("Unsupported type {0}", valueType);
+
             FieldInfo[] fis = valueType.GetFields(TypeExtensions.AllInstanceMembers);
             _memberSerializers = new List<MemberSerializerInfo>(fis.Length);
 
             foreach (FieldInfo fi in fis)
             {
-                Type fieldType = fi.FieldType;
-                BaseSerializer srl;
-
-                if (fieldType.IsPrimitive)
-                {
-                    switch (Type.GetTypeCode(fieldType))
-                    {
-                        case TypeCode.Char:
-                        case TypeCode.SByte:
-                        case TypeCode.Byte:
-                        case TypeCode.Int16:
-                        case TypeCode.UInt16:
-                        case TypeCode.Int32:
-                        case TypeCode.UInt32:
-                        case TypeCode.Int64:
-                        case TypeCode.UInt64:
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            srl = new DeltaWithMultiplierSerializer(fieldType, fi.Name);
-                            break;
-
-                        default:
-                            throw new SerializerException("Unsupported field type {0}", fieldType);
-                    }
-                }
-                else
-                {
-                    srl = new FieldsSerializer(fieldType);
-                }
-
-                _memberSerializers.Add(new MemberSerializerInfo(fi, srl));
+                _memberSerializers.Add(new MemberSerializerInfo(fi, GetSerializer(fi.FieldType, fi.Name)));
             }
+        }
+        
+        public static BaseSerializer GetSerializer([NotNull] Type valueType, string name = null)
+        {
+            if (valueType.IsArray)
+                throw new SerializerException("Arrays are not supported ({0})", valueType);
+
+            if (valueType.IsPrimitive)
+            {
+                switch (Type.GetTypeCode(valueType))
+                {
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                        return new SimpleSerializer(valueType, name);
+
+                    case TypeCode.Char:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return new MultipliedDeltaSerializer(valueType, name);
+
+                    default:
+                        throw new SerializerException("Unsupported primitive type {0}", valueType);
+                }
+            }
+            
+            return new FieldsSerializer(valueType, name);
         }
 
         public IList<MemberSerializerInfo> MemberSerializers

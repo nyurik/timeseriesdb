@@ -5,12 +5,12 @@ using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class DeltaWithMultiplierSerializer : BaseSerializer
+    internal class MultipliedDeltaSerializer : BaseSerializer
     {
         private int _divider;
+        private ConstantExpression _dividerExp;
         private bool _isInteger;
         private int _multiplier;
-        private string _name;
 
         /// <summary>
         /// Integer and Float delta serializer.
@@ -19,12 +19,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// <param name="name">Name of the value (for debugging)</param>
         /// <param name="multiplier">Value is multiplied by this parameter before storage</param>
         /// <param name="divider">Value is divided by this parameter before storage</param>
-        public DeltaWithMultiplierSerializer([NotNull] Type valueType, [NotNull] string name, int multiplier = 1,
-                                             int divider = 1)
-            :base(valueType)
+        public MultipliedDeltaSerializer([NotNull] Type valueType, string name, int multiplier = 1, int divider = 1)
+            : base(valueType, name)
         {
             _multiplier = multiplier;
-            _name = name;
             _divider = divider;
         }
 
@@ -35,16 +33,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             {
                 ThrowOnInitialized();
                 _multiplier = value;
-            }
-        }
-
-        public string Name
-        {
-            get { return _name; }
-            set
-            {
-                ThrowOnInitialized();
-                _name = value;
             }
         }
 
@@ -60,29 +48,44 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public override void Validate()
         {
-            if (_name == null)
-                throw new SerializerException("Name is null for value of type {0}", ValueType.FullName);
-            if (_multiplier == 0)
-                throw new SerializerException("Multiplier for value {0} ({1}) may not be 0", _name, ValueType.FullName);
-            if (_divider == 0)
-                throw new SerializerException("Divider for value {0} ({1}) may not be 0", _name, ValueType.FullName);
+            if (_multiplier < 1)
+                throw new SerializerException(
+                    "Multiplier = {2} for value {0} ({1}), but must be >= 1", Name, ValueType.FullName, _multiplier);
+            if (_divider < 1)
+                throw new SerializerException(
+                    "Divider = {2} for value {0} ({1}), but must be >= 1", Name, ValueType.FullName, _divider);
 
+            ulong maxDivider = 0;
+            _isInteger = true;
             switch (Type.GetTypeCode(ValueType))
             {
                 case TypeCode.Char:
-                case TypeCode.SByte:
-                case TypeCode.Byte:
+                    maxDivider = char.MaxValue;
+                    _dividerExp = Expression.Constant((char) _divider);
+                    break;
                 case TypeCode.Int16:
+                    maxDivider = (ulong) Int16.MaxValue;
+                    _dividerExp = Expression.Constant((short) _divider);
+                    break;
                 case TypeCode.UInt16:
+                    maxDivider = UInt16.MaxValue;
+                    _dividerExp = Expression.Constant((ushort) _divider);
+                    break;
                 case TypeCode.Int32:
+                    maxDivider = Int32.MaxValue;
+                    _dividerExp = Expression.Constant(_divider);
+                    break;
                 case TypeCode.UInt32:
+                    maxDivider = UInt32.MaxValue;
+                    _dividerExp = Expression.Constant((uint) _divider);
+                    break;
                 case TypeCode.Int64:
+                    maxDivider = Int64.MaxValue;
+                    _dividerExp = Expression.Constant((long) _divider);
+                    break;
                 case TypeCode.UInt64:
-                    _isInteger = true;
-                    if (_multiplier != 1)
-                        throw new SerializerException(
-                            "Integer types must have multiplier == 1, but {0} was given instead for value {0} ({1})",
-                            _multiplier, _name, ValueType.FullName);
+                    maxDivider = UInt64.MaxValue;
+                    _dividerExp = Expression.Constant((ulong) _divider);
                     break;
                 case TypeCode.Single:
                 case TypeCode.Double:
@@ -91,8 +94,19 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {0}",
-                        _name, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {0}", Name, ValueType.AssemblyQualifiedName);
+            }
+
+            if (_isInteger)
+            {
+                if (_multiplier != 1)
+                    throw new SerializerException(
+                        "Integer types must have multiplier == 1, but {0} was given instead for value {0} ({1})",
+                        _multiplier, Name, ValueType.FullName);
+                if ((ulong) _divider > maxDivider)
+                    throw new SerializerException(
+                        "Divider = {2} for value {0} ({1}), but must be < {3}", Name, ValueType.FullName, _divider,
+                        maxDivider);
             }
 
             base.Validate();
@@ -107,7 +121,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             //
             // long stateVar;
             //
-            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state_" + _name);
+            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state_" + Name);
             stateVariables.Add(stateVarExp);
 
             //
@@ -131,12 +145,14 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 else
                 {
                     if (_multiplier != 1) throw new InvalidOperationException();
-                    getValExp = Expression.Divide(getValExp, Expression.Constant(_divider));
+                    getValExp = Expression.Divide(getValExp, _dividerExp);
                 }
             }
 
             if (getValExp.Type != typeof (long))
-                getValExp = Expression.ConvertChecked(getValExp, typeof (long));
+                getValExp = _isInteger
+                                ? Expression.Convert(getValExp, typeof (long))
+                                : Expression.ConvertChecked(getValExp, typeof (long));
 
 
             //
@@ -144,9 +160,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // codec.WriteSignedValue(stateVar);
             //
             initBlock.Add(Expression.Assign(stateVarExp, getValExp));
-            // ReSharper disable PossiblyMistakenUseOfParamsMethod
-            initBlock.Add(Expression.Call(codec, WriteSignedValueMethod, stateVarExp));
-            // ReSharper restore PossiblyMistakenUseOfParamsMethod
+            //initBlock.Add(DebugLong(codec, stateVarExp));
+            initBlock.Add(WriteSignedValue(codec, stateVarExp));
 
             //
             // stateVar2 = valueGetter();
@@ -154,8 +169,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // stateVar = stateVar2;
             // return codec.WriteSignedValue(delta);
             //
-            ParameterExpression stateVar2Exp = Expression.Variable(typeof (long), "state2_" + _name);
-            ParameterExpression deltaExp = Expression.Variable(typeof (long), "delta_" + _name);
+            ParameterExpression stateVar2Exp = Expression.Variable(typeof (long), "state2_" + Name);
+            ParameterExpression deltaExp = Expression.Variable(typeof (long), "delta_" + Name);
             return
                 Expression.Block(
                     typeof (bool),
@@ -163,9 +178,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     Expression.Assign(stateVar2Exp, getValExp),
                     Expression.Assign(deltaExp, Expression.Subtract(stateVar2Exp, stateVarExp)),
                     Expression.Assign(stateVarExp, stateVar2Exp),
-                    // ReSharper disable PossiblyMistakenUseOfParamsMethod
-                    Expression.Call(codec, WriteSignedValueMethod, deltaExp)
-                    // ReSharper restore PossiblyMistakenUseOfParamsMethod
+                    //DebugLong(codec, stateVarExp),
+                    WriteSignedValue(codec, deltaExp)
                     );
         }
 
@@ -178,7 +192,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             //
             // long stateVar;
             //
-            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state_" + _name);
+            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state_" + Name);
             stateVariables.Add(stateVarExp);
 
             //
@@ -195,8 +209,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 {
                     getValExp =
                         Expression.Multiply(
-                            Expression.Convert(getValExp, typeof(decimal)),
-                            Expression.Constant((decimal)_divider / _multiplier));
+                            Expression.Convert(getValExp, typeof (decimal)),
+                            Expression.Constant((decimal) _divider/_multiplier));
                     if (getValExp.Type != valueExp.Type)
                         getValExp = Expression.ConvertChecked(getValExp, valueExp.Type);
                 }
@@ -205,9 +219,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     if (_multiplier != 1) throw new InvalidOperationException();
                     if (getValExp.Type != valueExp.Type)
                         getValExp = Expression.Convert(getValExp, valueExp.Type);
-                    getValExp = Expression.MultiplyChecked(getValExp, Expression.Constant(_divider));
+                    getValExp = Expression.Multiply(getValExp, _dividerExp);
                 }
             }
+            else if (getValExp.Type != valueExp.Type)
+                getValExp = Expression.Convert(getValExp, valueExp.Type);
 
 
             // expression: T.Field = valueGetter()
@@ -218,8 +234,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // stateVar = codec.ReadSignedValue();
             // T.Field = stateVar;
             //
-            MethodCallExpression readValExp = Expression.Call(codec, ReadSignedValueMethod);
+            MethodCallExpression readValExp = ReadSignedValue(codec);
             initBlock.Add(Expression.Assign(stateVarExp, readValExp));
+            //initBlock.Add(DebugLong(codec, stateVarExp)); 
             initBlock.Add(setFieldExp);
 
             //
@@ -227,6 +244,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // T.Field = stateVar;
             //
             deltaBlock.Add(Expression.AddAssign(stateVarExp, readValExp));
+            //deltaBlock.Add(DebugLong(codec, stateVarExp));
             deltaBlock.Add(setFieldExp);
         }
     }

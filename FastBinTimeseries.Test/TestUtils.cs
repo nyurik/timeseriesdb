@@ -131,6 +131,67 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        public static void CollectionAssertEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual, string name = null,
+                                                    Func<T, T, bool> comparer = null)
+        {
+            if (comparer == null)
+            {
+                Comparer<T> dflt = Comparer<T>.Default;
+                comparer = (x, y) => dflt.Compare(x, y) == 0;
+            }
+
+            string msg = name != null ? "In test " + name + ", " : "";
+
+            int count = 0;
+            T lastValue = default(T);
+
+            string format = typeof (T) == typeof (float) || typeof (T) == typeof (double) ? ":r" : "";
+
+            using (IEnumerator<T> e = expected.GetEnumerator())
+            using (IEnumerator<T> a = actual.GetEnumerator())
+            {
+                while (true)
+                {
+                    bool eMoved = e.MoveNext();
+                    if (eMoved != a.MoveNext())
+                    {
+                        if (eMoved)
+                        {
+                            Assert.Fail(
+                                "{0}After {1} items, actual list ended, while expected had more starting with {2" +
+                                format + "}",
+                                msg, count, e.Current);
+                        }
+                        else
+                        {
+                            Assert.Fail(
+                                "{0}After {1} items, expected list ended, while actual had more starting with {2" +
+                                format + "}",
+                                msg, count, a.Current);
+                        }
+                    }
+
+                    if (!eMoved)
+                        break;
+
+                    if (!comparer(e.Current, a.Current))
+                    {
+                        string failMsg =
+                            string.Format(
+                                "{0}After {1} items, expected value {2" + format + "} != actual value {3" + format + "}",
+                                msg, count, e.Current, a.Current);
+                        if (count > 0)
+                            failMsg += string.Format(", lastValue = {0" + format + "}", lastValue);
+
+                        Assert.Fail(failMsg);
+                    }
+
+                    lastValue = a.Current;
+                    count++;
+                }
+            }
+        }
+
         #region Nested type: CacheItem
 
         private class CacheItem : IEquatable<CacheItem>
