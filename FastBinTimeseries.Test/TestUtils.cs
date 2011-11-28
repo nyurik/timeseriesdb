@@ -136,8 +136,7 @@ namespace NYurik.FastBinTimeseries.Test
         {
             if (comparer == null)
             {
-                Comparer<T> dflt = Comparer<T>.Default;
-                comparer = (x, y) => dflt.Compare(x, y) == 0;
+                comparer = EqualityComparer<T>.Default.Equals;
             }
 
             string msg = name != null ? "In test " + name + ", " : "";

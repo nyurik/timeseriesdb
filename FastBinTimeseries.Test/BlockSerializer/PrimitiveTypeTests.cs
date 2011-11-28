@@ -24,7 +24,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             var min = (int) (-Math.Pow(10, maxDigits));
             var max = (int) (Math.Pow(10, maxDigits));
 
-            Run(Values(i => (double) i, min, max));
+            Run(Values(i => (double) i, min, max), "*1", i => ((MultipliedDeltaSerializer) i).Multiplier = 1);
             Run(
                 Values(i => (double) i/10, min, max), "*10", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
                 (x, y) => Math.Abs(x - y) < 0.1);
@@ -58,7 +58,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             var min = (int) (-Math.Pow(10, maxDigits));
             var max = (int) (Math.Pow(10, maxDigits));
 
-            Run(Values(i => (float) i, min, max));
+            Run(Values(i => (float) i, min, max), "*1", i => ((MultipliedDeltaSerializer) i).Multiplier = 1);
             Run(
                 Values(i => (float) i/10, min, max), "*10", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
                 (x, y) => Math.Abs(x - y) < 0.1);

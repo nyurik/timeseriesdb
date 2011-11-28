@@ -58,19 +58,23 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
 #if DEBUG
         private const int DebugHistLength = 10;
-        private readonly float[] _debugFloatHist = new float[DebugHistLength];
-        private readonly long[] _debugLongHist = new long[DebugHistLength];
+        private readonly Tuple<string, float>[] _debugFloatHist = new Tuple<string, float>[DebugHistLength];
+        private readonly Tuple<string, long>[] _debugLongHist = new Tuple<string, long>[DebugHistLength];
 
-        internal void DebugLong(long v)
+        internal void DebugLong(long v, string name)
         {
-            Array.Copy(_debugLongHist, 0, _debugLongHist, 1, _debugLongHist.Length - 1);
-            _debugLongHist[0] = v;
+            DebugValue(_debugLongHist, v, name);
         }
 
-        internal void DebugFloat(float v)
+        internal void DebugFloat(float v, string name)
         {
-            Array.Copy(_debugFloatHist, 0, _debugFloatHist, 1, _debugFloatHist.Length - 1);
-            _debugFloatHist[0] = v;
+            DebugValue(_debugFloatHist, v, name);
+        }
+
+        internal void DebugValue<T>(Tuple<string,T>[] values, T v, string name)
+        {
+            Array.Copy(values, 0, values, 1, values.Length - 1);
+            values[0] = Tuple.Create(name, v);
         }
 #endif
 

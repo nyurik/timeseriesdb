@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
@@ -19,24 +20,26 @@ namespace NYurik.FastBinTimeseries.CommonCode
     public struct UtcDateTime : IComparable, IFormattable, IConvertible, IComparable<UtcDateTime>,
                                 IEquatable<UtcDateTime>
     {
+        public const long MinTicks = 0; // UtcDateTime.MinValue.Ticks;
+        public const long MaxTicks = 3155378975999999999; // UtcDateTime.MaxValue.Ticks;
+
         internal const string FormatDateOnly = "yyyy-MM-dd";
         internal const string FormatDateTimeMin = "yyyy-MM-dd HH:mm";
         internal const string FormatDateTimeSec = "yyyy-MM-dd HH:mm:ss";
-        internal const string FormatDateTimeMs = "yyyy-MM-dd HH:mm:ss.ffff";
+        internal const string FormatDateTimeMs = "yyyy-MM-dd HH:mm:ss.fff";
+        internal const string FormatDateTimeComplete = "yyyy-MM-dd HH:mm:ss.fffffff";
 
         /// <summary>
         /// Same as <see cref="DateTime.MaxValue"/> except as UTC kind
         /// </summary>
-        public static readonly UtcDateTime MaxValue =
-            (UtcDateTime) DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc);
+        public static readonly UtcDateTime MaxValue = new UtcDateTime(MaxTicks);
 
         /// <summary>
         /// Same as <see cref="DateTime.MinValue"/> except as UTC kind
         /// </summary>
-        public static readonly UtcDateTime MinValue =
-            (UtcDateTime) DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+        public static readonly UtcDateTime MinValue = new UtcDateTime(MinTicks);
 
-        [Timestamp] private readonly long _value;
+        private readonly long _value;
 
         public UtcDateTime(long ticks)
         {
@@ -60,13 +63,12 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         public UtcDateTime(DateTime value)
         {
-            if (value.Kind == DateTimeKind.Utc)
-                _value = value.Ticks;
-            else
+            if (value.Kind != DateTimeKind.Utc)
                 throw new ArgumentOutOfRangeException(
                     "value", value,
                     "DateTime must be in UTC\n" +
                     "You may either use value.ToUniversalTime() or DateTime.SpecifyKind(value, DateTimeKind.Utc)to convert.");
+            _value = value.Ticks;
         }
 
         public static UtcDateTime Now
@@ -93,22 +95,17 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         public int Hour
         {
-            get { return ((DateTime) this).Hour; }
-        }
-
-        public DateTimeKind Kind
-        {
-            get { return DateTimeKind.Utc; }
+            get { return (int) (_value/TimeSpan.TicksPerHour%24); }
         }
 
         public int Millisecond
         {
-            get { return ((DateTime) this).Millisecond; }
+            get { return (int) (_value/TimeSpan.TicksPerMillisecond%1000); }
         }
 
         public int Minute
         {
-            get { return ((DateTime) this).Minute; }
+            get { return (int) (_value/TimeSpan.TicksPerMinute%60); }
         }
 
         public int Month
@@ -118,7 +115,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         public int Second
         {
-            get { return ((DateTime) this).Second; }
+            get { return (int) (_value/TimeSpan.TicksPerSecond%60); }
         }
 
         public long Ticks
@@ -128,7 +125,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         public TimeSpan TimeOfDay
         {
-            get { return ((DateTime) this).TimeOfDay; }
+            get { return new TimeSpan(_value%TimeSpan.TicksPerDay); }
         }
 
         public int Year
@@ -143,13 +140,14 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         public DayOfWeek DayOfWeek
         {
-            get { return ((DateTime) this).DayOfWeek; }
+            get { return (DayOfWeek) ((_value/TimeSpan.TicksPerDay + 1)%7); }
         }
 
         #endregion
 
         #region IComparable Members
 
+        [Pure]
         public int CompareTo(object value)
         {
             if (value is UtcDateTime)
@@ -161,6 +159,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         #region IComparable<UtcDateTime> Members
 
+        [Pure]
         public int CompareTo(UtcDateTime other)
         {
             return _value.CompareTo(other._value);
@@ -242,20 +241,26 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         object IConvertible.ToType(Type conversionType, IFormatProvider provider)
         {
+            if (conversionType == null)
+                throw new ArgumentNullException("conversionType");
             if (conversionType == typeof (UtcDateTime))
                 return this;
             if (conversionType == typeof (DateTime))
                 return (DateTime) this;
             if (conversionType == typeof (string))
                 return ToString(provider);
+            if (conversionType == typeof (object))
+                return this;
             throw new InvalidCastException("Cannot convert to " + conversionType);
         }
 
+        [Pure]
         public TypeCode GetTypeCode()
         {
             return ((DateTime) this).GetTypeCode();
         }
 
+        [Pure]
         public string ToString(IFormatProvider provider)
         {
             return ToString(null, provider);
@@ -268,6 +273,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
         /// <summary>
         /// Custom formats: "G" or null - show just the significant (non-zero) part of the datetime. "L" - same but in local time
         /// </summary>
+        [Pure]
         public string ToString(string format, IFormatProvider formatProvider)
         {
             var value = (DateTime) this;
@@ -307,41 +313,61 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         #region DateTime Arithmetic
 
+        private UtcDateTime AddScaled(double value, int scale)
+        {
+            const long minMillisecond = -315537897600000L;
+            const long maxMillisecond = 315537897600000L;
+
+            var val = (long) (value*scale + (value >= 0.0 ? 0.5 : -0.5));
+            if (val <= minMillisecond || val >= maxMillisecond)
+                throw new ArgumentOutOfRangeException("value", "Arithmetic overflow");
+
+            return AddTicks(val*TimeSpan.TicksPerMillisecond);
+        }
+
+        [Pure]
         public UtcDateTime Add(TimeSpan value)
         {
             return AddTicks(value.Ticks);
         }
 
+        [Pure]
         public UtcDateTime AddDays(double value)
         {
-            return (UtcDateTime) ((DateTime) this).AddDays(value);
+            return AddScaled(value, (int) (TimeSpan.TicksPerDay/TimeSpan.TicksPerMillisecond));
         }
 
+        [Pure]
         public UtcDateTime AddHours(double value)
         {
-            return (UtcDateTime) ((DateTime) this).AddHours(value);
+            return AddScaled(value, (int) (TimeSpan.TicksPerHour/TimeSpan.TicksPerMillisecond));
         }
 
+        [Pure]
         public UtcDateTime AddMilliseconds(double value)
         {
-            return (UtcDateTime) ((DateTime) this).AddMilliseconds(value);
+            return AddScaled(value, 1);
         }
 
+        [Pure]
         public UtcDateTime AddMinutes(double value)
         {
-            return (UtcDateTime) ((DateTime) this).AddMinutes(value);
+            return AddScaled(value, (int) (TimeSpan.TicksPerMinute/TimeSpan.TicksPerMillisecond));
         }
 
+        [Pure]
         public UtcDateTime AddMonths(int months)
         {
             return (UtcDateTime) ((DateTime) this).AddMonths(months);
         }
 
+        [Pure]
         public UtcDateTime AddSeconds(double value)
         {
-            return (UtcDateTime) ((DateTime) this).AddSeconds(value);
+            return AddScaled(value, (int) (TimeSpan.TicksPerSecond/TimeSpan.TicksPerMillisecond));
         }
 
+        [Pure]
         public UtcDateTime AddTicks(long value)
         {
             if (value < -_value || value > (MaxValue._value - _value))
@@ -350,21 +376,25 @@ namespace NYurik.FastBinTimeseries.CommonCode
             return new UtcDateTime(_value + value);
         }
 
+        [Pure]
         public UtcDateTime AddYears(int value)
         {
             return (UtcDateTime) ((DateTime) this).AddYears(value);
         }
 
+        [Pure]
         public TimeSpan Subtract(UtcDateTime value)
         {
-            return ((DateTime) this).Subtract((DateTime) value);
+            return new TimeSpan(_value - value._value);
         }
 
+        [Pure]
         public UtcDateTime Subtract(TimeSpan value)
         {
             return AddTicks(-value.Ticks);
         }
 
+        [Pure]
         public DateTime ToLocalTime()
         {
             return ((DateTime) this).ToLocalTime();
@@ -374,16 +404,19 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         #region Equality
 
+        [Pure]
         public int CompareTo(DateTime value)
         {
             return ((DateTime) this).CompareTo(value);
         }
 
+        [Pure]
         public bool Equals(UtcDateTime other)
         {
             return _value == other._value;
         }
 
+        [Pure]
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -391,6 +424,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
             return Equals((UtcDateTime) obj);
         }
 
+        [Pure]
         public override int GetHashCode()
         {
             return _value.GetHashCode();
@@ -400,51 +434,61 @@ namespace NYurik.FastBinTimeseries.CommonCode
 
         #region Formatting
 
+        [Pure]
         public string[] GetDateTimeFormats()
         {
             return ((DateTime) this).GetDateTimeFormats();
         }
 
+        [Pure]
         public string[] GetDateTimeFormats(IFormatProvider provider)
         {
             return ((DateTime) this).GetDateTimeFormats(provider);
         }
 
+        [Pure]
         public string[] GetDateTimeFormats(char format)
         {
             return ((DateTime) this).GetDateTimeFormats(format);
         }
 
+        [Pure]
         public string[] GetDateTimeFormats(char format, IFormatProvider provider)
         {
             return ((DateTime) this).GetDateTimeFormats(format, provider);
         }
 
+        [Pure]
         public string ToLongDateString()
         {
-            return ((DateTime) this).ToLongDateString();
+            return ToString("D", null);
         }
 
+        [Pure]
         public string ToLongTimeString()
         {
-            return ((DateTime) this).ToLongTimeString();
+            return ToString("T", null);
         }
 
+        [Pure]
         public string ToShortDateString()
         {
-            return ((DateTime) this).ToShortDateString();
+            return ToString("d", null);
         }
 
+        [Pure]
         public string ToShortTimeString()
         {
-            return ((DateTime) this).ToShortTimeString();
+            return ToString("t", null);
         }
 
+        [Pure]
         public override string ToString()
         {
             return ToString(null, null);
         }
 
+        [Pure]
         public string ToString(string format)
         {
             return ToString(format, null);

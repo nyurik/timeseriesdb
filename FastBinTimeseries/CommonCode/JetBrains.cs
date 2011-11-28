@@ -1,5 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
+﻿/*
+ * Copyright 2007-2011 JetBrains s.r.o.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+using System;
 
 namespace JetBrains.Annotations
 {
@@ -22,6 +37,7 @@ namespace JetBrains.Annotations
         /// Gets a value indicating whether a element should be localized.
         /// <value><c>true</c> if a element should be localized; otherwise, <c>false</c>.</value>
         /// </summary>
+        [UsedImplicitly]
         public bool Required { get; set; }
 
         /// <summary>
@@ -55,24 +71,20 @@ namespace JetBrains.Annotations
     [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
     public sealed class StringFormatMethodAttribute : Attribute
     {
-        private readonly string myFormatParameterName;
-
         /// <summary>
         /// Initializes new instance of StringFormatMethodAttribute
         /// </summary>
         /// <param name="formatParameterName">Specifies which parameter of an annotated method should be treated as format-string</param>
         public StringFormatMethodAttribute(string formatParameterName)
         {
-            myFormatParameterName = formatParameterName;
+            FormatParameterName = formatParameterName;
         }
 
         /// <summary>
         /// Gets format parameter name
         /// </summary>
-        public string FormatParameterName
-        {
-            get { return myFormatParameterName; }
-        }
+        [UsedImplicitly]
+        public string FormatParameterName { get; private set; }
     }
 
     /// <summary>
@@ -103,24 +115,19 @@ namespace JetBrains.Annotations
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false, Inherited = true)]
     public sealed class AssertionConditionAttribute : Attribute
     {
-        private readonly AssertionConditionType myConditionType;
-
         /// <summary>
         /// Initializes new instance of AssertionConditionAttribute
         /// </summary>
         /// <param name="conditionType">Specifies condition type</param>
         public AssertionConditionAttribute(AssertionConditionType conditionType)
         {
-            myConditionType = conditionType;
+            ConditionType = conditionType;
         }
 
         /// <summary>
         /// Gets condition type
         /// </summary>
-        public AssertionConditionType ConditionType
-        {
-            get { return myConditionType; }
-        }
+        public AssertionConditionType ConditionType { get; private set; }
     }
 
     /// <summary>
@@ -206,27 +213,21 @@ namespace JetBrains.Annotations
     /// </example>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
     [BaseTypeRequired(typeof (Attribute))]
-    [CLSCompliant(false)]
     public sealed class BaseTypeRequiredAttribute : Attribute
     {
-        private readonly Type[] myBaseTypes;
-
         /// <summary>
         /// Initializes new instance of BaseTypeRequiredAttribute
         /// </summary>
-        /// <param name="baseTypes">Specifies which types are required</param>
-        public BaseTypeRequiredAttribute(params Type[] baseTypes)
+        /// <param name="baseType">Specifies which types are required</param>
+        public BaseTypeRequiredAttribute(Type baseType)
         {
-            myBaseTypes = baseTypes;
+            BaseTypes = new[] {baseType};
         }
 
         /// <summary>
         /// Gets enumerations of specified base types
         /// </summary>
-        public IEnumerable<Type> BaseTypes
-        {
-            get { return myBaseTypes; }
-        }
+        public Type[] BaseTypes { get; private set; }
     }
 
     /// <summary>
@@ -315,7 +316,7 @@ namespace JetBrains.Annotations
     [Flags]
     public enum ImplicitUseKindFlags
     {
-        Default = Access | Assign | Instantiated,
+        Default = Access | Assign | InstantiatedWithFixedConstructorSignature,
 
         /// <summary>
         /// Only entity marked with attribute considered used
@@ -328,9 +329,15 @@ namespace JetBrains.Annotations
         Assign = 2,
 
         /// <summary>
+        /// Indicates implicit instantiation of a type with fixed constructor signature.
+        /// That means any unused constructor parameters won't be reported as such.
+        /// </summary>
+        InstantiatedWithFixedConstructorSignature = 4,
+
+        /// <summary>
         /// Indicates implicit instantiation of a type
         /// </summary>
-        Instantiated = 4,
+        InstantiatedNoFixedConstructorSignature = 8,
     }
 
     /// <summary>
@@ -352,5 +359,32 @@ namespace JetBrains.Annotations
         /// Entity marked with attribute and all its members considered used
         /// </summary>
         WithMembers = Itself | Members
+    }
+
+    /// <summary>
+    /// Tells code analysis engine if the parameter is completely handled when the invoked method is on stack. 
+    /// If the parameter is delegate, indicates that delegate is executed while the method is executed.
+    /// If the parameter is enumerable, indicates that it is enumerated while the method is executed.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Parameter, Inherited = true)]
+    public sealed class InstantHandleAttribute : Attribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Parameter)]
+    public class PathReferenceAttribute : Attribute
+    {
+        public PathReferenceAttribute()
+        {
+        }
+
+        [UsedImplicitly]
+        public PathReferenceAttribute([PathReference] string basePath)
+        {
+            BasePath = basePath;
+        }
+
+        [UsedImplicitly]
+        public string BasePath { get; private set; }
     }
 }

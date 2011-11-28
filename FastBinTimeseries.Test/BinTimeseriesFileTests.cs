@@ -70,8 +70,8 @@ namespace NYurik.FastBinTimeseries.Test
             string fileName = GetBinFileName();
             using (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1> f =
                 AllowCreate
-                    ? new BinSeriesFile<UtcDateTime,_DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = false}
-                    : (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>)BinaryFile.Open(fileName, false))
+                    ? new BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = false}
+                    : (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false))
             {
                 if (AllowCreate)
                 {

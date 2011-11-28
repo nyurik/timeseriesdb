@@ -38,7 +38,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
             try
             {
-                BaseSerializer fldSerializer = FieldsSerializer.GetSerializer(typeof(T));
+                BaseSerializer fldSerializer = FieldsSerializer.GetSerializer(typeof (T));
                 if (updateSrlzr != null)
                     updateSrlzr(fldSerializer);
 
@@ -50,7 +50,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     // ReSharper disable PossibleMultipleEnumeration
                     values, RoundTrip(serialize, deserialize, codec, values),
                     // ReSharper restore PossibleMultipleEnumeration
-                    typeof(T).Name + name, comparer);
+                    typeof (T).Name + name, comparer);
             }
             catch (Exception x)
             {
@@ -60,7 +60,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     codec.BufferPos > 0
                         ? codec.Buffer[codec.BufferPos - 1].ToString(CultureInfo.InvariantCulture)
                         : "n/a");
-                if (x.GetType() == typeof(OverflowException))
+                if (x.GetType() == typeof (OverflowException))
                     throw new OverflowException(msg, x);
 
                 throw new SerializerException(x, msg);
@@ -98,7 +98,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                                 : "n/a",
                             moveNext ? enmr.Current.ToString() : "none left");
 
-                        if (x.GetType() == typeof(OverflowException))
+                        if (x.GetType() == typeof (OverflowException))
                             throw new OverflowException(msg, x);
 
                         throw new SerializerException(x, msg);
@@ -109,6 +109,5 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 }
             }
         }
-
     }
 }

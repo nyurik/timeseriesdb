@@ -239,7 +239,8 @@ namespace NYurik.FastBinTimeseries
                         || !cache.TryGetValue(mid, out timeAtMid)
                         || !cache.TryGetValue(mid + 1, out timeAtMid2))
                     {
-                        if (PerformUnsafeBlockAccess(mid, false, new ArraySegment<TVal>(buff), count * ItemSize, useMma) < 2)
+                        if (PerformUnsafeBlockAccess(mid, false, new ArraySegment<TVal>(buff), count*ItemSize, useMma)
+                            < 2)
                             throw new BinaryFileException("Unable to read two blocks");
 
                         timeAtMid = IndexAccessor(buff[0]);
@@ -406,7 +407,8 @@ namespace NYurik.FastBinTimeseries
                             throw new BinaryFileException(
                                 "Last index in {2} ({0}) is greater than the first new item's index ({1})",
                                 lastTs, newTs, isFirstSeg ? "file" : "segment");
-                    } else if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
+                    }
+                    else if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
                         throw new BinaryFileException(
                             "Last index in {1} ({0}) equals to the first new item's index (enfocing uniqueness)",
                             lastTs, isFirstSeg ? "file" : "segment");

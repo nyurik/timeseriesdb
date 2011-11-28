@@ -1,5 +1,5 @@
 #if DEBUG
-    #define DEBUG_SERIALIZER
+//#define DEBUG_SERIALIZER
 #endif
 
 using System;
@@ -51,19 +51,25 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return Expression.Call(codec, "ThrowOverflow", new[] {value.Type}, value);
         }
 
-        public static Expression DebugLong(Expression codec, Expression value)
+        public static Expression DebugLong(Expression codec, Expression value, string name = null)
         {
 #if DEBUG_SERIALIZER
-            return Expression.Call(codec, "DebugLong", null, value);
+            var prm = value as ParameterExpression;
+            return Expression.Call(
+                codec, "DebugLong", null, value,
+                Expression.Constant(name ?? (prm != null ? prm.Name : null), typeof (string)));
 #else
             return Expression.Empty();
 #endif
         }
 
-        public static Expression DebugFloat(Expression codec, Expression value)
+        public static Expression DebugFloat(Expression codec, Expression value, string name = null)
         {
 #if DEBUG_SERIALIZER
-            return Expression.Call(codec, "DebugFloat", null, value);
+            var prm = value as ParameterExpression;
+            return Expression.Call(
+                codec, "DebugFloat", null, value,
+                Expression.Constant(name ?? (prm != null ? prm.Name : null), typeof (string)));
 #else
             return Expression.Empty();
 #endif
@@ -74,10 +80,18 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             IsInitialized = true;
         }
 
+        public IEnumerable<ParameterExpression> List { get; set; }
+
         public Expression GetSerializer(
             Expression valueExp, Expression codec, List<ParameterExpression> stateVariables, List<Expression> initBlock)
         {
             EnsureValidation();
+
+            if (ValueType != valueExp.Type)
+                throw new SerializerException(
+                    "Serializer received an unexpected value of type {0}, instead of {1}",
+                    valueExp.Type.FullName, ValueType.FullName);
+
             return GetSerializerExp(valueExp, codec, stateVariables, initBlock);
         }
 
@@ -86,6 +100,16 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         {
             EnsureValidation();
             GetDeSerializerExp(codec, stateVariables, out readInitValue, out readNextValue);
+
+            if (ValueType != readInitValue.Type)
+                throw new SerializerException(
+                    "DeSerializer 'init' has unexpected type {0}, instead of {1}",
+                    readInitValue.Type.FullName, ValueType.FullName);
+
+            if (ValueType != readNextValue.Type)
+                throw new SerializerException(
+                    "DeSerializer 'next' has unexpected type {0}, instead of {1}",
+                    readInitValue.Type.FullName, ValueType.FullName);
         }
 
         protected abstract Expression GetSerializerExp(

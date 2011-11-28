@@ -7,7 +7,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     internal class MultipliedDeltaSerializer : BaseSerializer
     {
-        private long _divider;
+        private long _divider = 1;
         private ConstantExpression _dividerExp;
         private bool _isInteger;
         private long _multiplier;
@@ -17,15 +17,17 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// </summary>
         /// <param name="valueType">Type of value to store</param>
         /// <param name="name">Name of the value (for debugging)</param>
-        /// <param name="multiplier">Value is multiplied by this parameter before storage</param>
-        /// <param name="divider">Value is divided by this parameter before storage</param>
-        public MultipliedDeltaSerializer([NotNull] Type valueType, string name, long multiplier = 1, long divider = 1)
+        public MultipliedDeltaSerializer([NotNull] Type valueType, string name)
             : base(valueType, name)
         {
-            _multiplier = multiplier;
-            _divider = divider;
+            // Floating point numbers must manually initialize Multiplier
+            _multiplier =
+                valueType.IsPrimitive && (valueType == typeof (float) || valueType == typeof (double))
+                    ? 0
+                    : 1;
         }
 
+        /// <summary> Value is multiplied by this parameter before storage</summary>
         public long Multiplier
         {
             get { return _multiplier; }
@@ -36,6 +38,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
+        /// <summary> Value is divided by this parameter before storage </summary>
         public long Divider
         {
             get { return _divider; }
@@ -81,7 +84,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 case TypeCode.Int64:
                     maxDivider = Int64.MaxValue;
-                    _dividerExp = Expression.Constant(_divider);
+                    // ReSharper disable RedundantCast
+                    _dividerExp = Expression.Constant((long) _divider);
+                    // ReSharper restore RedundantCast
                     break;
                 case TypeCode.UInt64:
                     maxDivider = UInt64.MaxValue;
@@ -250,15 +255,15 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     switch (Type.GetTypeCode(ValueType))
                     {
                         case TypeCode.Single:
-                            getValExp = Expression.Multiply(
+                            getValExp = Expression.Divide(
                                 Expression.Convert(getValExp, typeof (float)),
-                                Expression.Constant((float) _divider/_multiplier));
+                                Expression.Constant((float) _multiplier/_divider));
                             break;
 
                         case TypeCode.Double:
-                            getValExp = Expression.Multiply(
+                            getValExp = Expression.Divide(
                                 Expression.Convert(getValExp, typeof (double)),
-                                Expression.Constant((double) _divider/_multiplier));
+                                Expression.Constant((double) _multiplier/_divider));
                             break;
 
                         default:
@@ -284,7 +289,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             MethodCallExpression readValExp = ReadSignedValue(codec);
             readInitValue = Expression.Block(
                 Expression.Assign(stateVarExp, readValExp),
-                DebugLong(codec, stateVarExp), 
+                DebugLong(codec, stateVarExp),
                 getValExp);
 
             //

@@ -53,10 +53,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         {
             if (serializer == null)
                 throw new ArgumentNullException("serializer");
-//            if (typeof (T) != serializer.ValueType)
-//                throw new SerializerException(
-//                    "Serializer must be for type {0}, instead of {1}",
-//                    typeof (T).FullName, serializer.ValueType.FullName);
 
             // param: codec
             ParameterExpression codecParam = Expression.Parameter(typeof (StreamCodec), "codec");
@@ -189,10 +185,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         public static Action<StreamCodec, Buff<T>, int> GenerateDeSerializer([NotNull] BaseSerializer serializer)
         {
             if (serializer == null) throw new ArgumentNullException("serializer");
-//            if (typeof(T) != serializer.ValueType)
-//                throw new SerializerException(
-//                    "Serializer must be for type {0}, instead of {1}",
-//                    typeof(T).FullName, serializer.ValueType.FullName);
 
             // param: codec
             ParameterExpression codecParam = Expression.Parameter(typeof (StreamCodec), "codec");

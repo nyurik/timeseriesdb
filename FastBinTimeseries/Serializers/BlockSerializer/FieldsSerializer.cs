@@ -30,6 +30,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
+        public MemberSerializerInfo this[string memberInfoName]
+        {
+            get { return MemberSerializers.FirstOrDefault(i => i.MemberInfo.Name == memberInfoName); }
+        }
+
         public IList<MemberSerializerInfo> MemberSerializers
         {
             get { return _memberSerializers; }

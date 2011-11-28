@@ -12,7 +12,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
     {
         private const int BufferSize = 10000000;
 
-        public static IEnumerable<ulong> TestValuesGenerator(bool sixBits = true, bool sevenBits = true, bool eightBits = true)
+        public static IEnumerable<ulong> TestValuesGenerator(bool sixBits = true, bool sevenBits = true,
+                                                             bool eightBits = true)
         {
             var vals6Bit = new byte[] {0x00, 0x01, 0x20, 0x21, 0x3F};
             var vals6BitHigh = new byte[] {0x00, 0x01, 0x08, 0x09, 0x0F}; // like a 4-bit value

@@ -6,22 +6,25 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class UtcDateTimeSerializer : MultipliedDeltaSerializer
+    internal class UtcDateTimeSerializer : BaseSerializer
     {
+        private readonly MultipliedDeltaSerializer _deltaSerializer;
+
         /// <summary>
         /// Integer and Float delta serializer.
         /// </summary>
         /// <param name="name">Name of the value (for debugging)</param>
-        /// <param name="divider">Value is divided by this parameter before storage</param>
-        public UtcDateTimeSerializer(string name, TimeSpan divider = default(TimeSpan))
-            : base(typeof (long), name, divider: ValidateDivider(divider))
+        public UtcDateTimeSerializer(string name)
+            : base(typeof (UtcDateTime), name)
         {
+            _deltaSerializer = new MultipliedDeltaSerializer(typeof (long), name);
         }
 
+        /// <summary>Value is divided by this parameter before storage</summary>
         public TimeSpan TimeDivider
         {
-            get { return TimeSpan.FromTicks(Divider); }
-            set { Divider = ValidateDivider(value); }
+            get { return TimeSpan.FromTicks(_deltaSerializer.Divider); }
+            set { _deltaSerializer.Divider = ValidateDivider(value); }
         }
 
         private static long ValidateDivider(TimeSpan value)
@@ -41,15 +44,16 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                                                        List<ParameterExpression> stateVariables,
                                                        List<Expression> initBlock)
         {
-            return base.GetSerializerExp(Expression.Property(valueExp, "Ticks"), codec, stateVariables, initBlock);
+            return _deltaSerializer.GetSerializer(
+                Expression.Property(valueExp, "Ticks"), codec, stateVariables, initBlock);
         }
 
         protected override void GetDeSerializerExp(Expression codec, List<ParameterExpression> stateVariables,
                                                    out Expression readInitValue, out Expression readNextValue)
         {
             Expression readInit, readNext;
-            base.GetDeSerializerExp(codec, stateVariables, out readInit, out readNext);
-            
+            _deltaSerializer.GetDeSerializer(codec, stateVariables, out readInit, out readNext);
+
             ConstructorInfo ctor = typeof (UtcDateTime).GetConstructor(new[] {typeof (long)});
             if (ctor == null)
                 throw new SerializerException("UtcDateTime(long) constructor was not found");
