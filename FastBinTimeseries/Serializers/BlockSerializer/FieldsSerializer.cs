@@ -83,6 +83,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public override void Validate()
         {
+            ThrowOnInitialized();
             foreach (MemberSerializerInfo ms in _memberSerializers)
                 ms.Validate();
             _memberSerializers = new ReadOnlyCollection<MemberSerializerInfo>(_memberSerializers);
@@ -135,7 +136,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             {
                 Expression readInit, readNext;
                 member.Serializer.GetDeSerializer(codec, stateVariables, out readInit, out readNext);
-                
+
                 Expression field = member.GetterFactory(currentVar);
                 readAllInit.Add(Expression.Assign(field, readInit));
                 readAllNext.Add(Expression.Assign(field, readNext));

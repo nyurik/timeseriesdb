@@ -62,6 +62,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public override void Validate()
         {
+            ThrowOnInitialized();
             _typeCode = Type.GetTypeCode(ValueType);
             switch (_typeCode)
             {

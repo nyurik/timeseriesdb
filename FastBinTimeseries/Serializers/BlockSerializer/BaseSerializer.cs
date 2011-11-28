@@ -77,10 +77,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public virtual void Validate()
         {
+            ThrowOnInitialized();
             IsInitialized = true;
         }
-
-        public IEnumerable<ParameterExpression> List { get; set; }
 
         public Expression GetSerializer(
             Expression valueExp, Expression codec, List<ParameterExpression> stateVariables, List<Expression> initBlock)

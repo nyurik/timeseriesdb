@@ -51,6 +51,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public override void Validate()
         {
+            ThrowOnInitialized();
+
             if (_multiplier < 1)
                 throw new SerializerException(
                     "Multiplier = {2} for value {0} ({1}), but must be >= 1", Name, ValueType.FullName, _multiplier);
@@ -116,9 +118,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             base.Validate();
         }
 
-        protected override Expression GetSerializerExp(Expression valueExp, Expression codec,
-                                                       List<ParameterExpression> stateVariables,
-                                                       List<Expression> initBlock)
+        protected override Expression GetSerializerExp(
+            Expression valueExp, Expression codec, List<ParameterExpression> stateVariables, List<Expression> initBlock)
         {
             ThrowOnNotInitialized();
 
