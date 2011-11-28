@@ -140,6 +140,7 @@
     <Compile Include="Serializers\BlockSerializer\MemberSerializerInfo.cs" />
     <Compile Include="Serializers\BlockSerializer\SimpleSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\StreamCodec.cs" />
+    <Compile Include="Serializers\BlockSerializer\UtcDateTimeSerializer.cs" />
     <Compile Include="Serializers\SerializerException.cs" />
     <Compile Include="FastBinFileUtils.cs" />
     <Compile Include="IBinaryFile.cs" />

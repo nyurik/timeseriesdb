@@ -36,12 +36,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                        : Expression.Field(valueExp, (FieldInfo) MemberInfo);
         }
 
-        public virtual Expression SetterFactory(Expression valueExp)
-        {
-            // both properties and fields have identical getter and setter
-            return GetterFactory(valueExp);
-        }
-
         public void Validate()
         {
             Serializer.Validate();

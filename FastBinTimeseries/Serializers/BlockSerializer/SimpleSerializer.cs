@@ -38,9 +38,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return writeMethod;
         }
 
-        protected override void GetDeSerializerExp(Expression valueExp, Expression codec,
-                                                   List<ParameterExpression> stateVariables, List<Expression> initBlock,
-                                                   List<Expression> deltaBlock)
+        protected override void GetDeSerializerExp(Expression codec, List<ParameterExpression> stateVariables,
+                                                   out Expression readInitValue, out Expression readNextValue)
         {
             ThrowOnNotInitialized();
 
@@ -57,9 +56,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     throw new ArgumentOutOfRangeException();
             }
 
-            BinaryExpression setFieldExp = Expression.Assign(valueExp, readMethod);
-            initBlock.Add(setFieldExp);
-            deltaBlock.Add(setFieldExp);
+            readInitValue = readMethod;
+            readNextValue = readMethod;
         }
 
         public override void Validate()

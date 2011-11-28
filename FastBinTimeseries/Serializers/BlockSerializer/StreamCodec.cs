@@ -99,6 +99,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return true;
         }
 
+        internal void ThrowOverflow<T>(T value)
+        {
+            throw new OverflowException(string.Format("Value {0} cannot be stored", value));
+        }
+
         internal bool WriteSignedValue(long value)
         {
             ThrowIfNotEnoughSpace();

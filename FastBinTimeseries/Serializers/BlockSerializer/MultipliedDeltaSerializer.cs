@@ -7,10 +7,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     internal class MultipliedDeltaSerializer : BaseSerializer
     {
-        private int _divider;
+        private long _divider;
         private ConstantExpression _dividerExp;
         private bool _isInteger;
-        private int _multiplier;
+        private long _multiplier;
 
         /// <summary>
         /// Integer and Float delta serializer.
@@ -19,14 +19,14 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// <param name="name">Name of the value (for debugging)</param>
         /// <param name="multiplier">Value is multiplied by this parameter before storage</param>
         /// <param name="divider">Value is divided by this parameter before storage</param>
-        public MultipliedDeltaSerializer([NotNull] Type valueType, string name, int multiplier = 1, int divider = 1)
+        public MultipliedDeltaSerializer([NotNull] Type valueType, string name, long multiplier = 1, long divider = 1)
             : base(valueType, name)
         {
             _multiplier = multiplier;
             _divider = divider;
         }
 
-        public int Multiplier
+        public long Multiplier
         {
             get { return _multiplier; }
             set
@@ -36,7 +36,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
-        public int Divider
+        public long Divider
         {
             get { return _divider; }
             set
@@ -73,7 +73,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 case TypeCode.Int32:
                     maxDivider = Int32.MaxValue;
-                    _dividerExp = Expression.Constant(_divider);
+                    _dividerExp = Expression.Constant((int) _divider);
                     break;
                 case TypeCode.UInt32:
                     maxDivider = UInt32.MaxValue;
@@ -81,7 +81,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 case TypeCode.Int64:
                     maxDivider = Int64.MaxValue;
-                    _dividerExp = Expression.Constant((long) _divider);
+                    _dividerExp = Expression.Constant(_divider);
                     break;
                 case TypeCode.UInt64:
                     maxDivider = UInt64.MaxValue;
@@ -89,7 +89,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 case TypeCode.Single:
                 case TypeCode.Double:
-                case TypeCode.Decimal:
                     _isInteger = false;
                     break;
                 default:
@@ -121,7 +120,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             //
             // long stateVar;
             //
-            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state_" + Name);
+            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state" + Name);
             stateVariables.Add(stateVarExp);
 
             //
@@ -135,13 +134,33 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             if (_multiplier != 1 || _divider != 1)
             {
                 if (!_isInteger)
-                    getValExp =
-                        Expression.Call(
-                            typeof (Math), "Round", null,
-                            Expression.Multiply(
-                                Expression.Convert(getValExp, typeof (decimal)),
-                                Expression.Constant((decimal) _multiplier/_divider)),
-                            Expression.Constant(0));
+                {
+                    switch (Type.GetTypeCode(ValueType))
+                    {
+                        case TypeCode.Single:
+                            {
+                                // floats support 7 significant digits
+                                float dvdr = (float) _multiplier/_divider;
+                                float maxValue = (float) Math.Pow(10, 7)/dvdr;
+
+                                getValExp = FloatingGetValExp(getValExp, codec, dvdr, -maxValue, maxValue);
+                            }
+                            break;
+
+                        case TypeCode.Double:
+                            {
+                                // doubles support at least 15 significant digits
+                                double dvdr = (double) _multiplier/_divider;
+                                double maxValue = Math.Pow(10, 15)/dvdr;
+
+                                getValExp = FloatingGetValExp(getValExp, codec, dvdr, -maxValue, maxValue);
+                            }
+                            break;
+
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
                 else
                 {
                     if (_multiplier != 1) throw new InvalidOperationException();
@@ -149,10 +168,12 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 }
             }
 
+            // for integer types, do not check, ulong would not fit otherwise
             if (getValExp.Type != typeof (long))
-                getValExp = _isInteger
-                                ? Expression.Convert(getValExp, typeof (long))
-                                : Expression.ConvertChecked(getValExp, typeof (long));
+                getValExp =
+                    _isInteger
+                        ? Expression.Convert(getValExp, typeof (long))
+                        : Expression.ConvertChecked(getValExp, typeof (long));
 
 
             //
@@ -160,7 +181,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // codec.WriteSignedValue(stateVar);
             //
             initBlock.Add(Expression.Assign(stateVarExp, getValExp));
-            //initBlock.Add(DebugLong(codec, stateVarExp));
+            initBlock.Add(DebugLong(codec, stateVarExp));
             initBlock.Add(WriteSignedValue(codec, stateVarExp));
 
             //
@@ -169,8 +190,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // stateVar = stateVar2;
             // return codec.WriteSignedValue(delta);
             //
-            ParameterExpression stateVar2Exp = Expression.Variable(typeof (long), "state2_" + Name);
-            ParameterExpression deltaExp = Expression.Variable(typeof (long), "delta_" + Name);
+            ParameterExpression stateVar2Exp = Expression.Variable(typeof (long), "state2" + Name);
+            ParameterExpression deltaExp = Expression.Variable(typeof (long), "delta" + Name);
             return
                 Expression.Block(
                     typeof (bool),
@@ -178,21 +199,40 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     Expression.Assign(stateVar2Exp, getValExp),
                     Expression.Assign(deltaExp, Expression.Subtract(stateVar2Exp, stateVarExp)),
                     Expression.Assign(stateVarExp, stateVar2Exp),
-                    //DebugLong(codec, stateVarExp),
+                    DebugLong(codec, stateVarExp),
                     WriteSignedValue(codec, deltaExp)
                     );
         }
 
-        protected override void GetDeSerializerExp(Expression valueExp, Expression codec,
-                                                   List<ParameterExpression> stateVariables,
-                                                   List<Expression> initBlock, List<Expression> deltaBlock)
+        private Expression FloatingGetValExp<T>(Expression value, Expression codec, T divider,
+                                                T minValue, T maxValue)
+        {
+            Expression multExp = Expression.Multiply(value, Expression.Constant(divider));
+            if (value.Type == typeof (float))
+                multExp = Expression.Convert(multExp, typeof (double));
+
+            return
+                Expression.Block(
+                    // if (value < -maxValue || maxValue < value)
+                    //     ThrowOverflow(value);
+                    Expression.IfThen(
+                        Expression.Or(
+                            Expression.LessThan(value, Expression.Constant(minValue)),
+                            Expression.LessThan(Expression.Constant(maxValue), value)),
+                        ThrowOverflow(codec, value)),
+                    // Math.Round(value*_multiplier/_divider)
+                    Expression.Call(typeof (Math), "Round", null, multExp));
+        }
+
+        protected override void GetDeSerializerExp(Expression codec, List<ParameterExpression> stateVariables,
+                                                   out Expression readInitValue, out Expression readNextValue)
         {
             ThrowOnNotInitialized();
 
             //
             // long stateVar;
             //
-            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state_" + Name);
+            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state" + Name);
             stateVariables.Add(stateVarExp);
 
             //
@@ -207,45 +247,54 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             {
                 if (!_isInteger)
                 {
-                    getValExp =
-                        Expression.Multiply(
-                            Expression.Convert(getValExp, typeof (decimal)),
-                            Expression.Constant((decimal) _divider/_multiplier));
-                    if (getValExp.Type != valueExp.Type)
-                        getValExp = Expression.ConvertChecked(getValExp, valueExp.Type);
+                    switch (Type.GetTypeCode(ValueType))
+                    {
+                        case TypeCode.Single:
+                            getValExp = Expression.Multiply(
+                                Expression.Convert(getValExp, typeof (float)),
+                                Expression.Constant((float) _divider/_multiplier));
+                            break;
+
+                        case TypeCode.Double:
+                            getValExp = Expression.Multiply(
+                                Expression.Convert(getValExp, typeof (double)),
+                                Expression.Constant((double) _divider/_multiplier));
+                            break;
+
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
                 else
                 {
                     if (_multiplier != 1) throw new InvalidOperationException();
-                    if (getValExp.Type != valueExp.Type)
-                        getValExp = Expression.Convert(getValExp, valueExp.Type);
+                    if (getValExp.Type != ValueType)
+                        getValExp = Expression.Convert(getValExp, ValueType);
                     getValExp = Expression.Multiply(getValExp, _dividerExp);
                 }
             }
-            else if (getValExp.Type != valueExp.Type)
-                getValExp = Expression.Convert(getValExp, valueExp.Type);
-
-
-            // expression: T.Field = valueGetter()
-            BinaryExpression setFieldExp = Expression.Assign(valueExp, getValExp);
+            else if (getValExp.Type != ValueType)
+                getValExp = Expression.Convert(getValExp, ValueType);
 
 
             //
             // stateVar = codec.ReadSignedValue();
-            // T.Field = stateVar;
+            // return stateVar;
             //
             MethodCallExpression readValExp = ReadSignedValue(codec);
-            initBlock.Add(Expression.Assign(stateVarExp, readValExp));
-            //initBlock.Add(DebugLong(codec, stateVarExp)); 
-            initBlock.Add(setFieldExp);
+            readInitValue = Expression.Block(
+                Expression.Assign(stateVarExp, readValExp),
+                DebugLong(codec, stateVarExp), 
+                getValExp);
 
             //
             // stateVar += codec.ReadSignedValue();
-            // T.Field = stateVar;
+            // return stateVar;
             //
-            deltaBlock.Add(Expression.AddAssign(stateVarExp, readValExp));
-            //deltaBlock.Add(DebugLong(codec, stateVarExp));
-            deltaBlock.Add(setFieldExp);
+            readNextValue = Expression.Block(
+                Expression.AddAssign(stateVarExp, readValExp),
+                DebugLong(codec, stateVarExp),
+                getValExp);
         }
     }
 }

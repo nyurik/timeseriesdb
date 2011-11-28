@@ -1,110 +1,17 @@
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 using NUnit.Framework;
-using NYurik.FastBinTimeseries.Serializers;
+using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
 namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 {
     [TestFixture]
-    public class PrimitiveTypeTests : TestsBase
+    public class PrimitiveTypeTests : SerializtionTestsBase
     {
-        private IEnumerable<T> Values<T>(Func<long, T> converter, long min, long max)
-        {
-            if (max - min > ushort.MaxValue || max - min <= 0)
-            {
-                foreach (long i in StreamCodecTests.TestValuesGenerator())
-                    if (i >= min && i <= max)
-                        yield return converter(i);
-            }
-            else
-                for (long i = min; i <= max; i++)
-                    yield return converter(i);
-        }
-
-
-        private void Run<T>(Func<long, T> converter, string name = null,
-                            Action<MultipliedDeltaSerializer> updateSrlzr = null, Func<T, T, bool> comparer = null,
-                            long min = long.MinValue, long max = long.MaxValue)
-        {
-            var codec = new StreamCodec(10000);
-
-            try
-            {
-                BaseSerializer fldSerializer = FieldsSerializer.GetSerializer(typeof (T));
-                if (updateSrlzr != null)
-                {
-                    var srl = fldSerializer as MultipliedDeltaSerializer;
-                    if (srl == null)
-                        return;
-                    updateSrlzr(srl);
-                }
-
-                IEnumerable<T> values = Values(converter, min, max);
-                Func<StreamCodec, IEnumerator<T>, bool> serialize =
-                    DynamicSerializer<T>.GenerateSerializer(fldSerializer);
-                Action<StreamCodec, Buff<T>, int> deserialize = DynamicSerializer<T>.GenerateDeSerializer(fldSerializer);
-
-                TestUtils.CollectionAssertEqual(
-                    // ReSharper disable PossibleMultipleEnumeration
-                    values, RoundTrip(serialize, deserialize, codec, values),
-                    // ReSharper restore PossibleMultipleEnumeration
-                    typeof (T).Name + name, comparer);
-            }
-            catch (Exception x)
-            {
-                throw new SerializerException(
-                    x, "codec.BufferPos={0}, codec.Buffer[pos-1]={1}",
-                    codec.BufferPos,
-                    codec.BufferPos > 0
-                        ? codec.Buffer[codec.BufferPos - 1].ToString(CultureInfo.InvariantCulture)
-                        : "n/a");
-            }
-        }
-
-        private static IEnumerable<T> RoundTrip<T>(
-            Func<StreamCodec, IEnumerator<T>, bool> serialize,
-            Action<StreamCodec, Buff<T>, int> deserialize,
-            StreamCodec codec, IEnumerable<T> values)
-        {
-            using (IEnumerator<T> enmr = values.GetEnumerator())
-            {
-                bool moveNext = enmr.MoveNext();
-                var buff = new Buff<T>();
-
-                while (moveNext)
-                {
-                    try
-                    {
-                        codec.BufferPos = 0;
-                        moveNext = serialize(codec, enmr);
-
-                        codec.BufferPos = 0;
-                        buff.Reset();
-                        deserialize(codec, buff, int.MaxValue);
-                    }
-                    catch (Exception x)
-                    {
-                        throw new SerializerException(
-                            x, "codec.BufferPos={0}, codec.Buffer[pos-1]={1}, enmr.Value={2}",
-                            codec.BufferPos,
-                            codec.BufferPos > 0
-                                ? codec.Buffer[codec.BufferPos - 1].ToString(CultureInfo.InvariantCulture)
-                                : "n/a",
-                            moveNext ? enmr.Current.ToString() : "none left");
-                    }
-                    ArraySegment<T> result = buff.Buffer;
-                    for (int i = result.Offset; i < result.Count; i++)
-                        yield return result.Array[i];
-                }
-            }
-        }
-
         [Test]
         public void TypeByte()
         {
-            Run(i => (byte) i, min: byte.MinValue, max: byte.MaxValue);
+            Run(Range(byte.MinValue, byte.MaxValue, i => (byte) (i + 1)));
         }
 
         [Test]
@@ -114,103 +21,137 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
             const int maxDigits = 15;
 
-            var min = (int)(-Math.Pow(10, maxDigits));
-            var max = (int)(Math.Pow(10, maxDigits));
+            var min = (int) (-Math.Pow(10, maxDigits));
+            var max = (int) (Math.Pow(10, maxDigits));
 
-            Run(i => (double)i, min: min, max: max);
+            Run(Values(i => (double) i, min, max));
             Run(
-                i => (double)i / 10, "*10", i => i.Multiplier = 10, (x, y) => Math.Abs(x - y) < 0.01,
-                min, max);
+                Values(i => (double) i/10, min, max), "*10", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                (x, y) => Math.Abs(x - y) < 0.1);
             Run(
-                i => (double)i / 100, "*100", i => i.Multiplier = 100, (x, y) => Math.Abs(x - y) < 0.001,
-                min, max);
+                Values(i => (double) i/100, min, max), "*100", i => ((MultipliedDeltaSerializer) i).Multiplier = 100,
+                (x, y) => Math.Abs(x - y) < 0.01);
 
             // Very large numbers cannot be stored as double
             TestUtils.AssertException<OverflowException>(
                 () =>
                 Run(
-                    i => (double)i,
-                    min: (long)(-Math.Pow(10, maxDigits + 3)),
-                    max: (long)(-Math.Pow(10, maxDigits + 3) + 10)));
+                    Range(-Math.Pow(10, maxDigits + 3), -Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
+                    "*10 Large Neg", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                    (x, y) => Math.Abs(x - y) < 0.1));
+
+            TestUtils.AssertException<OverflowException>(
+                () =>
+                Run(
+                    Range(Math.Pow(10, maxDigits + 3), Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
+                    "*10 Large Pos", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                    (x, y) => Math.Abs(x - y) < 0.1));
         }
 
         [Test]
         public void TypeFloat()
         {
             // float: +/- 1.5 x 10-45 to +/- 3.4 x 1038, 7 digits precision
-            
+
             const int maxDigits = 7;
 
             var min = (int) (-Math.Pow(10, maxDigits));
-            var max = (int)(Math.Pow(10, maxDigits));
+            var max = (int) (Math.Pow(10, maxDigits));
 
-            Run(i => (float) i, min: min, max: max);
+            Run(Values(i => (float) i, min, max));
             Run(
-                i => (float) i/10, "*10", i => i.Multiplier = 10, (x, y) => Math.Abs(x - y) < 0.01,
-                min, max);
+                Values(i => (float) i/10, min, max), "*10", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                (x, y) => Math.Abs(x - y) < 0.1);
             Run(
-                i => (float) i/100, "*100", i => i.Multiplier = 100, (x, y) => Math.Abs(x - y) < 0.001,
-                min, max);
+                Values(i => (float) i/100, min, max), "*100", i => ((MultipliedDeltaSerializer) i).Multiplier = 100,
+                (x, y) => Math.Abs(x - y) < 0.01);
 
             // Very large numbers cannot be stored as float
             TestUtils.AssertException<OverflowException>(
                 () =>
                 Run(
-                    i => (float) i,
-                    min: (long) (-Math.Pow(10, maxDigits + 3)),
-                    max: (long) (-Math.Pow(10, maxDigits + 3) + 10)));
+                    Range(
+                        (float) -Math.Pow(10, maxDigits + 3), (float) -Math.Pow(10, maxDigits + 3) + 10,
+                        i => (float) (i + 0.1)),
+                    "*10 Large Neg", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                    (x, y) => Math.Abs(x - y) < 0.1));
+
+            TestUtils.AssertException<OverflowException>(
+                () =>
+                Run(
+                    Range(
+                        (float) Math.Pow(10, maxDigits + 3), (float) Math.Pow(10, maxDigits + 3) + 10,
+                        i => (float) (i + 0.1)), "*10 Large Pos", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                    (x, y) => Math.Abs(x - y) < 0.1));
         }
 
         [Test, Explicit, Category("Long test")]
         public void TypeInt()
         {
-            Run(i => (int) i);
-            Run(i => (int) i, "/10", i => i.Divider = 10, (x, y) => x/10*10 == y/10*10);
+            Run(Values(i => (int) i));
+            Run(
+                Values(i => (int) i), "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10,
+                (x, y) => x/10*10 == y/10*10);
         }
 
         [Test, Explicit, Category("Long test")]
         public void TypeLong()
         {
-            Run(i => i);
-            Run(i => i, "/10", i => i.Divider = 10, (x, y) => x/10*10 == y/10*10);
+            Run(Values(i => i));
+            Run(Values(i => i), "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10, (x, y) => x/10*10 == y/10*10);
         }
 
         [Test]
         public void TypeSbyte()
         {
-            Run(i => (sbyte) i, min: sbyte.MinValue, max: sbyte.MaxValue);
+            Run(Range(sbyte.MinValue, sbyte.MaxValue, i => (sbyte) (i + 1)));
         }
 
         [Test]
         public void TypeShort()
         {
-            Run(i => (short) i, min: short.MinValue, max: short.MaxValue);
+            Run(Range(short.MinValue, short.MaxValue, i => (short) (i + 1)));
             Run(
-                i => (short) i, "/10", i => i.Divider = 10, (x, y) => x/10*10 == y/10*10, short.MinValue,
-                short.MaxValue);
+                Range(short.MinValue, short.MaxValue, i => (short) (i + 1)), "/10",
+                i => ((MultipliedDeltaSerializer) i).Divider = 10,
+                (x, y) => x/10*10 == y/10*10);
         }
 
         [Test, Explicit, Category("Long test")]
         public void TypeUint()
         {
-            Run(i => (uint) i);
-            Run(i => (uint) i, "/10", i => i.Divider = 10, (x, y) => x/10*10 == y/10*10);
+            Run(Values(i => (uint) i));
+            Run(
+                Values(i => (uint) i), "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10,
+                (x, y) => x/10*10 == y/10*10);
         }
 
         [Test, Explicit, Category("Long test")]
         public void TypeUlong()
         {
-            Run(i => (ulong) i);
-            Run(i => (ulong) i, "/10", i => i.Divider = 10, (x, y) => x/10*10 == y/10*10);
+            Run(Values(i => (ulong) i));
+            Run(
+                Values(i => (ulong) i), "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10,
+                (x, y) => x/10*10 == y/10*10);
         }
 
         [Test]
         public void TypeUshort()
         {
-            Run(i => (ushort) i, min: ushort.MinValue, max: ushort.MaxValue);
+            Run(Range(ushort.MinValue, ushort.MaxValue, i => (ushort) (i + 1)));
             Run(
-                i => (ushort) i, "/10", i => i.Divider = 10, (x, y) => x/10*10 == y/10*10, ushort.MinValue,
-                ushort.MaxValue);
+                Range(short.MinValue, short.MaxValue, i => (short) (i + 1)),
+                "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10, (x, y) => x/10*10 == y/10*10);
+        }
+
+        [Test]
+        public void TypeUtcDateTime()
+        {
+            Run(Range(UtcDateTime.MinValue, UtcDateTime.MinValue.AddSeconds(.5), i => i.AddTicks(1)));
+            Run(Range(UtcDateTime.MaxValue.AddSeconds(-.5), UtcDateTime.MaxValue, i => i.AddTicks(1)));
+            Run(
+                Range(new UtcDateTime(2011, 1, 1), new UtcDateTime(2011, 2, 1), i => i.AddHours(1)), "Each hour",
+                i => ((UtcDateTimeSerializer) i).TimeDivider = TimeSpan.FromHours(1));
         }
     }
 }

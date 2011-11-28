@@ -3,7 +3,7 @@ using System;
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
-    public sealed partial class FieldAttribute : Attribute
+    public sealed class FieldAttribute : Attribute
     {
         public FieldAttribute()
         {

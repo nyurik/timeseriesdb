@@ -4,8 +4,10 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using JetBrains.Annotations;
 using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
@@ -27,7 +29,17 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 _memberSerializers.Add(new MemberSerializerInfo(fi, GetSerializer(fi.FieldType, fi.Name)));
             }
         }
-        
+
+        public IList<MemberSerializerInfo> MemberSerializers
+        {
+            get { return _memberSerializers; }
+            set
+            {
+                ThrowOnInitialized();
+                _memberSerializers = value.ToList();
+            }
+        }
+
         public static BaseSerializer GetSerializer([NotNull] Type valueType, string name = null)
         {
             if (valueType.IsArray)
@@ -57,18 +69,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                         throw new SerializerException("Unsupported primitive type {0}", valueType);
                 }
             }
-            
-            return new FieldsSerializer(valueType, name);
-        }
 
-        public IList<MemberSerializerInfo> MemberSerializers
-        {
-            get { return _memberSerializers; }
-            set
-            {
-                ThrowOnInitialized();
-                _memberSerializers = value.ToList();
-            }
+            if (valueType == typeof (UtcDateTime))
+                return new UtcDateTimeSerializer(name);
+
+            return new FieldsSerializer(valueType, name);
         }
 
         public override void Validate()
@@ -100,14 +105,42 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return result ?? Expression.Constant(true);
         }
 
-        protected override void GetDeSerializerExp(Expression valueExp, Expression codec,
-                                                   List<ParameterExpression> stateVariables,
-                                                   List<Expression> initBlock, List<Expression> deltaBlock)
+        protected override void GetDeSerializerExp(Expression codec, List<ParameterExpression> stateVariables,
+                                                   out Expression readInitValue, out Expression readNextValue)
         {
             ThrowOnNotInitialized();
+
+            // T current;
+            ParameterExpression currentVar = Expression.Variable(ValueType, "current");
+
+            // (class)  T current = FormatterServices.GetUninitializedObject(typeof(T));
+            // (struct) T current = default(T);
+            BinaryExpression assignNewT = Expression.Assign(
+                currentVar,
+                ValueType.IsValueType
+                    ? (Expression) Expression.Default(ValueType)
+                    : Expression.Call(
+                        typeof (FormatterServices), "GetUninitializedObject", null,
+                        Expression.Constant(ValueType)));
+
+            var readAllInit = new List<Expression> {assignNewT};
+            var readAllNext = new List<Expression> {assignNewT};
+
             foreach (MemberSerializerInfo member in _memberSerializers)
-                member.Serializer.GetDeSerializer(
-                    member.SetterFactory(valueExp), codec, stateVariables, initBlock, deltaBlock);
+            {
+                Expression readInit, readNext;
+                member.Serializer.GetDeSerializer(codec, stateVariables, out readInit, out readNext);
+                
+                Expression field = member.GetterFactory(currentVar);
+                readAllInit.Add(Expression.Assign(field, readInit));
+                readAllNext.Add(Expression.Assign(field, readNext));
+            }
+
+            readAllInit.Add(currentVar);
+            readAllNext.Add(currentVar);
+
+            readInitValue = Expression.Block(new[] {currentVar}, readAllInit);
+            readNextValue = Expression.Block(new[] {currentVar}, readAllNext);
         }
     }
 }

@@ -1,3 +1,7 @@
+#if DEBUG
+    #define DEBUG_SERIALIZER
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -42,9 +46,14 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return Expression.Call(codec, "ReadSignedValue", null);
         }
 
+        protected MethodCallExpression ThrowOverflow(Expression codec, Expression value)
+        {
+            return Expression.Call(codec, "ThrowOverflow", new[] {value.Type}, value);
+        }
+
         public static Expression DebugLong(Expression codec, Expression value)
         {
-#if DEBUG
+#if DEBUG_SERIALIZER
             return Expression.Call(codec, "DebugLong", null, value);
 #else
             return Expression.Empty();
@@ -53,7 +62,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public static Expression DebugFloat(Expression codec, Expression value)
         {
-#if DEBUG
+#if DEBUG_SERIALIZER
             return Expression.Call(codec, "DebugFloat", null, value);
 #else
             return Expression.Empty();
@@ -72,20 +81,18 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return GetSerializerExp(valueExp, codec, stateVariables, initBlock);
         }
 
-        public void GetDeSerializer(
-            Expression valueExp, Expression codec, List<ParameterExpression> stateVariables,
-            List<Expression> initBlock, List<Expression> deltaBlock)
+        public void GetDeSerializer(Expression codec, List<ParameterExpression> stateVariables,
+                                    out Expression readInitValue, out Expression readNextValue)
         {
             EnsureValidation();
-            GetDeSerializerExp(valueExp, codec, stateVariables, initBlock, deltaBlock);
+            GetDeSerializerExp(codec, stateVariables, out readInitValue, out readNextValue);
         }
 
         protected abstract Expression GetSerializerExp(
             Expression valueExp, Expression codec, List<ParameterExpression> stateVariables, List<Expression> initBlock);
 
-        protected abstract void GetDeSerializerExp(
-            Expression valueExp, Expression codec, List<ParameterExpression> stateVariables,
-            List<Expression> initBlock, List<Expression> deltaBlock);
+        protected abstract void GetDeSerializerExp(Expression codec, List<ParameterExpression> stateVariables,
+                                                   out Expression readInitValue, out Expression readNextValue);
 
         private void EnsureValidation()
         {

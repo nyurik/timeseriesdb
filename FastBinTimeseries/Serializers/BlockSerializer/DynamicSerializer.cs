@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Runtime.Serialization;
 using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
@@ -54,10 +53,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         {
             if (serializer == null)
                 throw new ArgumentNullException("serializer");
-            if (typeof (T) != serializer.ValueType)
-                throw new SerializerException(
-                    "Serializer must be for type {0}, instead of {1}",
-                    typeof (T).FullName, serializer.ValueType.FullName);
+//            if (typeof (T) != serializer.ValueType)
+//                throw new SerializerException(
+//                    "Serializer must be for type {0}, instead of {1}",
+//                    typeof (T).FullName, serializer.ValueType.FullName);
 
             // param: codec
             ParameterExpression codecParam = Expression.Parameter(typeof (StreamCodec), "codec");
@@ -175,13 +174,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         ///     
         ///     var state1, state2, ...;
         /// 
-        ///     T current = FormatterServices.GetUninitializedObject(typeof(T)); // if class
-        ///     T current = default(T); // if struct
-        /// 
-        ///     codec.Read(state1);
-        ///     codec.Read(state2);
-        ///     ...
-        ///     result.Add(current);
+        ///     result.Add(ReadField(codec, ref state));
         /// 
         ///     while (true) {
         /// 
@@ -189,24 +182,17 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         ///         if (count == 0)
         ///             break;
         /// 
-        ///         // only if T is a class
-        ///         T current = FormatterServices.GetUninitializedObject(typeof(T));
-        /// 
-        ///         current.Field1 = ReadField1(codec, ref state1);
-        ///         current.Field2 = ReadField2(codec, ref state2);
-        ///         ...
-        /// 
-        ///         result.Add(current);
+        ///         result.Add(ReadField(codec, ref state));
         ///     }
         /// }
         /// 
         public static Action<StreamCodec, Buff<T>, int> GenerateDeSerializer([NotNull] BaseSerializer serializer)
         {
             if (serializer == null) throw new ArgumentNullException("serializer");
-            if (typeof(T) != serializer.ValueType)
-                throw new SerializerException(
-                    "Serializer must be for type {0}, instead of {1}",
-                    typeof(T).FullName, serializer.ValueType.FullName);
+//            if (typeof(T) != serializer.ValueType)
+//                throw new SerializerException(
+//                    "Serializer must be for type {0}, instead of {1}",
+//                    typeof(T).FullName, serializer.ValueType.FullName);
 
             // param: codec
             ParameterExpression codecParam = Expression.Parameter(typeof (StreamCodec), "codec");
@@ -220,49 +206,26 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // int count;
             ParameterExpression countVar = Expression.Variable(typeof (int), "count");
 
-            // T current;
-            ParameterExpression currentVar = Expression.Variable(typeof (T), "current");
-
             LabelTarget breakLabel = Expression.Label("loopBreak");
 
-            var stateVariables = new List<ParameterExpression> {currentVar, countVar};
-            var initBlock = new List<Expression>();
-            var deltaBlock = new List<Expression>();
-            var methodBody = new List<Expression>();
+            var stateVariables = new List<ParameterExpression> {countVar};
 
-            serializer.GetDeSerializer(currentVar, codecParam, stateVariables, initBlock, deltaBlock);
+            Expression readInitValue, readNextValue;
+            serializer.GetDeSerializer(codecParam, stateVariables, out readInitValue, out readNextValue);
 
-            // count = codec.ReadHeader();
-            methodBody.Add(
-                Expression.Assign(
-                    countVar,
-                    Expression.Call(codecParam, "ReadHeader", null)));
-
-            // if (maxItemCount < count)
-            //     count = maxItemCount;
-            methodBody.Add(
-                Expression.IfThen(
-                    Expression.LessThan(maxItemCountParam, countVar),
-                    Expression.Assign(countVar, maxItemCountParam)));
-
-            // (class)  T current = FormatterServices.GetUninitializedObject(typeof(T));
-            // (struct) T current = default(T);
-            BinaryExpression assignNewT = Expression.Assign(
-                currentVar,
-                typeof (T).IsValueType
-                    ? (Expression) Expression.Default(typeof (T))
-                    : Expression.Call(
-                        typeof (FormatterServices), "GetUninitializedObject", null,
-                        Expression.Constant(typeof (T))));
-            methodBody.Add(assignNewT);
-
-            // codec.Read(state1); codec.Read(state2); ...
-            methodBody.AddRange(initBlock);
-
-            // result.Add(current);
-            MethodCallExpression addCurrentToResultExp =
-                Expression.Call(resultParam, "Add", null, currentVar);
-            methodBody.Add(addCurrentToResultExp);
+            var methodBody =
+                new List<Expression>
+                    {
+                        // count = codec.ReadHeader();
+                        Expression.Assign(countVar, Expression.Call(codecParam, "ReadHeader", null)),
+                        // if (maxItemCount < count)
+                        //     count = maxItemCount;
+                        Expression.IfThen(
+                            Expression.LessThan(maxItemCountParam, countVar),
+                            Expression.Assign(countVar, maxItemCountParam)),
+                        // result.Add(ReadField(codec, ref state));
+                        Expression.Call(resultParam, "Add", null, readInitValue)
+                    };
 
             var loopBody =
                 new List<Expression>
@@ -274,20 +237,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                             // count == 0)
                             Expression.Equal(countVar, Expression.Constant(0)),
                             // break;
-                            Expression.Break(breakLabel))
+                            Expression.Break(breakLabel)),
+                        // result.Add(ReadField(codec, ref state));
+                        Expression.Call(resultParam, "Add", null, readNextValue)
                     };
-
-            // (class) T current = FormatterServices.GetUninitializedObject(typeof(T));
-            if (!typeof (T).IsValueType)
-                loopBody.Add(assignNewT);
-
-
-            // current.Field1 = ReadField1(codec, ref state1);
-            // ...
-            loopBody.AddRange(deltaBlock);
-
-            // result.Add(current);
-            loopBody.Add(addCurrentToResultExp);
 
             // while (true) { loopBody; }
             methodBody.Add(
