@@ -25,6 +25,22 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         }
 
         public Type ValueType { get; private set; }
+        
+        private StatefullSerializer _statefullSerializer;
+
+        public StatefullSerializer StatefullSerializer
+        {
+            get { return _statefullSerializer; }
+            set
+            {
+                ThrowOnInitialized();
+                if (value == null)
+                    throw new ArgumentNullException("value");
+                if (_statefullSerializer != null && !ReferenceEquals(value, _statefullSerializer))
+                    throw new ArgumentException("StatefullSerializer has already been set");
+                _statefullSerializer = value;
+            }
+        }
 
         public string Name
         {

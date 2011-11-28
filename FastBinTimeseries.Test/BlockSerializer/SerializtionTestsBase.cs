@@ -38,7 +38,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
             try
             {
-                BaseSerializer fldSerializer = FieldsSerializer.GetSerializer(typeof (T));
+                BaseSerializer fldSerializer = StatefullSerializer.GetSerializer(typeof (T));
                 if (updateSrlzr != null)
                     updateSrlzr(fldSerializer);
 
