@@ -1,22 +1,19 @@
 using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class SimpleSerializer : BaseSerializer
+    internal class SimpleField : BaseField
     {
         private TypeCode _typeCode;
 
-        public SimpleSerializer([NotNull] Type valueType, string name)
-            : base(valueType, name)
+        public SimpleField([NotNull] IStateStore serializer, [NotNull] Type valueType, string stateName)
+            : base(serializer, valueType, stateName)
         {
         }
 
-        protected override Expression GetSerializerExp(Expression valueExp, Expression codec,
-                                                       List<ParameterExpression> stateVariables,
-                                                       List<Expression> initBlock)
+        protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
             ThrowOnNotInitialized();
             MethodCallExpression writeMethod;
@@ -34,12 +31,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     throw new ArgumentOutOfRangeException();
             }
 
-            initBlock.Add(writeMethod);
-            return writeMethod;
+            return new Tuple<Expression, Expression>(writeMethod, writeMethod);
         }
 
-        protected override void GetDeSerializerExp(Expression codec, List<ParameterExpression> stateVariables,
-                                                   out Expression readInitValue, out Expression readNextValue)
+        protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
             ThrowOnNotInitialized();
 
@@ -56,8 +51,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     throw new ArgumentOutOfRangeException();
             }
 
-            readInitValue = readMethod;
-            readNextValue = readMethod;
+            return new Tuple<Expression, Expression>(readMethod, readMethod);
         }
 
         public override void Validate()
@@ -71,7 +65,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {0}", Name, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {0}", StateName, ValueType.AssemblyQualifiedName);
             }
 
             base.Validate();

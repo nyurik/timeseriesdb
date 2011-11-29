@@ -1,8 +1,9 @@
 using System;
+using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class StreamCodec
+    public class StreamCodec
     {
         // All buffers are created slightly bigger than
         private const int PaddingSize = 10;
@@ -58,23 +59,32 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
 #if DEBUG
         private const int DebugHistLength = 10;
-        private readonly Tuple<string, float>[] _debugFloatHist = new Tuple<string, float>[DebugHistLength];
-        private readonly Tuple<string, long>[] _debugLongHist = new Tuple<string, long>[DebugHistLength];
+        private readonly Tuple<string, int, double>[] _debugDoubleHist = new Tuple<string, int, double>[DebugHistLength];
+        private readonly Tuple<string, int, float>[] _debugFloatHist = new Tuple<string, int, float>[DebugHistLength];
+        private readonly Tuple<string, int, long>[] _debugLongHist = new Tuple<string, int, long>[DebugHistLength];
 
+        [UsedImplicitly]
         internal void DebugLong(long v, string name)
         {
             DebugValue(_debugLongHist, v, name);
         }
 
+        [UsedImplicitly]
         internal void DebugFloat(float v, string name)
         {
             DebugValue(_debugFloatHist, v, name);
         }
 
-        internal void DebugValue<T>(Tuple<string,T>[] values, T v, string name)
+        [UsedImplicitly]
+        internal void DebugFloat(double v, string name)
         {
-            Array.Copy(values, 0, values, 1, values.Length - 1);
-            values[0] = Tuple.Create(name, v);
+            DebugValue(_debugDoubleHist, v, name);
+        }
+
+        internal void DebugValue<T>(Tuple<string, int, T>[] values, T v, string name)
+        {
+            Array.Copy(values, 1, values, 0, values.Length - 1);
+            values[values.Length - 1] = Tuple.Create(name, BufferPos, v);
         }
 #endif
 

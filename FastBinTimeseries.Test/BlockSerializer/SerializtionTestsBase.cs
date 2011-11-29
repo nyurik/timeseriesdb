@@ -32,23 +32,19 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
 
         public void Run<T>(IEnumerable<T> values, string name = null,
-                           Action<BaseSerializer> updateSrlzr = null, Func<T, T, bool> comparer = null)
+                           Action<BaseField> updateSrlzr = null, Func<T, T, bool> comparer = null)
         {
             var codec = new StreamCodec(10000);
+            var ds = new DynamicSerializer<T>();
 
             try
             {
-                BaseSerializer fldSerializer = StatefullSerializer.GetSerializer(typeof (T));
                 if (updateSrlzr != null)
-                    updateSrlzr(fldSerializer);
-
-                Func<StreamCodec, IEnumerator<T>, bool> serialize =
-                    DynamicSerializer<T>.GenerateSerializer(fldSerializer);
-                Action<StreamCodec, Buff<T>, int> deserialize = DynamicSerializer<T>.GenerateDeSerializer(fldSerializer);
+                    updateSrlzr(ds.RootField);
 
                 TestUtils.CollectionAssertEqual(
                     // ReSharper disable PossibleMultipleEnumeration
-                    values, RoundTrip(serialize, deserialize, codec, values),
+                    values, RoundTrip(ds, codec, values),
                     // ReSharper restore PossibleMultipleEnumeration
                     typeof (T).Name + name, comparer);
             }
@@ -67,10 +63,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             }
         }
 
-        private static IEnumerable<T> RoundTrip<T>(
-            Func<StreamCodec, IEnumerator<T>, bool> serialize,
-            Action<StreamCodec, Buff<T>, int> deserialize,
-            StreamCodec codec, IEnumerable<T> values)
+        private static IEnumerable<T> RoundTrip<T>(DynamicSerializer<T> ds, StreamCodec codec, IEnumerable<T> values)
         {
             using (IEnumerator<T> enmr = values.GetEnumerator())
             {
@@ -82,11 +75,11 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     try
                     {
                         codec.BufferPos = 0;
-                        moveNext = serialize(codec, enmr);
+                        moveNext = ds.Serialize(codec, enmr);
 
                         codec.BufferPos = 0;
                         buff.Reset();
-                        deserialize(codec, buff, int.MaxValue);
+                        ds.DeSerialize(codec, buff, int.MaxValue);
                     }
                     catch (Exception x)
                     {

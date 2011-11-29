@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using JetBrains.Annotations;
 using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
@@ -9,6 +10,55 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
     [TestFixture]
     public class ComplexTypeTests : SerializtionTestsBase
     {
+        private struct Strct2 : IEquatable<Strct2>, IComparable<Strct2>
+        {
+            [UsedImplicitly] private double _double1;
+            [UsedImplicitly] private double _double2;
+
+            #region Implementation
+
+            public Strct2(double double1, double double2)
+            {
+                _double1 = double1;
+                _double2 = double2;
+            }
+
+            #region IComparable<Strct2> Members
+
+            public int CompareTo(Strct2 other)
+            {
+                return _double1.CompareTo(other._double2);
+            }
+
+            #endregion
+
+            #region IEquatable<Strct2> Members
+
+            public bool Equals(Strct2 other)
+            {
+                return other._double1.Equals(_double1) && other._double2.Equals(_double2);
+            }
+
+            #endregion
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (obj.GetType() != typeof (Strct2)) return false;
+                return Equals((Strct2) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (_double1.GetHashCode()*397) ^ _double2.GetHashCode();
+                }
+            }
+
+            #endregion
+        }
+
         private struct Strct : IEquatable<Strct>, IComparable<Strct>
         {
             [UsedImplicitly] private double _double1;
@@ -33,16 +83,24 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
             #region Implementation
 
+            #region IComparable<Strct> Members
+
             public int CompareTo(Strct other)
             {
                 return Index.CompareTo(other.Index);
             }
+
+            #endregion
+
+            #region IEquatable<Strct> Members
 
             public bool Equals(Strct other)
             {
                 return other.Index == Index && other._double1.Equals(_double1) && other._float.Equals(_float)
                        && other._timestamp.Equals(_timestamp);
             }
+
+            #endregion
 
             public override bool Equals(object obj)
             {
@@ -72,16 +130,30 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         }
 
         [Test]
+        public void Strct2SharedStateTest()
+        {
+            Run(
+                Enumerable.Range(1, 100).Select(i => new Strct2(10000 + i*2, 10000 + i*2 + 1)), "0+",
+                i =>
+                    {
+                        var s = (ComplexField) i;
+                        ((MultipliedDeltaField) s["_double1"].Field).Multiplier = 1;
+                        ((MultipliedDeltaField) s["_double2"].Field).Multiplier = 1;
+                        s["_double2"].Field.StateName = s["_double1"].Field.StateName;
+                    });
+        }
+
+        [Test]
         public void StrctTest()
         {
             Run(
                 Range(new Strct(0), new Strct(1000), i => new Strct(i.Index + 1)), "0+",
                 i =>
                     {
-                        var s = (FieldsSerializer) i;
-                        ((MultipliedDeltaSerializer) s["_float"].Serializer).Multiplier = 10;
-                        ((MultipliedDeltaSerializer) s["_double1"].Serializer).Multiplier = 1;
-                        ((MultipliedDeltaSerializer) s["_double2"].Serializer).Multiplier = 1;
+                        var s = (ComplexField) i;
+                        ((MultipliedDeltaField) s["_float"].Field).Multiplier = 10;
+                        ((MultipliedDeltaField) s["_double1"].Field).Multiplier = 1;
+                        ((MultipliedDeltaField) s["_double2"].Field).Multiplier = 1;
                     });
         }
     }

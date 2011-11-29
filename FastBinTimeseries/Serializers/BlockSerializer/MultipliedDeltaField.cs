@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class MultipliedDeltaSerializer : BaseSerializer
+    internal class MultipliedDeltaField : BaseField
     {
         private long _divider = 1;
         private ConstantExpression _dividerExp;
@@ -15,10 +14,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// <summary>
         /// Integer and Float delta serializer.
         /// </summary>
+        /// <param name="stateStore">Serializer with the state</param>
         /// <param name="valueType">Type of value to store</param>
-        /// <param name="name">Name of the value (for debugging)</param>
-        public MultipliedDeltaSerializer([NotNull] Type valueType, string name)
-            : base(valueType, name)
+        /// <param name="stateName">Name of the value (for debugging)</param>
+        public MultipliedDeltaField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
+            : base(stateStore, valueType, stateName)
         {
             // Floating point numbers must manually initialize Multiplier
             _multiplier =
@@ -55,10 +55,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
             if (_multiplier < 1)
                 throw new SerializerException(
-                    "Multiplier = {2} for value {0} ({1}), but must be >= 1", Name, ValueType.FullName, _multiplier);
+                    "Multiplier = {2} for value {0} ({1}), but must be >= 1", StateName, ValueType.FullName, _multiplier);
             if (_divider < 1)
                 throw new SerializerException(
-                    "Divider = {2} for value {0} ({1}), but must be >= 1", Name, ValueType.FullName, _divider);
+                    "Divider = {2} for value {0} ({1}), but must be >= 1", StateName, ValueType.FullName, _divider);
 
             ulong maxDivider = 0;
             _isInteger = true;
@@ -100,7 +100,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {0}", Name, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {0}", StateName, ValueType.AssemblyQualifiedName);
             }
 
             if (_isInteger)
@@ -108,26 +108,25 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 if (_multiplier != 1)
                     throw new SerializerException(
                         "Integer types must have multiplier == 1, but {0} was given instead for value {0} ({1})",
-                        _multiplier, Name, ValueType.FullName);
+                        _multiplier, StateName, ValueType.FullName);
                 if ((ulong) _divider > maxDivider)
                     throw new SerializerException(
-                        "Divider = {2} for value {0} ({1}), but must be < {3}", Name, ValueType.FullName, _divider,
+                        "Divider = {2} for value {0} ({1}), but must be < {3}", StateName, ValueType.FullName, _divider,
                         maxDivider);
             }
 
             base.Validate();
         }
 
-        protected override Expression GetSerializerExp(
-            Expression valueExp, Expression codec, List<ParameterExpression> stateVariables, List<Expression> initBlock)
+        protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
             ThrowOnNotInitialized();
 
             //
             // long stateVar;
             //
-            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state" + Name);
-            stateVariables.Add(stateVarExp);
+            bool needToInit;
+            ParameterExpression stateVarExp = StateStore.GetOrCreateStateVar(StateName, typeof (long), out needToInit);
 
             //
             // valueGetter():
@@ -182,13 +181,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                         : Expression.ConvertChecked(getValExp, typeof (long));
 
 
-            //
-            // stateVar = valueGetter();
-            // codec.WriteSignedValue(stateVar);
-            //
-            initBlock.Add(Expression.Assign(stateVarExp, getValExp));
-            initBlock.Add(DebugLong(codec, stateVarExp));
-            initBlock.Add(WriteSignedValue(codec, stateVarExp));
+            ParameterExpression varState2Exp = Expression.Variable(typeof (long), "state2");
+            ParameterExpression varDeltaExp = Expression.Variable(typeof (long), "delta");
 
             //
             // stateVar2 = valueGetter();
@@ -196,18 +190,30 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // stateVar = stateVar2;
             // return codec.WriteSignedValue(delta);
             //
-            ParameterExpression stateVar2Exp = Expression.Variable(typeof (long), "state2" + Name);
-            ParameterExpression deltaExp = Expression.Variable(typeof (long), "delta" + Name);
-            return
+            Expression deltaExp =
                 Expression.Block(
                     typeof (bool),
-                    new[] {stateVar2Exp, deltaExp},
-                    Expression.Assign(stateVar2Exp, getValExp),
-                    Expression.Assign(deltaExp, Expression.Subtract(stateVar2Exp, stateVarExp)),
-                    Expression.Assign(stateVarExp, stateVar2Exp),
-                    DebugLong(codec, stateVarExp),
-                    WriteSignedValue(codec, deltaExp)
+                    new[] {varState2Exp, varDeltaExp},
+                    Expression.Assign(varState2Exp, getValExp),
+                    Expression.Assign(varDeltaExp, Expression.Subtract(varState2Exp, stateVarExp)),
+                    Expression.Assign(stateVarExp, varState2Exp),
+                    DebugValueExp(codec, stateVarExp, "MultFld WriteDelta"),
+                    WriteSignedValue(codec, varDeltaExp)
                     );
+
+            //
+            // stateVar = valueGetter();
+            // codec.WriteSignedValue(stateVar);
+            //
+            Expression initExp =
+                needToInit
+                    ? Expression.Block(
+                        Expression.Assign(stateVarExp, getValExp),
+                        DebugValueExp(codec, stateVarExp, "MultFld WriteInit"),
+                        WriteSignedValue(codec, stateVarExp))
+                    : deltaExp;
+
+            return new Tuple<Expression, Expression>(initExp, deltaExp);
         }
 
         private Expression FloatingGetValExp<T>(Expression value, Expression codec, T divider,
@@ -230,16 +236,15 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     Expression.Call(typeof (Math), "Round", null, multExp));
         }
 
-        protected override void GetDeSerializerExp(Expression codec, List<ParameterExpression> stateVariables,
-                                                   out Expression readInitValue, out Expression readNextValue)
+        protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
             ThrowOnNotInitialized();
 
             //
             // long stateVar;
             //
-            ParameterExpression stateVarExp = Expression.Variable(typeof (long), "state" + Name);
-            stateVariables.Add(stateVarExp);
+            bool needToInit;
+            ParameterExpression stateVarExp = StateStore.GetOrCreateStateVar(StateName, typeof (long), out needToInit);
 
             //
             // valueGetter():
@@ -283,24 +288,31 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 getValExp = Expression.Convert(getValExp, ValueType);
 
 
-            //
-            // stateVar = codec.ReadSignedValue();
-            // return stateVar;
-            //
             MethodCallExpression readValExp = ReadSignedValue(codec);
-            readInitValue = Expression.Block(
-                Expression.Assign(stateVarExp, readValExp),
-                DebugLong(codec, stateVarExp),
-                getValExp);
 
             //
             // stateVar += codec.ReadSignedValue();
             // return stateVar;
             //
-            readNextValue = Expression.Block(
-                Expression.AddAssign(stateVarExp, readValExp),
-                DebugLong(codec, stateVarExp),
-                getValExp);
+            Expression deltaExp =
+                Expression.Block(
+                    Expression.AddAssign(stateVarExp, readValExp),
+                    DebugValueExp(codec, stateVarExp, "MultFld ReadDelta"),
+                    getValExp);
+
+            //
+            // stateVar = codec.ReadSignedValue();
+            // return stateVar;
+            //
+            Expression initExp =
+                needToInit
+                    ? Expression.Block(
+                        Expression.Assign(stateVarExp, readValExp),
+                        DebugValueExp(codec, stateVarExp, "MultFld ReadInit"),
+                        getValExp)
+                    : deltaExp;
+
+            return new Tuple<Expression, Expression>(initExp, deltaExp);
         }
     }
 }

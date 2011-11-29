@@ -24,12 +24,12 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             var min = (int) (-Math.Pow(10, maxDigits));
             var max = (int) (Math.Pow(10, maxDigits));
 
-            Run(Values(i => (double) i, min, max), "*1", i => ((MultipliedDeltaSerializer) i).Multiplier = 1);
+            Run(Values(i => (double) i, min, max), "*1", i => ((MultipliedDeltaField) i).Multiplier = 1);
             Run(
-                Values(i => (double) i/10, min, max), "*10", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                Values(i => (double) i/10, min, max), "*10", i => ((MultipliedDeltaField) i).Multiplier = 10,
                 (x, y) => Math.Abs(x - y) < 0.1);
             Run(
-                Values(i => (double) i/100, min, max), "*100", i => ((MultipliedDeltaSerializer) i).Multiplier = 100,
+                Values(i => (double) i/100, min, max), "*100", i => ((MultipliedDeltaField) i).Multiplier = 100,
                 (x, y) => Math.Abs(x - y) < 0.01);
 
             // Very large numbers cannot be stored as double
@@ -37,14 +37,14 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 () =>
                 Run(
                     Range(-Math.Pow(10, maxDigits + 3), -Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
-                    "*10 Large Neg", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                    "*10 Large Neg", i => ((MultipliedDeltaField) i).Multiplier = 10,
                     (x, y) => Math.Abs(x - y) < 0.1));
 
             TestUtils.AssertException<OverflowException>(
                 () =>
                 Run(
                     Range(Math.Pow(10, maxDigits + 3), Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
-                    "*10 Large Pos", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                    "*10 Large Pos", i => ((MultipliedDeltaField) i).Multiplier = 10,
                     (x, y) => Math.Abs(x - y) < 0.1));
         }
 
@@ -58,12 +58,12 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             var min = (int) (-Math.Pow(10, maxDigits));
             var max = (int) (Math.Pow(10, maxDigits));
 
-            Run(Values(i => (float) i, min, max), "*1", i => ((MultipliedDeltaSerializer) i).Multiplier = 1);
+            Run(Values(i => (float) i, min, max), "*1", i => ((MultipliedDeltaField) i).Multiplier = 1);
             Run(
-                Values(i => (float) i/10, min, max), "*10", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                Values(i => (float) i/10, min, max), "*10", i => ((MultipliedDeltaField) i).Multiplier = 10,
                 (x, y) => Math.Abs(x - y) < 0.1);
             Run(
-                Values(i => (float) i/100, min, max), "*100", i => ((MultipliedDeltaSerializer) i).Multiplier = 100,
+                Values(i => (float) i/100, min, max), "*100", i => ((MultipliedDeltaField) i).Multiplier = 100,
                 (x, y) => Math.Abs(x - y) < 0.01);
 
             // Very large numbers cannot be stored as float
@@ -73,7 +73,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     Range(
                         (float) -Math.Pow(10, maxDigits + 3), (float) -Math.Pow(10, maxDigits + 3) + 10,
                         i => (float) (i + 0.1)),
-                    "*10 Large Neg", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                    "*10 Large Neg", i => ((MultipliedDeltaField) i).Multiplier = 10,
                     (x, y) => Math.Abs(x - y) < 0.1));
 
             TestUtils.AssertException<OverflowException>(
@@ -81,7 +81,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 Run(
                     Range(
                         (float) Math.Pow(10, maxDigits + 3), (float) Math.Pow(10, maxDigits + 3) + 10,
-                        i => (float) (i + 0.1)), "*10 Large Pos", i => ((MultipliedDeltaSerializer) i).Multiplier = 10,
+                        i => (float) (i + 0.1)), "*10 Large Pos", i => ((MultipliedDeltaField) i).Multiplier = 10,
                     (x, y) => Math.Abs(x - y) < 0.1));
         }
 
@@ -90,7 +90,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         {
             Run(Values(i => (int) i));
             Run(
-                Values(i => (int) i), "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10,
+                Values(i => (int) i), "/10", i => ((MultipliedDeltaField) i).Divider = 10,
                 (x, y) => x/10*10 == y/10*10);
         }
 
@@ -98,7 +98,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         public void TypeLong()
         {
             Run(Values(i => i));
-            Run(Values(i => i), "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10, (x, y) => x/10*10 == y/10*10);
+            Run(Values(i => i), "/10", i => ((MultipliedDeltaField) i).Divider = 10, (x, y) => x/10*10 == y/10*10);
         }
 
         [Test]
@@ -113,7 +113,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             Run(Range(short.MinValue, short.MaxValue, i => (short) (i + 1)));
             Run(
                 Range(short.MinValue, short.MaxValue, i => (short) (i + 1)), "/10",
-                i => ((MultipliedDeltaSerializer) i).Divider = 10,
+                i => ((MultipliedDeltaField) i).Divider = 10,
                 (x, y) => x/10*10 == y/10*10);
         }
 
@@ -122,7 +122,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         {
             Run(Values(i => (uint) i));
             Run(
-                Values(i => (uint) i), "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10,
+                Values(i => (uint) i), "/10", i => ((MultipliedDeltaField) i).Divider = 10,
                 (x, y) => x/10*10 == y/10*10);
         }
 
@@ -131,7 +131,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         {
             Run(Values(i => (ulong) i));
             Run(
-                Values(i => (ulong) i), "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10,
+                Values(i => (ulong) i), "/10", i => ((MultipliedDeltaField) i).Divider = 10,
                 (x, y) => x/10*10 == y/10*10);
         }
 
@@ -141,7 +141,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             Run(Range(ushort.MinValue, ushort.MaxValue, i => (ushort) (i + 1)));
             Run(
                 Range(short.MinValue, short.MaxValue, i => (short) (i + 1)),
-                "/10", i => ((MultipliedDeltaSerializer) i).Divider = 10, (x, y) => x/10*10 == y/10*10);
+                "/10", i => ((MultipliedDeltaField) i).Divider = 10, (x, y) => x/10*10 == y/10*10);
         }
 
         [Test]
@@ -151,7 +151,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             Run(Range(UtcDateTime.MaxValue.AddSeconds(-.5), UtcDateTime.MaxValue, i => i.AddTicks(1)));
             Run(
                 Range(new UtcDateTime(2011, 1, 1), new UtcDateTime(2011, 2, 1), i => i.AddHours(1)), "Each hour",
-                i => ((UtcDateTimeSerializer) i).TimeDivider = TimeSpan.FromHours(1));
+                i => ((UtcDateTimeField) i).TimeDivider = TimeSpan.FromHours(1));
         }
     }
 }
