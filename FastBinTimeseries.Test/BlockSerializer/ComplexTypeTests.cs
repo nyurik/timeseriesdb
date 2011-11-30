@@ -137,8 +137,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 i =>
                     {
                         var s = (ComplexField) i;
-                        ((MultipliedDeltaField) s["_double1"].Field).Multiplier = 1;
-                        ((MultipliedDeltaField) s["_double2"].Field).Multiplier = 1;
+                        ((ScaledDeltaField) s["_double1"].Field).Multiplier = 1;
+                        ((ScaledDeltaField) s["_double2"].Field).Multiplier = 1;
                         s["_double2"].Field.StateName = s["_double1"].Field.StateName;
                     });
         }
@@ -151,9 +151,9 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 i =>
                     {
                         var s = (ComplexField) i;
-                        ((MultipliedDeltaField) s["_float"].Field).Multiplier = 10;
-                        ((MultipliedDeltaField) s["_double1"].Field).Multiplier = 1;
-                        ((MultipliedDeltaField) s["_double2"].Field).Multiplier = 1;
+                        ((ScaledDeltaField) s["_float"].Field).Multiplier = 10;
+                        ((ScaledDeltaField) s["_double1"].Field).Multiplier = 1;
+                        ((ScaledDeltaField) s["_double2"].Field).Multiplier = 1;
                     });
         }
     }

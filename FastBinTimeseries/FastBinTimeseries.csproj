@@ -134,7 +134,7 @@
     <Compile Include="Serializers\BlockSerializer\DynamicSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\FieldAttribute.cs" />
     <Compile Include="Serializers\BlockSerializer\BaseField.cs" />
-    <Compile Include="Serializers\BlockSerializer\MultipliedDeltaField.cs" />
+    <Compile Include="Serializers\BlockSerializer\ScaledDeltaField.cs" />
     <Compile Include="Serializers\BlockSerializer\ComplexField.cs" />
     <Compile Include="Serializers\BlockSerializer\IBinBlock.cs" />
     <Compile Include="Serializers\BlockSerializer\SubFieldInfo.cs" />

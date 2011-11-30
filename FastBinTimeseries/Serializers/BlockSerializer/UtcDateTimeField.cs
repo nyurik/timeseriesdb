@@ -8,7 +8,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     internal class UtcDateTimeField : BaseField
     {
-        private readonly MultipliedDeltaField _deltaField;
+        private readonly ScaledDeltaField _deltaField;
 
         /// <summary>
         /// Integer and Float delta serializer.
@@ -16,7 +16,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         public UtcDateTimeField([NotNull] IStateStore serializer, string stateName)
             : base(serializer, typeof (UtcDateTime), stateName)
         {
-            _deltaField = new MultipliedDeltaField(serializer, typeof (long), stateName);
+            _deltaField = new ScaledDeltaField(serializer, typeof (long), stateName);
         }
 
         /// <summary>Value is divided by this parameter before storage</summary>

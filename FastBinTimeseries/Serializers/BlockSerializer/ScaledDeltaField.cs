@@ -4,7 +4,7 @@ using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class MultipliedDeltaField : BaseField
+    internal class ScaledDeltaField : BaseField
     {
         private long _divider = 1;
         private ConstantExpression _dividerExp;
@@ -17,7 +17,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// <param name="stateStore">Serializer with the state</param>
         /// <param name="valueType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
-        public MultipliedDeltaField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
+        public ScaledDeltaField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
             : base(stateStore, valueType, stateName)
         {
             // Floating point numbers must manually initialize Multiplier

@@ -81,7 +81,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     case TypeCode.Single:
                     case TypeCode.Double:
                     case TypeCode.Decimal:
-                        return new MultipliedDeltaField(this, valueType, name);
+                        return new ScaledDeltaField(this, valueType, name);
 
                     default:
                         throw new SerializerException("Unsupported primitive type {0}", valueType);
