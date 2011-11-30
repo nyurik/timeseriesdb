@@ -26,7 +26,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             set
             {
                 if (value < 0 || value > BufferSize)
-                    throw new ArgumentOutOfRangeException("value", value, "Must be >= 0 && <= BufferSize");
+                    throw new ArgumentOutOfRangeException("value", value, "Must be >= 0 && <= " + BufferSize);
                 _bufferPos = value;
             }
         }

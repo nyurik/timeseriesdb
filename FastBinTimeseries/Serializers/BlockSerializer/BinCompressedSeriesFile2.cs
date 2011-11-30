@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
-using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -14,6 +12,22 @@ namespace NYurik.FastBinTimeseries
 //        {
 //            Serializer = new DeltaSerializer();
 //        }
+
+        #region IEnumerableFeed<TInd,TVal> Members
+
+        public Func<TVal, TInd> IndexAccessor
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd @from, bool inReverse = false,
+                                                              IEnumerable<TVal[]> bufferProvider = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
             throw new NotImplementedException();
@@ -24,11 +38,6 @@ namespace NYurik.FastBinTimeseries
             throw new NotImplementedException();
         }
 
-        public Func<TVal, TInd> IndexAccessor
-        {
-            get { throw new NotImplementedException(); }
-        }
-
         public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd @from, bool inReverse = false, int bufferSize = 0)
         {
             throw new NotImplementedException();
@@ -36,7 +45,6 @@ namespace NYurik.FastBinTimeseries
 
         protected void PerformWriteStreaming(IEnumerable<ArraySegment<TVal>> stream, long firstItemIdx = long.MaxValue)
         {
-            
         }
     }
 }

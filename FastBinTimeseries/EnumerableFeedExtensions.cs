@@ -16,12 +16,12 @@ namespace NYurik.FastBinTimeseries
         [Obsolete("Use Stream<TInd, TVal>() instead")]
         public static IEnumerable<T> Stream<T>(Func<IEnumerableFeed<T>> feedFactory,
                                                UtcDateTime from, UtcDateTime? until = null,
-                                               bool inReverse = false, int bufferSize = 0,
+                                               bool inReverse = false, IEnumerable<T[]> bufferProvider = null,
                                                Action<IEnumerableFeed<T>> onDispose = null)
         {
             return Stream(
                 () => (IEnumerableFeed<UtcDateTime, T>) feedFactory(),
-                from, until, inReverse, bufferSize,
+                from, until, inReverse, bufferProvider,
                 onDispose != null
                     ? f => onDispose((IEnumerableFeed<T>) f)
                     : (Action<IEnumerableFeed<UtcDateTime, T>>) null);
@@ -29,15 +29,15 @@ namespace NYurik.FastBinTimeseries
 
         public static IEnumerable<TVal> Stream<TInd, TVal>(
             this IEnumerableFeed<TInd, TVal> feed,
-            TInd from, TInd? until = null, bool inReverse = false, int bufferSize = 0)
+            TInd from, TInd? until = null, bool inReverse = false, IEnumerable<TVal[]> bufferProvider = null)
             where TInd : struct, IComparable<TInd>
         {
-            return Stream(() => feed, from, until, inReverse, bufferSize);
+            return Stream(() => feed, from, until, inReverse, bufferProvider);
         }
 
         public static IEnumerable<TVal> Stream<TInd, TVal>(
             Func<IEnumerableFeed<TInd, TVal>> feedFactory,
-            TInd from, TInd? until = null, bool inReverse = false, int bufferSize = 0,
+            TInd from, TInd? until = null, bool inReverse = false, IEnumerable<TVal[]> bufferProvider = null,
             Action<IEnumerableFeed<TInd, TVal>> onDispose = null)
             where TInd : struct, IComparable<TInd>
         {
@@ -47,7 +47,7 @@ namespace NYurik.FastBinTimeseries
             IEnumerableFeed<TInd, TVal> feed = feedFactory();
             try
             {
-                foreach (var segm in feed.StreamSegments(from, until, inReverse, bufferSize))
+                foreach (var segm in feed.StreamSegments(from, until, inReverse, bufferProvider))
                 {
                     if (inReverse)
                         for (int i = segm.Offset + segm.Count - 1; i >= segm.Offset; i--)
@@ -80,25 +80,25 @@ namespace NYurik.FastBinTimeseries
 //
         public static IEnumerable<ArraySegment<TVal>> StreamSegments<TInd, TVal>(
             this IEnumerableFeed<TInd, TVal> feed,
-            TInd from, TInd? until = null, bool inReverse = false, int bufferSize = 0)
+            TInd from, TInd? until = null, bool inReverse = false, IEnumerable<TVal[]> bufferProvider = null)
             where TInd : struct, IComparable<TInd>
         {
             if (feed == null)
                 throw new ArgumentNullException("feed");
 
             return until == null
-                       ? feed.StreamSegments(from, inReverse, bufferSize)
-                       : StreamSegmentsUntil(feed, from, until.Value, inReverse, bufferSize);
+                       ? feed.StreamSegments(from, inReverse, bufferProvider)
+                       : StreamSegmentsUntil(feed, from, until.Value, inReverse, bufferProvider);
         }
 
         private static IEnumerable<ArraySegment<TVal>> StreamSegmentsUntil<TInd, TVal>(
             IEnumerableFeed<TInd, TVal> feed, TInd from,
             TInd until, bool inReverse,
-            int bufferSize) where TInd : struct, IComparable<TInd>
+            IEnumerable<TVal[]> bufferProvider) where TInd : struct, IComparable<TInd>
         {
             Func<TVal, TInd> tsa = feed.IndexAccessor;
 
-            foreach (var segm in feed.StreamSegments(from, inReverse, bufferSize))
+            foreach (var segm in feed.StreamSegments(from, inReverse, bufferProvider))
             {
                 if (segm.Count == 0)
                     continue;

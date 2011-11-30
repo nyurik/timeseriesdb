@@ -125,7 +125,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_firstIndex == null && count > 0)
                 {
-                    ArraySegment<TVal> seg = PerformStreaming(0, false, 1).FirstOrDefault();
+                    ArraySegment<TVal> seg = PerformStreaming(0, false, maxItemCount: 1).FirstOrDefault();
                     if (seg.Array != null && seg.Count > 0)
                         _firstIndex = IndexAccessor(seg.Array[seg.Offset]);
                 }
@@ -142,7 +142,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_lastIndex == null && count > 0)
                 {
-                    ArraySegment<TVal> seg = PerformStreaming(count - 1, false, 1).FirstOrDefault();
+                    ArraySegment<TVal> seg = PerformStreaming(count - 1, false, maxItemCount: 1).FirstOrDefault();
                     if (seg.Array != null && seg.Count > 0)
                         _lastIndex = IndexAccessor(seg.Array[seg.Offset]);
                 }
@@ -167,13 +167,14 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
-        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse, int bufferSize)
+        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse = false,
+                                                              IEnumerable<TVal[]> bufferProvider = null)
         {
             long index = FirstIndexToPos(from);
             if (inReverse)
                 index--;
 
-            return PerformStreaming(index, inReverse, bufferSize);
+            return PerformStreaming(index, inReverse, bufferProvider);
         }
 
         #endregion

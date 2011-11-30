@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
@@ -9,8 +8,7 @@ namespace NYurik.FastBinTimeseries
     public abstract class BinaryFile<T> : BinaryFile, IBinaryFile
     {
         private const int MinReqSizeToUseMapView = 4*1024; // 4 KB
-
-        private readonly ThreadLocal<T[]> _streamBuffer = new ThreadLocal<T[]>();
+        private BufferProvider<T> _bufferProvider;
         private IBinSerializer<T> _serializer;
 
         /// <summary>
@@ -300,13 +298,15 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="firstItemIdx">The index of the first block to read (both forward and backward). Invalid values will be adjusted to existing data.</param>
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
-        /// <param name="bufferSize">The size of the internal buffer to read data. Set to 0 to make internal buffer autogrow with time</param>
+        /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
+        /// <param name="maxItemCount">Maximum number of items to return</param>
         protected internal IEnumerable<ArraySegment<T>> PerformStreaming(long firstItemIdx, bool enumerateInReverse,
-                                                                         int bufferSize)
+                                                                         IEnumerable<T[]> bufferProvider = null,
+                                                                         long maxItemCount = 0)
         {
             ThrowOnNotInitialized();
-            if (bufferSize < 0)
-                throw new ArgumentOutOfRangeException("bufferSize", bufferSize, "Must be >= 0");
+            if (maxItemCount < 0)
+                throw new ArgumentOutOfRangeException("maxItemCount", maxItemCount, "Must be >= 0");
 
             bool canSeek = BaseStream.CanSeek;
             long fileSize = 0, fileCount = long.MaxValue;
@@ -338,41 +338,35 @@ namespace NYurik.FastBinTimeseries
                     yield break;
             }
 
-            bool autogrow = bufferSize == 0;
+            IEnumerable<T[]> buffers;
 
-            T[] buffer;
-            int initBufSize = autogrow ? 16*MinPageSize/ItemSize : bufferSize;
+            bool limitByCount = maxItemCount > 0;
 
-            if (!_streamBuffer.IsValueCreated)
-                _streamBuffer.Value = buffer = new T[initBufSize];
+            if (bufferProvider != null)
+                buffers = bufferProvider;
             else
             {
-                buffer = _streamBuffer.Value;
-                if (buffer.Length < initBufSize)
-                    _streamBuffer.Value = buffer = new T[initBufSize];
+                int initSize = 16*MinPageSize/ItemSize;
+                if (limitByCount && initSize > maxItemCount)
+                    initSize = (int) maxItemCount;
+                if (_bufferProvider == null)
+                    _bufferProvider = new BufferProvider<T>();
+                buffers = _bufferProvider.GetBuffers(initSize, MaxLargePageSize/ItemSize, 10);
             }
 
-            int iterations = 0;
             bool? useMemMappedAccess = null;
 
-            while (true)
+            // buffer provider should be an infinite loop
+            foreach (var buffer in buffers)
             {
                 long itemsLeft = !canSeek ? long.MaxValue : (enumerateInReverse ? idx + 1 : fileCount - idx);
-
                 if (itemsLeft <= 0)
                     yield break;
 
-                if (autogrow && iterations++ > 10)
-                {
-                    if (itemsLeft > buffer.Length)
-                    {
-                        // switch to larger blocks
-                        _streamBuffer.Value = buffer = new T[Math.Min(MaxLargePageSize/ItemSize, itemsLeft)];
-                    }
-                    autogrow = false;
-                }
-
                 var readSize = (int) Math.Min(itemsLeft, buffer.Length);
+                if (limitByCount && readSize > maxItemCount)
+                    readSize = (int) maxItemCount;
+
                 var block = new ArraySegment<T>(buffer, 0, readSize);
 
                 long readBlockFrom = enumerateInReverse ? idx - readSize + 1 : idx;
@@ -401,6 +395,13 @@ namespace NYurik.FastBinTimeseries
 
                     if (canSeek)
                         idx += readSize;
+                }
+
+                if (limitByCount)
+                {
+                    maxItemCount -= readSize;
+                    if (maxItemCount <= 0)
+                        yield break;
                 }
             }
         }

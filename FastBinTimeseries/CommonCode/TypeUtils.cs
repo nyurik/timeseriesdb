@@ -24,19 +24,20 @@ namespace NYurik.FastBinTimeseries.CommonCode
         {
             // If we were unable to resolve type object - possibly because of the version change
             // Try to load using just the assembly name, without any version/culture/public key info
-            return Type.GetType(typeName,
-                                an =>
-                                    {
-                                        try
-                                        {
-                                            return Assembly.Load(new AssemblyName(an.FullName).Name);
-                                        }
-                                        catch
-                                        {
-                                            return null;
-                                        }
-                                    },
-                                null);
+            return Type.GetType(
+                typeName,
+                an =>
+                    {
+                        try
+                        {
+                            return Assembly.Load(new AssemblyName(an.FullName).Name);
+                        }
+                        catch
+                        {
+                            return null;
+                        }
+                    },
+                null);
         }
 
         /// <summary>

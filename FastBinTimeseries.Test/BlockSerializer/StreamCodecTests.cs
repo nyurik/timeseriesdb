@@ -185,7 +185,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         {
             var codec = new StreamCodec(BufferSize);
 
-            foreach (var valList in BatchGroup(TestValuesGenerator(), codec.Buffer.Length/10))
+            foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
             {
                 codec.BufferPos = 0;
                 foreach (long val in valList)
@@ -207,7 +207,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         {
             var codec = new StreamCodec(BufferSize);
 
-            foreach (var valList in BatchGroup(TestValuesGenerator(), codec.Buffer.Length/10))
+            foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
             {
                 codec.BufferPos = 0;
                 foreach (ulong val in valList)

@@ -36,6 +36,7 @@ namespace NYurik.FastBinTimeseries
         where TInd : struct, IComparable<TInd>
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
+        private BufferProvider<TVal> _bufferProvider;
 
         // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
@@ -166,13 +167,19 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
-        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse, int bufferSize)
+        public int Foo(int f)
         {
-            long index = FirstIndexToPos(@from);
+            return f;
+        }
+
+
+        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse = false, IEnumerable<TVal[]> bufferProvider = null)
+        {
+            long index = FirstIndexToPos(from);
             if (inReverse)
                 index--;
 
-            return PerformStreaming(index, inReverse, bufferSize);
+            return PerformStreaming(index, inReverse, bufferProvider);
         }
 
         #endregion

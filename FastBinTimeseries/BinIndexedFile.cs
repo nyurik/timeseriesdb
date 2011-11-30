@@ -61,10 +61,11 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="firstItemIdx">The index of the first block to read (both forward and backward). Invalid values will be adjusted to existing data.</param>
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
-        /// <param name="bufferSize">The size of the internal buffer to read data. Set to 0 to make internal buffer autogrow with time</param>
-        public IEnumerable<ArraySegment<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse, int bufferSize)
+        /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
+        public IEnumerable<ArraySegment<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse,
+                                                           IEnumerable<T[]> bufferProvider = null)
         {
-            return PerformStreaming(firstItemIdx, enumerateInReverse, bufferSize);
+            return PerformStreaming(firstItemIdx, enumerateInReverse, bufferProvider);
         }
 
         /// <summary>

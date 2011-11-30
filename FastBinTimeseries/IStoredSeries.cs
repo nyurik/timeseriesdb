@@ -26,8 +26,9 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="from">The index of the first element to read. Inclusive if going forward, exclusive when going backwards</param>
         /// <param name="inReverse">Set to true if you want to enumerate backwards, from last to first</param>
-        /// <param name="bufferSize">Size of the read buffer. If 0, the buffer will start small and grow with time</param>
-        IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse = false, int bufferSize = 0);
+        /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
+        IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse = false,
+                                                       IEnumerable<TVal[]> bufferProvider = null);
     }
 
     //[Obsolete("Use IEnumerableFeed<TInd, TVal> instead")]

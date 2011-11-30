@@ -1,26 +1,16 @@
-using System;
 using NUnit.Framework;
-using NYurik.FastBinTimeseries.CommonCode;
-using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
 namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 {
     [TestFixture]
     public class DeltaSerializerTests : TestsBase
     {
-        [Test]
-        public void Test1()
-        {
-            
-        }
-
-        void TestStub<T>(T[] buff, int count)
+        private void TestStub<T>(T[] buff, int count)
         {
             for (int i = 0; i < 10000; i++)
             {
                 for (int j = 0; j < buff.Length; j++)
                 {
-
                 }
             }
         }
@@ -50,6 +40,11 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 //            {
 //                VerifyData(bf, data);
 //            }
+        }
+
+        [Test]
+        public void Test1()
+        {
         }
     }
 }

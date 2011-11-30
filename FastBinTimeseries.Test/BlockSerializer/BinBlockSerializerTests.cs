@@ -13,7 +13,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         private static void VerifyData(BinIndexedFile<TradesBlock> bf, TradesBlock[] data)
         {
             int ind = 0;
-            foreach (var sg in bf.StreamSegments(0, false, 0))
+            foreach (var sg in bf.StreamSegments(0, false))
             {
                 int last = sg.Offset + sg.Count;
                 for (int i = sg.Offset; i < last; i++)

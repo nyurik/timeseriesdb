@@ -108,7 +108,8 @@
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
     <None Include="_ClassDiagram.cd" />
-    <None Include="BinCompressedSeriesFile.cs" />
+    <Compile Include="BinCompressedSeriesFile.cs" />
+    <Compile Include="BufferProvider.cs" />
     <Compile Include="Serializers\BlockSerializer\BinCompressedSeriesFile2.cs" />
     <Compile Include="BinSeriesFile.cs" />
     <Compile Include="CommonCode\JetBrains.cs" />
