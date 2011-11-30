@@ -14,17 +14,17 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Helper non-generic class aids in creating a new instance of <see cref="BinTimeseriesFile{T}"/>.
     /// </summary>
-    public static class BinSeriesFile
+    public static class BinCompressedSeriesFile
     {
         /// <summary>
-        /// Uses reflection to create an instance of <see cref="BinSeriesFile{TInd,TVal}"/>.
+        /// Uses reflection to create an instance of <see cref="BinCompressedSeriesFile{TInd,TVal}"/>.
         /// </summary>
         public static IBinaryFile GenericNew(Type indType, Type itemType, string fileName,
                                              FieldInfo indexFieldInfo = null)
         {
             return (IBinaryFile)
                    Activator.CreateInstance(
-                       typeof (BinSeriesFile<,>).MakeGenericType(indType, itemType),
+                       typeof(BinCompressedSeriesFile<,>).MakeGenericType(indType, itemType),
                        fileName, indexFieldInfo);
         }
     }
@@ -32,14 +32,13 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Object representing a binary-serialized long-based series file.
     /// </summary>
-    public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IEnumerableFeed<TInd, TVal>
+    public class BinCompressedSeriesFile<TInd, TVal> : BinaryFile<byte>, IEnumerableFeed<TInd, TVal>
         where TInd : struct, IComparable<TInd>
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
 
         // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
-        private static readonly Version Version11 = new Version(1, 1);
         // ReSharper restore StaticFieldInGenericType
 
         private TInd? _firstIndex;
@@ -53,7 +52,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Allow Activator non-public instantiation
         /// </summary>
-        protected BinSeriesFile()
+        protected BinCompressedSeriesFile()
         {
         }
 
@@ -62,7 +61,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="fileName">A relative or absolute path for the file to create.</param>
         /// <param name="indexFieldInfo">Field containing the TInd index, or null to get default</param>
-        public BinSeriesFile(string fileName, FieldInfo indexFieldInfo = null)
+        public BinCompressedSeriesFile(string fileName, FieldInfo indexFieldInfo = null)
             : base(fileName)
         {
             UniqueIndexes = false;
@@ -72,7 +71,7 @@ namespace NYurik.FastBinTimeseries
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
             Version ver = reader.ReadVersion();
-            if (ver != Version11 && ver != Version10)
+            if (ver != Version10)
                 throw new IncompatibleVersionException(GetType(), ver);
 
             // UniqueIndexes was not available in ver 1.0
@@ -91,10 +90,10 @@ namespace NYurik.FastBinTimeseries
 
         protected override Version WriteCustomHeader(BinaryWriter writer)
         {
-            writer.WriteVersion(Version11);
+            writer.WriteVersion(Version10);
             writer.Write(UniqueIndexes);
             writer.Write(IndexFieldInfo.Name);
-            return Version11;
+            return Version10;
         }
 
         #endregion
@@ -125,7 +124,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_firstIndex == null && count > 0)
                 {
-                    ArraySegment<TVal> seg = PerformStreaming(0, false, 1).FirstOrDefault();
+                    ArraySegment<byte> seg = PerformStreaming(0, false, 1).FirstOrDefault();
                     if (seg.Array != null && seg.Count > 0)
                         _firstIndex = IndexAccessor(seg.Array[seg.Offset]);
                 }
@@ -142,7 +141,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_lastIndex == null && count > 0)
                 {
-                    ArraySegment<TVal> seg = PerformStreaming(count - 1, false, 1).FirstOrDefault();
+                    ArraySegment<byte> seg = PerformStreaming(count - 1, false, 1).FirstOrDefault();
                     if (seg.Array != null && seg.Count > 0)
                         _lastIndex = IndexAccessor(seg.Array[seg.Offset]);
                 }
@@ -169,7 +168,7 @@ namespace NYurik.FastBinTimeseries
 
         public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse, int bufferSize)
         {
-            long index = FirstIndexToPos(from);
+            long index = FirstIndexToPos(@from);
             if (inReverse)
                 index--;
 
@@ -177,12 +176,6 @@ namespace NYurik.FastBinTimeseries
         }
 
         #endregion
-
-        [Obsolete("Use streaming methods instead")]
-        public void ReadData(long firstItemIdx, ArraySegment<TVal> buffer)
-        {
-            PerformFileAccess(firstItemIdx, buffer, false);
-        }
 
         public long BinarySearch(TInd index)
         {
@@ -357,17 +350,6 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Add new items at the end of the existing file
         /// </summary>
-        [Obsolete("Use overloaded method")]
-        public void AppendData(ArraySegment<TVal> buffer)
-        {
-            if (buffer.Array == null)
-                throw new ArgumentNullException("buffer");
-            AppendData(new[] {buffer});
-        }
-
-        /// <summary>
-        /// Add new items at the end of the existing file
-        /// </summary>
         public void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
         {
             if (bufferStream == null)
@@ -379,7 +361,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Add new items at the end of the existing file
         /// </summary>
-        private IEnumerable<ArraySegment<TVal>> ProcessWriteStream(
+        private IEnumerable<ArraySegment<byte>> ProcessWriteStream(
             [NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
         {
             bool isFirstSeg = true;
@@ -441,70 +423,6 @@ namespace NYurik.FastBinTimeseries
                 isFirstSeg = false;
                 segInd++;
             }
-        }
-
-        /// <summary>
-        /// Read data starting at <paramref name="fromInclusive"/>, up to, 
-        /// but not including <paramref name="toExclusive"/> into the <paramref name="buffer"/>.
-        /// No more than buffer.Count items will be read.
-        /// </summary>
-        /// <returns>The total number of items read.</returns>
-        [Obsolete("Use streaming methods instead")]
-        public int ReadData(TInd fromInclusive, TInd toExclusive, ArraySegment<TVal> buffer)
-        {
-            if (buffer.Array == null)
-                throw new ArgumentNullException("buffer");
-            Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-
-            PerformFileAccess(
-                rng.Item1,
-                new ArraySegment<TVal>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)),
-                false);
-
-            return rng.Item2;
-        }
-
-        /// <summary>
-        /// Read data starting at <paramref name="fromInclusive"/>, up to, 
-        /// but not including <paramref name="toExclusive"/>.
-        /// </summary>
-        /// <returns>An array of items no bigger than <paramref name="maxItemsToRead"/></returns>
-        [Obsolete("Use streaming methods instead")]
-        public TVal[] ReadData(TInd fromInclusive, TInd toExclusive, int maxItemsToRead)
-        {
-            if (maxItemsToRead < 0)
-                throw new ArgumentOutOfRangeException("maxItemsToRead", maxItemsToRead, "<0");
-            Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-
-            var buffer = new TVal[Math.Min(maxItemsToRead, rng.Item2)];
-
-            PerformFileAccess(rng.Item1, new ArraySegment<TVal>(buffer), false);
-
-            return buffer;
-        }
-
-        /// <summary>
-        /// Read all available data begining at a given index
-        /// </summary>
-        [Obsolete("Use streaming methods instead")]
-        public TVal[] ReadDataToEnd(TInd fromInclusive)
-        {
-            long firstItemIdx = FirstIndexToPos(fromInclusive);
-            return ReadDataToEnd(firstItemIdx);
-        }
-
-        /// <summary>
-        /// Read all available data begining at a given index
-        /// </summary>
-        [Obsolete("Use streaming methods instead")]
-        public TVal[] ReadDataToEnd(long firstItemIdx)
-        {
-            int reqSize = (Count - firstItemIdx).ToIntCountChecked();
-            var buffer = new TVal[reqSize];
-
-            PerformFileAccess(firstItemIdx, new ArraySegment<TVal>(buffer), false);
-
-            return buffer;
         }
 
         /// <summary>

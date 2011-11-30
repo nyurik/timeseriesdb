@@ -120,6 +120,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
     public struct DeltaBlock
     {
-        public byte[] Buffer;
+        public readonly byte[] Buffer;
+
+        public DeltaBlock(int blockSize)
+        {
+            Buffer = new byte[blockSize];
+        }
     }
 }

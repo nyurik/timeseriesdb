@@ -79,15 +79,14 @@ namespace NYurik.FastBinTimeseries
             {
                 switch (NativeWinApis.SystemInfo.ProcessorInfo.wProcessorArchitecture)
                 {
+                    // ReSharper disable RedundantCaseLabel
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_INTEL:
+                    default:
                         return 4*1024*1024;
 
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_AMD64:
                     case NativeWinApis.SYSTEM_INFO.ProcArch.PROCESSOR_ARCHITECTURE_IA64:
                         return 16*1024*1024;
-
-                    default:
-                        return 4*1024*1024;
                 }
             }
         }

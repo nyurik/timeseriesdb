@@ -31,7 +31,9 @@ namespace NYurik.FastBinTimeseries
 
     internal static class NativeWinApis
     {
+        // ReSharper disable InconsistentNaming
         public static readonly unsafe bool Is64bit = sizeof (void*) == sizeof (long);
+        // ReSharper restore InconsistentNaming
         private static SYSTEM_INFO? _sysInfo;
 
         public static SYSTEM_INFO SystemInfo
@@ -119,10 +121,8 @@ namespace NYurik.FastBinTimeseries
         internal static unsafe uint ReadFile(FileStream fileHandle, byte* byteBufPtr, int byteCount)
         {
             uint bytesProcessed;
-            ThrowOnError(
-                ReadFile(
-                    fileHandle.SafeFileHandle, byteBufPtr, (uint) byteCount, out bytesProcessed, null)
-                );
+            if (!ReadFile(fileHandle.SafeFileHandle, byteBufPtr, (uint) byteCount, out bytesProcessed, null))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
             return bytesProcessed;
         }
 
@@ -138,9 +138,8 @@ namespace NYurik.FastBinTimeseries
         internal static unsafe uint WriteFile(FileStream fileHandle, byte* byteBufPtr, int byteCount)
         {
             uint bytesProcessed;
-            ThrowOnError(
-                WriteFile(
-                    fileHandle.SafeFileHandle, byteBufPtr, (uint) byteCount, out bytesProcessed, null));
+            if (!WriteFile(fileHandle.SafeFileHandle, byteBufPtr, (uint) byteCount, out bytesProcessed, null))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
             return bytesProcessed;
         }
 
@@ -159,15 +158,10 @@ namespace NYurik.FastBinTimeseries
             return handle;
         }
 
-        private static void ThrowOnError(bool result)
-        {
-            if (!result)
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-        }
-
         #region Nested type: SYSTEM_INFO
 
         [StructLayout(LayoutKind.Sequential)]
+        // ReSharper disable InconsistentNaming
         internal struct SYSTEM_INFO
         {
             public PROCESSOR_INFO_UNION ProcessorInfo;
@@ -186,7 +180,7 @@ namespace NYurik.FastBinTimeseries
                 PROCESSOR_ARCHITECTURE_INTEL = 0, //32-bit
                 PROCESSOR_ARCHITECTURE_IA64 = 6, //Itanium 64-bit
                 PROCESSOR_ARCHITECTURE_AMD64 = 9, //Extended 64-bit
-                PROCESSOR_ARCHITECTURE_UNKNOWN = 0xFFFF //Unknown
+                PROCESSOR_ARCHITECTURE_UNKNOWN = 0xFFFF, //Unknown
             }
 
             [StructLayout(LayoutKind.Explicit)]
@@ -199,6 +193,8 @@ namespace NYurik.FastBinTimeseries
         }
 
         #endregion
+
+        // ReSharper restore InconsistentNaming
     }
 
     internal class SafeMapViewHandle : SafeHandleZeroOrMinusOneIsInvalid
