@@ -3,6 +3,8 @@
 #endif
 
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
 
@@ -16,6 +18,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         protected BaseField()
         {
         }
+
+        public abstract void InitNew(BinaryWriter writer);
+
+        public abstract void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap);
 
         /// <param name="stateStore"></param>
         /// <param name="valueType">Type of value to store</param>

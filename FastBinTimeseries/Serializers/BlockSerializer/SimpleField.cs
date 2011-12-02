@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class SimpleField : BaseField
+    public class SimpleField : BaseField
     {
         private TypeCode _typeCode;
 
@@ -52,6 +54,16 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
 
             return new Tuple<Expression, Expression>(readMethod, readMethod);
+        }
+
+        public override void InitNew(BinaryWriter writer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        {
+            throw new NotImplementedException();
         }
 
         public override void Validate()

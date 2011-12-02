@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -12,6 +13,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public class ComplexField : BaseField
     {
+        private static readonly Version Version10 = new Version(1, 0);
+
+        private Version _version = Version10;
         private IList<SubFieldInfo> _fields;
 
         public ComplexField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
@@ -44,6 +48,35 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 ThrowOnInitialized();
                 _fields = value.ToList();
             }
+        }
+
+        public override void InitNew(BinaryWriter writer)
+        {
+            ThrowOnInitialized();
+            Validate();
+
+            writer.WriteVersion(_version);
+            writer.Write(_fields.Count);
+            foreach (SubFieldInfo field in _fields)
+                field.InitNew(writer);
+
+            IsInitialized = true;
+        }
+
+        public override void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        {
+            ThrowOnInitialized();
+            
+            _version = reader.ReadVersion();
+            if (_version != Version10)
+                throw new IncompatibleVersionException(GetType(), _version);
+            
+            var fields = new SubFieldInfo[reader.ReadInt32()];
+            for (int i = 0; i < fields.Length; i++)
+                fields[i] = new SubFieldInfo(reader, typeMap);
+            
+            Validate();
+            IsInitialized = true;
         }
 
         public override void Validate()

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using JetBrains.Annotations;
@@ -6,7 +8,7 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class UtcDateTimeField : BaseField
+    public class UtcDateTimeField : BaseField
     {
         private readonly ScaledDeltaField _deltaField;
 
@@ -37,6 +39,16 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 throw new SerializerException(
                     "TimeSpan.TicksPerDay must be divisible by time slice {0}", value);
             return value == TimeSpan.Zero ? 1 : value.Ticks;
+        }
+
+        public override void InitNew(BinaryWriter writer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        {
+            throw new NotImplementedException();
         }
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)

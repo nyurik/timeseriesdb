@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    internal class ScaledDeltaField : BaseField
+    public class ScaledDeltaField : BaseField
     {
         private long _divider = 1;
         private ConstantExpression _dividerExp;
@@ -47,6 +49,16 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 ThrowOnInitialized();
                 _divider = value;
             }
+        }
+
+        public override void InitNew(BinaryWriter writer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        {
+            throw new NotImplementedException();
         }
 
         public override void Validate()
