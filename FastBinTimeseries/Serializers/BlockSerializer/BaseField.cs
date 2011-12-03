@@ -1,9 +1,6 @@
-#if DEBUG
-#define DEBUG_SERIALIZER
-#endif
-
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
@@ -12,6 +9,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public abstract class BaseField : Initializable
     {
+        protected static readonly Version Version10 = new Version(1, 0);
         private string _stateName;
         private IStateStore _stateStore;
 
@@ -19,24 +17,28 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         {
         }
 
-        public abstract void InitNew(BinaryWriter writer);
-
-        public abstract void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap);
-
+        /// <param name="version"></param>
         /// <param name="stateStore"></param>
         /// <param name="valueType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
-        protected BaseField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName = null)
+        protected BaseField(Version version, [NotNull] IStateStore stateStore, [NotNull] Type valueType,
+                            string stateName = null)
         {
             if (stateStore == null) throw new ArgumentNullException("stateStore");
             if (valueType == null) throw new ArgumentNullException("valueType");
 
+            Version = version;
             ValueType = valueType;
             _stateStore = stateStore;
             _stateName = stateName;
         }
 
         public Type ValueType { get; private set; }
+
+        public TypeCode ValueTypeCode
+        {
+            get { return Type.GetTypeCode(ValueType); }
+        }
 
         public IStateStore StateStore
         {
@@ -60,6 +62,46 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 ThrowOnInitialized();
                 _stateName = value;
             }
+        }
+
+        public Version Version { get; private set; }
+
+        public void InitNew(BinaryWriter writer)
+        {
+            EnsureReadonly();
+            writer.WriteType(GetType());
+            InitNewField(writer);
+        }
+
+        [Pure]
+        public static BaseField FieldFromReader(IStateStore stateStore, BinaryReader reader, IDictionary<string, Type> typeMap)
+        {
+            var fld = reader.ReadTypeAndInstantiate<BaseField>(typeMap, true);
+            
+            fld.StateStore = stateStore;
+            fld.InitExistingField(reader, typeMap);
+            fld.EnsureReadonly();
+
+            return fld;
+        }
+
+        protected virtual void InitNewField(BinaryWriter writer)
+        {
+            writer.WriteVersion(Version);
+            writer.WriteType(ValueType);
+            writer.Write(StateName);
+        }
+
+        protected virtual void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
+        {
+            Version = reader.ReadVersion();
+
+            string typeName;
+            bool remapped;
+            int size;
+            ValueType = reader.ReadType(typeMap, out typeName, out remapped, out size);
+
+            StateName = reader.ReadString();
         }
 
         protected MethodCallExpression WriteSignedValue(Expression codec, Expression value)
@@ -118,15 +160,14 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 #endif
         }
 
-        public virtual void Validate()
+        protected virtual void MakeReadonly()
         {
-            ThrowOnInitialized();
             IsInitialized = true;
         }
 
         public Tuple<Expression, Expression> GetSerializer(Expression valueExp, Expression codec)
         {
-            EnsureValidation();
+            EnsureReadonly();
 
             if (ValueType != valueExp.Type)
                 throw new SerializerException(
@@ -145,7 +186,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public Tuple<Expression, Expression> GetDeSerializer(Expression codec)
         {
-            EnsureValidation();
+            EnsureReadonly();
+
             Tuple<Expression, Expression> srl = GetDeSerializerExp(codec);
 
             if (ValueType != srl.Item1.Type)
@@ -165,10 +207,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         protected abstract Tuple<Expression, Expression> GetDeSerializerExp(Expression codec);
 
-        private void EnsureValidation()
+        private void EnsureReadonly()
         {
             if (!IsInitialized)
-                Validate();
+                MakeReadonly();
             if (!IsInitialized)
                 throw new SerializerException(
                     "Derived serializer {0} must call base when validating", GetType().AssemblyQualifiedName);

@@ -8,18 +8,19 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public class SimpleField : BaseField
     {
-        private TypeCode _typeCode;
+        protected SimpleField()
+        {
+        }
 
         public SimpleField([NotNull] IStateStore serializer, [NotNull] Type valueType, string stateName)
-            : base(serializer, valueType, stateName)
+            : base(Version10, serializer, valueType, stateName)
         {
         }
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
-            ThrowOnNotInitialized();
             MethodCallExpression writeMethod;
-            switch (_typeCode)
+            switch (ValueTypeCode)
             {
                 case TypeCode.SByte:
                     writeMethod = Expression.Call(
@@ -38,10 +39,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
-            ThrowOnNotInitialized();
-
             Expression readMethod;
-            switch (_typeCode)
+            switch (ValueTypeCode)
             {
                 case TypeCode.SByte:
                     readMethod = Expression.Convert(Expression.Call(codec, "ReadByte", null), typeof (sbyte));
@@ -56,21 +55,17 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return new Tuple<Expression, Expression>(readMethod, readMethod);
         }
 
-        public override void InitNew(BinaryWriter writer)
+        protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            throw new NotImplementedException();
+            base.InitExistingField(reader, typeMap);
+            if (Version != Version10)
+                throw new IncompatibleVersionException(GetType(), Version);
         }
 
-        public override void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Validate()
+        protected override void MakeReadonly()
         {
             ThrowOnInitialized();
-            _typeCode = Type.GetTypeCode(ValueType);
-            switch (_typeCode)
+            switch (ValueTypeCode)
             {
                 case TypeCode.Byte:
                 case TypeCode.SByte:
@@ -80,7 +75,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                         "Value {0} has an unsupported type {0}", StateName, ValueType.AssemblyQualifiedName);
             }
 
-            base.Validate();
+            base.MakeReadonly();
         }
     }
 }

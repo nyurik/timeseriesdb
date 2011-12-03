@@ -34,13 +34,15 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         public void Run<T>(IEnumerable<T> values, string name = null,
                            Action<BaseField> updateSrlzr = null, Func<T, T, bool> comparer = null)
         {
-            var codec = new StreamCodec(10000);
-            var ds = new DynamicSerializer<T>();
+            var codec = new CodecWriter(10000);
+            var ds = DynamicSerializer<T>.CreateDefault();
 
             try
             {
                 if (updateSrlzr != null)
                     updateSrlzr(ds.RootField);
+
+                ds.MakeReadonly();
 
                 TestUtils.CollectionAssertEqual(
                     // ReSharper disable PossibleMultipleEnumeration
@@ -63,12 +65,12 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             }
         }
 
-        private static IEnumerable<T> RoundTrip<T>(DynamicSerializer<T> ds, StreamCodec codec, IEnumerable<T> values)
+        private static IEnumerable<T> RoundTrip<T>(DynamicSerializer<T> ds, CodecWriter codec, IEnumerable<T> values)
         {
             using (IEnumerator<T> enmr = values.GetEnumerator())
             {
                 bool moveNext = enmr.MoveNext();
-                var buff = new Buff<T>();
+                var buff = new Buff<T>(new T[4]);
 
                 while (moveNext)
                 {
@@ -79,7 +81,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
                         codec.BufferPos = 0;
                         buff.Reset();
-                        ds.DeSerialize(codec, buff, int.MaxValue);
+                        ds.DeSerialize(new CodecReader(codec.UsedBuffer), buff, int.MaxValue);
                     }
                     catch (Exception x)
                     {

@@ -38,7 +38,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;__DEBUG_SERIALIZER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -140,9 +140,11 @@
     <Compile Include="Serializers\BlockSerializer\ScaledDeltaField.cs" />
     <Compile Include="Serializers\BlockSerializer\ComplexField.cs" />
     <Compile Include="Serializers\BlockSerializer\IBinBlock.cs" />
+    <Compile Include="Serializers\BlockSerializer\CodecBase.cs" />
+    <Compile Include="Serializers\BlockSerializer\CodecReader.cs" />
     <Compile Include="Serializers\BlockSerializer\SubFieldInfo.cs" />
     <Compile Include="Serializers\BlockSerializer\SimpleField.cs" />
-    <Compile Include="Serializers\BlockSerializer\StreamCodec.cs" />
+    <Compile Include="Serializers\BlockSerializer\CodecWriter.cs" />
     <Compile Include="Serializers\BlockSerializer\UtcDateTimeField.cs" />
     <Compile Include="Serializers\SerializerException.cs" />
     <Compile Include="FastBinFileUtils.cs" />

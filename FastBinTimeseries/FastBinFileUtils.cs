@@ -248,11 +248,5 @@ namespace NYurik.FastBinTimeseries
             if (aqn == null) throw new ArgumentOutOfRangeException("type", type, "AssemblyQualifiedName is null");
             writer.Write(aqn);
         }
-
-        public static void WriteType(this BinaryWriter writer, object value)
-        {
-            if (value == null) throw new ArgumentNullException("value");
-            writer.WriteType(value.GetType());
-        }
     }
 }

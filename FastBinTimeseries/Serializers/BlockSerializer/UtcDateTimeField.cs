@@ -10,13 +10,17 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public class UtcDateTimeField : BaseField
     {
-        private readonly ScaledDeltaField _deltaField;
+        private ScaledDeltaField _deltaField;
+
+        protected UtcDateTimeField()
+        {
+        }
 
         /// <summary>
         /// Integer and Float delta serializer.
         /// </summary>
         public UtcDateTimeField([NotNull] IStateStore serializer, string stateName)
-            : base(serializer, typeof (UtcDateTime), stateName)
+            : base(Version10, serializer, typeof (UtcDateTime), stateName)
         {
             _deltaField = new ScaledDeltaField(serializer, typeof (long), stateName);
         }
@@ -41,14 +45,26 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return value == TimeSpan.Zero ? 1 : value.Ticks;
         }
 
-        public override void InitNew(BinaryWriter writer)
+        protected override void InitNewField(BinaryWriter writer)
         {
-            throw new NotImplementedException();
+            base.InitNewField(writer);
+            _deltaField.InitNew(writer);
         }
 
-        public override void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            throw new NotImplementedException();
+            base.InitExistingField(reader, typeMap);
+            if (Version != Version10)
+                throw new IncompatibleVersionException(GetType(), Version);
+
+            BaseField fld = FieldFromReader(StateStore, reader, typeMap);
+            _deltaField = fld as ScaledDeltaField;
+            if (_deltaField == null)
+                throw new SerializerException(
+                    "Unexpected field {0} was deserialized instead of {1}", fld,
+                    typeof (ScaledDeltaField).AssemblyQualifiedName);
+
+            ValidateDivider(TimeDivider);
         }
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)

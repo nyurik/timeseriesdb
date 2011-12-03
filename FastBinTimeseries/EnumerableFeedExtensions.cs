@@ -133,5 +133,28 @@ namespace NYurik.FastBinTimeseries
                 yield break;
             }
         }
+
+
+        public static IEnumerable<T> StreamSegmentValues<T>(this IEnumerable<ArraySegment<T>> stream,
+                                                            bool inReverse = false)
+        {
+            if (stream == null)
+                throw new ArgumentNullException("stream");
+
+            if (inReverse)
+            {
+                foreach (var v in stream)
+                    if (v.Count > 0)
+                        for (int i = v.Count - 1; i >= v.Offset; i--)
+                            yield return v.Array[i];
+            }
+            else
+            {
+                foreach (var v in stream)
+                    if (v.Count > 0)
+                        for (int i = v.Offset; i < v.Count; i++)
+                            yield return v.Array[i];
+            }
+        }
     }
 }

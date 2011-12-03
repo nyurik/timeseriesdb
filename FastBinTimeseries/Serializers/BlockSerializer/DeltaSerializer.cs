@@ -76,7 +76,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
             writer.WriteVersion(_version);
 
-            writer.WriteType(_dataSerializer);
+            writer.WriteType(_dataSerializer.GetType());
             _dataSerializer.InitNew(writer);
 
             writer.Write(BlockSize);

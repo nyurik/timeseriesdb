@@ -123,7 +123,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             const int valCount = bufSize/10;
             const int runs = 100;
 
-            var codec = new StreamCodec(bufSize);
+            var codec = new CodecWriter(bufSize);
 
             ulong[] valList = TestValuesGenerator().Take(valCount).ToArray();
             foreach (ulong val in valList)
@@ -133,8 +133,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             fixed (byte* buff2 = codec.Buffer)
             {
                 int pos = 0;
-                StreamCodec.ReadSignedValueUnsafe(buff2, ref pos);
-                StreamCodec.ReadUnsignedValueUnsafe(buff2, ref pos);
+                CodecReader.ReadSignedValueUnsafe(buff2, ref pos);
+                CodecReader.ReadUnsignedValueUnsafe(buff2, ref pos);
             }
 
             Stopwatch sw = Stopwatch.StartNew();
@@ -144,7 +144,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 {
                     int pos = 0;
                     for (int r = 0; r < valCount; r++)
-                        StreamCodec.ReadSignedValueUnsafe(pbuff, ref pos);
+                        CodecReader.ReadSignedValueUnsafe(pbuff, ref pos);
                 }
             }
             Console.WriteLine("{0} ReadSignedValueUnsafe() time", sw.Elapsed);
@@ -156,7 +156,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 {
                     int pos = 0;
                     for (int r = 0; r < valCount; r++)
-                        StreamCodec.ReadUnsignedValueUnsafe(pbuff, ref pos);
+                        CodecReader.ReadUnsignedValueUnsafe(pbuff, ref pos);
                 }
             }
             Console.WriteLine("{0} ReadUnsignedValueUnsafe() time", sw.Elapsed);
@@ -165,7 +165,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         [Test]
         public unsafe void OneValueTest()
         {
-            var codec = new StreamCodec(10);
+            var codec = new CodecWriter(10);
             const long signedVal = unchecked((long) 0xFFFFFFFFFF000000UL);
             codec.BufferPos = 0;
             codec.WriteSignedValue(signedVal);
@@ -173,7 +173,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             fixed (byte* pbuf = codec.Buffer)
             {
                 int pos = 0;
-                long v = StreamCodec.ReadSignedValueUnsafe(pbuf, ref pos);
+                long v = CodecReader.ReadSignedValueUnsafe(pbuf, ref pos);
 
                 if (signedVal != v)
                     Assert.Fail("Failed signed long {0:X}", signedVal);
@@ -183,7 +183,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         [Test]
         public unsafe void SignedValues()
         {
-            var codec = new StreamCodec(BufferSize);
+            var codec = new CodecWriter(BufferSize);
 
             foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
             {
@@ -195,7 +195,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 {
                     int pos = 0;
                     foreach (long val in valList)
-                        if (val != StreamCodec.ReadSignedValueUnsafe(pbuf, ref pos))
+                        if (val != CodecReader.ReadSignedValueUnsafe(pbuf, ref pos))
                             Assert.Fail("Failed ulong {0:X}", val);
                     codec.BufferPos = pos;
                 }
@@ -205,7 +205,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         [Test]
         public unsafe void UnsignedValues()
         {
-            var codec = new StreamCodec(BufferSize);
+            var codec = new CodecWriter(BufferSize);
 
             foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
             {
@@ -217,7 +217,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 {
                     int pos = 0;
                     foreach (ulong val in valList)
-                        if (val != StreamCodec.ReadUnsignedValueUnsafe(pbuf, ref pos))
+                        if (val != CodecReader.ReadUnsignedValueUnsafe(pbuf, ref pos))
                             Assert.Fail("Failed ulong {0:X}", val);
                     codec.BufferPos = pos;
                 }

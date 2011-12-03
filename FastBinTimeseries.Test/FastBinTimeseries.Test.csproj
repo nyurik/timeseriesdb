@@ -75,6 +75,7 @@
     <Compile Include="BlockSerializer\DeltaSerializerTests.cs" />
     <Compile Include="BlockSerializer\SerializtionTestsBase.cs" />
     <Compile Include="BlockSerializer\StreamCodecTests.cs" />
+    <Compile Include="CompressedFileTests.cs" />
     <Compile Include="ConfigurableStream.cs" />
     <Compile Include="BlockSerializer\PrimitiveTypeTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

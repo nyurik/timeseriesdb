@@ -419,8 +419,8 @@ namespace NYurik.FastBinTimeseries
         /// </remarks>
         private void WriteHeaderV10(BinaryWriter writer)
         {
-            writer.WriteType(this);
-            writer.WriteType(NonGenericSerializer);
+            writer.WriteType(GetType());
+            writer.WriteType(NonGenericSerializer.GetType());
 
             // Make sure the item size will not change
             writer.Write(NonGenericSerializer.TypeSize);
@@ -480,14 +480,14 @@ namespace NYurik.FastBinTimeseries
             writer.Write(Tag);
 
             // Serializer
-            writer.WriteType(NonGenericSerializer);
+            writer.WriteType(NonGenericSerializer.GetType());
             NonGenericSerializer.InitNew(writer);
 
             // Make sure the item size will not change
             writer.Write(NonGenericSerializer.TypeSize);
 
             // Save versions and custom headers
-            writer.WriteType(this);
+            writer.WriteType(GetType());
             _version = WriteCustomHeader(writer);
         }
 
@@ -568,7 +568,7 @@ namespace NYurik.FastBinTimeseries
             if (dir == null)
                 throw new IOException(string.Format("Filename '{0}' is not valid", path));
 
-            if (dir != "" && !Directory.Exists(dir))
+            if (dir != "")
                 Directory.CreateDirectory(dir);
 
             ArraySegment<byte> header = CreateHeader();

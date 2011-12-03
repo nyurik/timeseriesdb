@@ -13,13 +13,14 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public class ComplexField : BaseField
     {
-        private static readonly Version Version10 = new Version(1, 0);
-
-        private Version _version = Version10;
         private IList<SubFieldInfo> _fields;
 
+        protected ComplexField()
+        {
+        }
+
         public ComplexField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
-            : base(stateStore, valueType, stateName)
+            : base(Version10, stateStore, valueType, stateName)
         {
             if (valueType.IsArray || valueType.IsPrimitive)
                 throw new SerializerException("Unsupported type {0}", valueType);
@@ -50,48 +51,34 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
-        public override void InitNew(BinaryWriter writer)
+        protected override void InitNewField(BinaryWriter writer)
         {
-            ThrowOnInitialized();
-            Validate();
+            base.InitNewField(writer);
 
-            writer.WriteVersion(_version);
             writer.Write(_fields.Count);
             foreach (SubFieldInfo field in _fields)
                 field.InitNew(writer);
-
-            IsInitialized = true;
         }
 
-        public override void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            ThrowOnInitialized();
-            
-            _version = reader.ReadVersion();
-            if (_version != Version10)
-                throw new IncompatibleVersionException(GetType(), _version);
+            base.InitExistingField(reader, typeMap);
+            if (Version != Version10)
+                throw new IncompatibleVersionException(GetType(), Version);
             
             var fields = new SubFieldInfo[reader.ReadInt32()];
             for (int i = 0; i < fields.Length; i++)
-                fields[i] = new SubFieldInfo(reader, typeMap);
-            
-            Validate();
-            IsInitialized = true;
+                fields[i] = new SubFieldInfo(StateStore, reader, typeMap);
         }
 
-        public override void Validate()
+        protected override void MakeReadonly()
         {
-            ThrowOnInitialized();
-            foreach (SubFieldInfo ms in _fields)
-                ms.Validate();
             _fields = new ReadOnlyCollection<SubFieldInfo>(_fields);
-            base.Validate();
+            base.MakeReadonly();
         }
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
-            ThrowOnNotInitialized();
-
             // result = writeDelta1() && writeDelta2() && ...
             var initExp = new List<Expression>();
 
@@ -115,8 +102,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
-            ThrowOnNotInitialized();
-
             // T current;
             ParameterExpression currentVar = Expression.Variable(ValueType, "current");
 

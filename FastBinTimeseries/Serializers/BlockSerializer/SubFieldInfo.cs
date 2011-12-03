@@ -24,7 +24,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             Field = field;
         }
 
-        public SubFieldInfo(BinaryReader reader, IDictionary<string, Type> typeMap)
+        public SubFieldInfo(IStateStore stateStore, BinaryReader reader, IDictionary<string, Type> typeMap)
         {
             string typeName;
             bool typeRemapped;
@@ -39,7 +39,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     "Unable to locate the field or property {0} on type {1}", name, type.AssemblyQualifiedName);
 
             Type fldType = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
-            
+
             Type actualFldPropType = GetFieldOrPropertyType(mmbr);
             if (actualFldPropType != fldType)
                 throw new SerializerException(
@@ -49,25 +49,22 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
             MemberInfo = mmbr;
 
-            Field = reader.ReadTypeAndInstantiate<BaseField>(typeMap, true);
-            Field.InitExisting(reader, typeMap);
+            Field = BaseField.FieldFromReader(stateStore, reader, typeMap);
         }
 
         public MemberInfo MemberInfo { get; private set; }
-        public BaseField Field { get; private set; }
 
-        public void Validate()
-        {
-            Field.Validate();
-        }
+        public BaseField Field { get; private set; }
 
         public void InitNew(BinaryWriter writer)
         {
+            if (MemberInfo.DeclaringType == null)
+                throw new SerializerException("MemberInfo {0} does not have a declaring type", MemberInfo);
+
             writer.WriteType(MemberInfo.DeclaringType);
             writer.Write(MemberInfo.Name);
             writer.WriteType(GetFieldOrPropertyType(MemberInfo));
 
-            writer.WriteType(Field);
             Field.InitNew(writer);
         }
 

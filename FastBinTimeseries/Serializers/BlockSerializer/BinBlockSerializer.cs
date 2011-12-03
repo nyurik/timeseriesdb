@@ -84,10 +84,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
             writer.WriteVersion(_version);
 
-            writer.WriteType(_headerSerializer);
+            writer.WriteType(_headerSerializer.GetType());
             _headerSerializer.InitNew(writer);
 
-            writer.WriteType(_dataSerializer);
+            writer.WriteType(_dataSerializer.GetType());
             _dataSerializer.InitNew(writer);
 
             writer.Write(ItemCount);

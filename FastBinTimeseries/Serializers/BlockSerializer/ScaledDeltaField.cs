@@ -13,6 +13,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         private bool _isInteger;
         private long _multiplier;
 
+        protected ScaledDeltaField()
+        {
+        }
+
         /// <summary>
         /// Integer and Float delta serializer.
         /// </summary>
@@ -20,7 +24,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// <param name="valueType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
         public ScaledDeltaField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
-            : base(stateStore, valueType, stateName)
+            : base(Version10, stateStore, valueType, stateName)
         {
             // Floating point numbers must manually initialize Multiplier
             _multiplier =
@@ -51,20 +55,24 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
-        public override void InitNew(BinaryWriter writer)
+        protected override void InitNewField(BinaryWriter writer)
         {
-            throw new NotImplementedException();
+            base.InitNewField(writer);
+            writer.Write(Divider);
+            writer.Write(Multiplier);
         }
 
-        public override void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
-            throw new NotImplementedException();
+            base.InitExistingField(reader, typeMap);
+            if (Version != Version10)
+                throw new IncompatibleVersionException(GetType(), Version);
+            Divider = reader.ReadInt64();
+            Multiplier = reader.ReadInt64();
         }
 
-        public override void Validate()
+        protected override void MakeReadonly()
         {
-            ThrowOnInitialized();
-
             if (_multiplier < 1)
                 throw new SerializerException(
                     "Multiplier = {2} for value {0} ({1}), but must be >= 1", StateName, ValueType.FullName, _multiplier);
@@ -74,7 +82,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
             ulong maxDivider = 0;
             _isInteger = true;
-            switch (Type.GetTypeCode(ValueType))
+            switch (ValueTypeCode)
             {
                 case TypeCode.Char:
                     maxDivider = char.MaxValue;
@@ -127,13 +135,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                         maxDivider);
             }
 
-            base.Validate();
+            base.MakeReadonly();
         }
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
-            ThrowOnNotInitialized();
-
             //
             // long stateVar;
             //
@@ -152,7 +158,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             {
                 if (!_isInteger)
                 {
-                    switch (Type.GetTypeCode(ValueType))
+                    switch (ValueTypeCode)
                     {
                         case TypeCode.Single:
                             {
@@ -250,8 +256,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
-            ThrowOnNotInitialized();
-
             //
             // long stateVar;
             //
@@ -270,7 +274,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             {
                 if (!_isInteger)
                 {
-                    switch (Type.GetTypeCode(ValueType))
+                    switch (ValueTypeCode)
                     {
                         case TypeCode.Single:
                             getValExp = Expression.Divide(

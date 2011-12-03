@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization;
 using JetBrains.Annotations;
 using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
@@ -40,15 +39,28 @@ namespace NYurik.FastBinTimeseries
 
         // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
-        private BufferProvider<TVal> _bufferProvider;
+        private int _blockSize;
         // ReSharper restore StaticFieldInGenericType
 
+        private BufferProvider<TVal> _bufferProvider;
         private TInd? _firstIndex;
         private FieldInfo _indexFieldInfo;
         private TInd? _lastIndex;
+
         private Tuple<long, ConcurrentDictionary<long, TInd>> _searchCache;
+        private DynamicSerializer<TVal> _serializer;
         private bool _uniqueIndexes;
-        private int BlockSize { get; set; }
+
+        private int BlockSize
+        {
+            get { return _blockSize; }
+            set
+            {
+                ThrowOnInitialized();
+                if (value <= 0) throw new ArgumentOutOfRangeException("value", value, "<= 0");
+                _blockSize = value;
+            }
+        }
 
         /// <summary> Number of binary search lookups to cache. 0-internal defaults, negative-disable </summary>
         public int BinarySearchCacheSize { get; set; }
@@ -94,7 +106,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_lastIndex == null && count > 0)
                 {
-                    throw new NotImplementedException(); 
+                    throw new NotImplementedException();
 //                    ArraySegment<byte> seg = PerformStreaming(count - 1, false, 1).FirstOrDefault();
 //                    if (seg.Array != null && seg.Count > 0)
 //                        _lastIndex = IndexAccessor(seg.Array[seg.Offset]);
@@ -132,6 +144,8 @@ namespace NYurik.FastBinTimeseries
         {
             UniqueIndexes = false;
             IndexFieldInfo = indexFieldInfo ?? DynamicCodeFactory.Instance.Value.GetIndexField<TVal>();
+            _serializer = DynamicSerializer<TVal>.CreateDefault();
+            BlockSize = 16*1024;
         }
 
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
@@ -140,16 +154,18 @@ namespace NYurik.FastBinTimeseries
             if (ver != Version10)
                 throw new IncompatibleVersionException(GetType(), ver);
 
-            // UniqueIndexes was not available in ver 1.0
-            UniqueIndexes = ver > Version10 && reader.ReadBoolean();
-
+            BlockSize = reader.ReadInt32();
+            UniqueIndexes = reader.ReadBoolean();
             string fieldName = reader.ReadString();
 
             FieldInfo fieldInfo = typeof (TVal).GetField(fieldName, TypeExtensions.AllInstanceMembers);
             if (fieldInfo == null)
                 throw new BinaryFileException(
                     "Index field {0} was not found in type {1}", fieldName, typeof (TVal).FullName);
+
             IndexFieldInfo = fieldInfo;
+
+            _serializer = DynamicSerializer<TVal>.CreateFromReader(reader, typeMap);
 
             return ver;
         }
@@ -157,8 +173,15 @@ namespace NYurik.FastBinTimeseries
         protected override Version WriteCustomHeader(BinaryWriter writer)
         {
             writer.WriteVersion(Version10);
+            writer.Write(BlockSize);
             writer.Write(UniqueIndexes);
             writer.Write(IndexFieldInfo.Name);
+            _serializer.WriteCustomHeader(writer);
+
+            int minBlockSize = _serializer.GetMinimumBlockSize();
+            if (BlockSize < minBlockSize)
+                throw new SerializerException("BlockSize ({0}) must be at least {1} bytes", BlockSize, minBlockSize);
+
             return Version10;
         }
 
@@ -171,19 +194,47 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
-
         public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse = false,
                                                               IEnumerable<TVal[]> bufferProvider = null)
         {
-            long index = FirstIndexToPos(from);
+            long index = 0; // BUG: FirstIndexToPos(from);
             if (inReverse)
                 index--;
 
-            throw new NotImplementedException(); 
-//            return PerformStreaming(index, inReverse, bufferProvider);
+            var buff = new Buff<TVal>(bufferProvider == null ? new TVal[64] : bufferProvider.First());
+            CodecReader codec = null;
+
+            foreach (var seg in PerformStreaming(index, inReverse))
+            {
+                if (codec == null)
+                    codec = new CodecReader(seg);
+                else
+                    codec.AttachBuffer(seg);
+
+                var blocks = FastBinFileUtils.RoundUpToMultiple(seg.Count, BlockSize)/BlockSize;
+                for (int i = 0; i < blocks; i++)
+                {
+                    codec.BufferPos = i*BlockSize;
+                    buff.Reset();
+                    _serializer.DeSerialize(codec, buff, int.MaxValue);
+                    yield return buff.Buffer;
+                }
+            }
         }
 
         #endregion
+
+        public override IEnumerable<byte[]> GetBuffers(long maxItemCount)
+        {
+            var initSize = (int) FastBinFileUtils.RoundUpToMultiple(16*MinPageSize, BlockSize);
+            if (maxItemCount > 0 && initSize > maxItemCount)
+                initSize = (int) FastBinFileUtils.RoundUpToMultiple(maxItemCount, BlockSize);
+            if (BufferProvider == null)
+                BufferProvider = new BufferProvider<byte>();
+
+            return BufferProvider.GetBuffers(
+                initSize, (int) FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/ItemSize, BlockSize), 10);
+        }
 
         public int Foo(int f)
         {
@@ -379,25 +430,15 @@ namespace NYurik.FastBinTimeseries
         private IEnumerable<ArraySegment<byte>> ProcessWriteStream(
             [NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
         {
-            bool isFirstSeg = true;
-
             TInd lastTs = LastFileIndex ?? default(TInd);
-            int segInd = 0;
             bool isEmptyFile = Count == 0;
 
-            var sc = new StreamCodec(BlockSize);
-            var ds = new DynamicSerializer<TVal>();
-//            var d = bufferStream.
-//                ds.Serialize(sc, )
-
-            foreach (var buffer in bufferStream)
+            using (IEnumerator<TVal> iterator = VerifyValues(bufferStream).GetEnumerator())
             {
-                if (buffer.Array == null)
-                    throw new SerializationException("BufferStream may not contain ArraySegments with null Array");
-                if (buffer.Count == 0)
-                    continue;
+                if (!iterator.MoveNext())
+                    yield break;
 
-                TInd firstBufferTs = IndexAccessor(buffer.Array[buffer.Offset]);
+                TInd firstBufferTs = IndexAccessor(iterator.Current);
                 TInd newTs = firstBufferTs;
 
                 if (!isEmptyFile)
@@ -407,44 +448,75 @@ namespace NYurik.FastBinTimeseries
                     {
                         if (!allowFileTruncations)
                             throw new BinaryFileException(
-                                "Last index in {2} ({0}) is greater than the first new item's index ({1})",
-                                lastTs, newTs, isFirstSeg ? "file" : "segment");
+                                "Last index in file ({0}) is greater than the first new item's index ({1})",
+                                lastTs, newTs);
                     }
                     else if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
                         throw new BinaryFileException(
-                            "Last index in {1} ({0}) equals to the first new item's index (enfocing uniqueness)",
-                            lastTs, isFirstSeg ? "file" : "segment");
+                            "Last index in file ({0}) equals to the first new item's index (enfocing uniqueness)",
+                            lastTs);
                 }
 
-                lastTs = newTs;
-
-                // Validate new data
-                int lastOffset = buffer.Offset + buffer.Count;
-                for (int i = buffer.Offset + 1; i < lastOffset; i++)
+                var codec = new CodecWriter(BlockSize);
+                while (true)
                 {
-                    newTs = IndexAccessor(buffer.Array[i]);
-                    if (newTs.CompareTo(lastTs) < 0)
-                        throw new BinaryFileException(
-                            "Segment {4}, new item's index at #{0} ({1}) is greater than index of the following item #{2} ({3})",
-                            i - 1, lastTs, i, newTs, segInd);
-                    if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
-                        throw new BinaryFileException(
-                            "Segment {4} new item's index at #{0} ({1}) equals the index of the following item #{2} (enforcing uniqueness)",
-                            i - 1, lastTs, i, segInd);
-                    lastTs = newTs;
-                }
+                    codec.BufferPos = 0;
+                    bool hasMore = _serializer.Serialize(codec, iterator);
+                    if (codec.BufferPos == 0)
+                        throw new SerializerException("Internal serializer error: buffer is empty");
 
-                throw new NotImplementedException(); 
-                // yield return buffer;
+                    yield return new ArraySegment<byte>(codec.Buffer, 0, codec.BufferPos);
+
+                    if (!hasMore)
+                        break;
+                }
 
                 if (isEmptyFile)
                     _firstIndex = firstBufferTs;
-                _lastIndex = lastTs;
-                isEmptyFile = false;
-                isFirstSeg = false;
+                _lastIndex = null;
+            }
+        }
+
+        private IEnumerable<TVal> VerifyValues(IEnumerable<ArraySegment<TVal>> stream)
+        {
+            if (stream == null)
+                throw new ArgumentNullException("stream");
+
+            bool isFirst = true;
+            TInd lastInd = default(TInd);
+            long segInd = 0;
+
+            foreach (var v in stream)
+            {
+                if (v.Count > 0)
+                {
+                    for (int i = v.Offset; i < v.Count; i++)
+                    {
+                        TInd newInd = IndexAccessor(v.Array[i]);
+
+                        if (!isFirst)
+                        {
+                            if (newInd.CompareTo(lastInd) < 0)
+                                throw new BinaryFileException(
+                                    "Segment {0}, last item's index {1} is greater than index of the following item #{2} ({3})",
+                                    segInd, lastInd, i, newInd);
+
+                            if (UniqueIndexes && newInd.CompareTo(lastInd) == 0)
+                                throw new BinaryFileException(
+                                    "Segment {0}, last item's index {1} equals to the following item's index at #{2} (enforcing index uniqueness)",
+                                    segInd, lastInd, i);
+                        }
+                        else
+                            isFirst = false;
+
+                        lastInd = newInd;
+
+                        yield return v.Array[i];
+                    }
+                }
+
                 segInd++;
             }
-            throw new NotImplementedException();
         }
 
         /// <summary>

@@ -99,6 +99,15 @@ namespace NYurik.FastBinTimeseries.Test
             return rNew;
         }
 
+        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(Func<long, T> converter, int count, int startFrom, int maxValue)
+        {
+            if (count <= 0)
+                yield break;
+
+            for (int i = startFrom; i < maxValue; i += count)
+                yield return new ArraySegment<T>(GenerateData(converter, count, i));
+        }
+
         public static byte NewByte(long i)
         {
             return (byte) (i & 0xFF);

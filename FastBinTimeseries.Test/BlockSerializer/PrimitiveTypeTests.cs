@@ -14,7 +14,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             Run(Range(byte.MinValue, byte.MaxValue, i => (byte) (i + 1)));
         }
 
-        [Test]
+        [Test, Explicit, Category("Long test")]
         public void TypeDouble()
         {
             // double: +/- 5.0 x 10-324  to  +/- 1.7 x 10308, 15-16 digits precision
