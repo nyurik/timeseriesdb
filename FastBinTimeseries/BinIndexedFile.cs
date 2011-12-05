@@ -35,37 +35,16 @@ namespace NYurik.FastBinTimeseries
         // ReSharper restore StaticFieldInGenericType
 
         /// <summary>
-        /// Read enough items to fill the <paramref name="buffer"/>, starting at <paramref name="firstItemIndex"/>.
-        /// </summary>
-        /// <param name="firstItemIndex">Index of the item to start from.</param>
-        /// <param name="buffer">Array of values to be written into a file.</param>
-        [Obsolete("Use streaming methods instead")]
-        public void ReadData(long firstItemIndex, ArraySegment<T> buffer)
-        {
-            PerformFileAccess(firstItemIndex, buffer, false);
-        }
-
-        /// <summary>
-        /// Write an array of items to the file.
-        /// </summary>
-        /// <param name="firstItemIndex">The index of the first value in the <paramref name="buffer"/> array.</param>
-        /// <param name="buffer">Array of values to be written into a file.</param>
-        [Obsolete("Use streaming methods instead")]
-        public void WriteData(long firstItemIndex, ArraySegment<T> buffer)
-        {
-            PerformFileAccess(firstItemIndex, buffer, true);
-        }
-
-        /// <summary>
         /// Enumerate items by block either in order or in reverse order, begining at the <paramref name="firstItemIdx"/>.
         /// </summary>
         /// <param name="firstItemIdx">The index of the first block to read (both forward and backward). Invalid values will be adjusted to existing data.</param>
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
-        public IEnumerable<ArraySegment<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse,
-                                                           IEnumerable<T[]> bufferProvider = null)
+        /// <param name="maxItemCount"></param>
+        public IEnumerable<Buffer<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse,
+                                                           IEnumerable<Buffer<T>> bufferProvider = null, long maxItemCount = long.MaxValue)
         {
-            return PerformStreaming(firstItemIdx, enumerateInReverse, bufferProvider);
+            return PerformStreaming(firstItemIdx, enumerateInReverse, bufferProvider, maxItemCount);
         }
 
         /// <summary>

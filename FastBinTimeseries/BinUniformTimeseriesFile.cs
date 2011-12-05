@@ -168,35 +168,6 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        [Obsolete]
-        public int ReadData(UtcDateTime fromInclusive, ArraySegment<T> buffer)
-        {
-            long firstItemIdx = this.IndexToLong(fromInclusive);
-            int maxCount = (Count - firstItemIdx).ToIntCountChecked();
-            if (buffer.Count > maxCount)
-                buffer = new ArraySegment<T>(buffer.Array, buffer.Offset, maxCount);
-
-            PerformFileAccess(firstItemIdx, buffer, false);
-
-            return buffer.Count;
-        }
-
-        /// <summary>
-        /// Read data starting at <paramref name="fromInclusive"/>, up to, but not including <paramref name="toExclusive"/>.
-        /// </summary>
-        /// <returns>The total number of items read.</returns>
-        [Obsolete("Use streaming methods instead")]
-        public int ReadData(UtcDateTime fromInclusive, UtcDateTime toExclusive, ArraySegment<T> buffer)
-        {
-            if (buffer.Array == null)
-                throw new ArgumentNullException("buffer");
-            Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-            PerformFileAccess(
-                rng.Item1,
-                new ArraySegment<T>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)), false);
-            return rng.Item2;
-        }
-
         /// <summary>
         /// Read data starting at <paramref name="fromInclusive"/>, up to, but not including <paramref name="toExclusive"/>.
         /// </summary>

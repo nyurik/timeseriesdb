@@ -108,8 +108,10 @@
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
     <None Include="_ClassDiagram.cd" />
-    <Compile Include="BinCompressedSeriesFile.cs" />
+    <None Include="BinCompressedSeriesFile.cs" />
     <Compile Include="BufferProvider.cs" />
+    <Compile Include="IEnumerableFeed.cs" />
+    <Compile Include="ObsoleteExtensions.cs" />
     <Compile Include="Serializers\BlockSerializer\BinCompressedSeriesFile2.cs" />
     <Compile Include="BinSeriesFile.cs" />
     <Compile Include="CommonCode\JetBrains.cs" />
@@ -133,6 +135,7 @@
     <Compile Include="IncompatibleVersionException.cs" />
     <Compile Include="Initializable.cs" />
     <Compile Include="Serializers\BlockSerializer\BinBlockSerializer.cs" />
+    <Compile Include="Buffer.cs" />
     <Compile Include="Serializers\BlockSerializer\DeltaSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\DynamicSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\FieldAttribute.cs" />

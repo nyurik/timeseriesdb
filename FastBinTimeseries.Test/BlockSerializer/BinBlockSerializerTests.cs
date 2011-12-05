@@ -15,8 +15,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             int ind = 0;
             foreach (var sg in bf.StreamSegments(0, false))
             {
-                int last = sg.Offset + sg.Count;
-                for (int i = sg.Offset; i < last; i++)
+                int last = sg.Count;
+                for (int i = 0; i < last; i++)
                 {
                     TradesBlock item = sg.Array[i];
                     if (!data[ind].Header.Equals(item.Header))

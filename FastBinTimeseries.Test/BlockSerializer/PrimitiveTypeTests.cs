@@ -48,7 +48,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     (x, y) => Math.Abs(x - y) < 0.1));
         }
 
-        [Test]
+        [Test, Explicit, Category("Long test")]
         public void TypeFloat()
         {
             // float: +/- 1.5 x 10-45 to +/- 3.4 x 1038, 7 digits precision

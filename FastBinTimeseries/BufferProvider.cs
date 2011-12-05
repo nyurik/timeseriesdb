@@ -13,13 +13,13 @@ namespace NYurik.FastBinTimeseries
         /// or a different (bigger) one. A weak reference will be kept so as to reduce the number of
         /// memory allocations. The method is thread safe.
         /// </summary>
-        public IEnumerable<T[]> GetBuffers(int initSize, int grownSize, int growupAfter)
+        public IEnumerable<Buffer<T>> GetBuffers(int initSize, int grownSize, int growupAfter)
         {
             WeakReference weakRef = Interlocked.Exchange(ref _buffer, null);
 
-            T[] buffer = (weakRef != null ? weakRef.Target as T[] : null);
-            if (buffer == null || buffer.Length < initSize)
-                buffer = new T[initSize];
+            Buffer<T> buffer = (weakRef != null ? weakRef.Target as Buffer<T> : null);
+            if (buffer == null || buffer.Capacity < initSize)
+                buffer = new Buffer<T>(initSize);
 
             try
             {
@@ -30,8 +30,8 @@ namespace NYurik.FastBinTimeseries
                 {
                     if (grow)
                     {
-                        if (iterations++ > growupAfter && buffer.Length < grownSize)
-                            buffer = new T[grownSize];
+                        if (iterations++ > growupAfter && buffer.Capacity < grownSize)
+                            buffer = new Buffer<T>(grownSize);
                         grow = false;
                     }
 

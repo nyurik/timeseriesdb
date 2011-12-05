@@ -46,11 +46,11 @@ namespace NYurik.FastBinTimeseries.Test
                                                    [Values(true, false)] bool enableCache)
         {
             const int repeatRuns = 10;
-//            RunTest(0, repeatRuns, uniqueTimestamps, enableCache);
-//            RunTest(1, repeatRuns, uniqueTimestamps, enableCache);
-//            RunTest(10, repeatRuns, uniqueTimestamps, enableCache);
-//            RunTest(100, repeatRuns, uniqueTimestamps, enableCache);
-//            RunTest(1000, repeatRuns, uniqueTimestamps, enableCache);
+            RunTest(0, repeatRuns, uniqueTimestamps, enableCache);
+            RunTest(1, repeatRuns, uniqueTimestamps, enableCache);
+            RunTest(10, repeatRuns, uniqueTimestamps, enableCache);
+            RunTest(100, repeatRuns, uniqueTimestamps, enableCache);
+            RunTest(1000, repeatRuns, uniqueTimestamps, enableCache);
             RunTest(10000, repeatRuns, uniqueTimestamps, enableCache);
         }
     }

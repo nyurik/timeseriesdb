@@ -180,7 +180,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             }
         }
 
-        [Test]
+        [Test, Explicit, Category("Long test")]
         public unsafe void SignedValues()
         {
             var codec = new CodecWriter(BufferSize);
@@ -202,7 +202,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             }
         }
 
-        [Test]
+        [Test, Explicit, Category("Long test")]
         public unsafe void UnsignedValues()
         {
             var codec = new CodecWriter(BufferSize);

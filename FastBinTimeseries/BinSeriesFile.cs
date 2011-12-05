@@ -125,9 +125,9 @@ namespace NYurik.FastBinTimeseries
 
                 if (_firstIndex == null && count > 0)
                 {
-                    ArraySegment<TVal> seg = PerformStreaming(0, false, maxItemCount: 1).FirstOrDefault();
-                    if (seg.Array != null && seg.Count > 0)
-                        _firstIndex = IndexAccessor(seg.Array[seg.Offset]);
+                    var seg = PerformStreaming(0, false, maxItemCount: 1).FirstOrDefault();
+                    if (seg != null && seg.Count > 0)
+                        _firstIndex = IndexAccessor(seg.Array[0]);
                 }
                 return _firstIndex;
             }
@@ -142,9 +142,9 @@ namespace NYurik.FastBinTimeseries
 
                 if (_lastIndex == null && count > 0)
                 {
-                    ArraySegment<TVal> seg = PerformStreaming(count - 1, false, maxItemCount: 1).FirstOrDefault();
-                    if (seg.Array != null && seg.Count > 0)
-                        _lastIndex = IndexAccessor(seg.Array[seg.Offset]);
+                    var seg = PerformStreaming(count - 1, false, maxItemCount: 1).FirstOrDefault();
+                    if (seg != null && seg.Count > 0)
+                        _lastIndex = IndexAccessor(seg.Array[0]);
                 }
                 return _lastIndex;
             }
@@ -167,14 +167,13 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
-        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd from, bool inReverse = false,
-                                                              IEnumerable<TVal[]> bufferProvider = null)
+        public IEnumerable<Buffer<TVal>> StreamSegments(TInd fromInd, bool inReverse = false, IEnumerable<Buffer<TVal>> bufferProvider = null, long maxItemCount = long.MaxValue)
         {
-            long index = FirstIndexToPos(from);
+            long index = FirstIndexToPos(fromInd);
             if (inReverse)
                 index--;
 
-            return PerformStreaming(index, inReverse, bufferProvider);
+            return PerformStreaming(index, inReverse, bufferProvider, maxItemCount);
         }
 
         #endregion
@@ -182,7 +181,7 @@ namespace NYurik.FastBinTimeseries
         [Obsolete("Use streaming methods instead")]
         public void ReadData(long firstItemIdx, ArraySegment<TVal> buffer)
         {
-            PerformFileAccess(firstItemIdx, buffer, false);
+            ObsoleteExtensions.ReadData(this, firstItemIdx, buffer);
         }
 
         public long BinarySearch(TInd index)
@@ -355,21 +354,7 @@ namespace NYurik.FastBinTimeseries
             return sc.Item2;
         }
 
-        /// <summary>
-        /// Add new items at the end of the existing file
-        /// </summary>
-        [Obsolete("Use overloaded method")]
-        public void AppendData(ArraySegment<TVal> buffer)
-        {
-            if (buffer.Array == null)
-                throw new ArgumentNullException("buffer");
-            AppendData(new[] {buffer});
-        }
-
-        /// <summary>
-        /// Add new items at the end of the existing file
-        /// </summary>
-        public void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
+        public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
         {
             if (bufferStream == null)
                 throw new ArgumentNullException("bufferStream");
@@ -442,70 +427,6 @@ namespace NYurik.FastBinTimeseries
                 isFirstSeg = false;
                 segInd++;
             }
-        }
-
-        /// <summary>
-        /// Read data starting at <paramref name="fromInclusive"/>, up to, 
-        /// but not including <paramref name="toExclusive"/> into the <paramref name="buffer"/>.
-        /// No more than buffer.Count items will be read.
-        /// </summary>
-        /// <returns>The total number of items read.</returns>
-        [Obsolete("Use streaming methods instead")]
-        public int ReadData(TInd fromInclusive, TInd toExclusive, ArraySegment<TVal> buffer)
-        {
-            if (buffer.Array == null)
-                throw new ArgumentNullException("buffer");
-            Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-
-            PerformFileAccess(
-                rng.Item1,
-                new ArraySegment<TVal>(buffer.Array, buffer.Offset, Math.Min(buffer.Count, rng.Item2)),
-                false);
-
-            return rng.Item2;
-        }
-
-        /// <summary>
-        /// Read data starting at <paramref name="fromInclusive"/>, up to, 
-        /// but not including <paramref name="toExclusive"/>.
-        /// </summary>
-        /// <returns>An array of items no bigger than <paramref name="maxItemsToRead"/></returns>
-        [Obsolete("Use streaming methods instead")]
-        public TVal[] ReadData(TInd fromInclusive, TInd toExclusive, int maxItemsToRead)
-        {
-            if (maxItemsToRead < 0)
-                throw new ArgumentOutOfRangeException("maxItemsToRead", maxItemsToRead, "<0");
-            Tuple<long, int> rng = CalcNeededBuffer(fromInclusive, toExclusive);
-
-            var buffer = new TVal[Math.Min(maxItemsToRead, rng.Item2)];
-
-            PerformFileAccess(rng.Item1, new ArraySegment<TVal>(buffer), false);
-
-            return buffer;
-        }
-
-        /// <summary>
-        /// Read all available data begining at a given index
-        /// </summary>
-        [Obsolete("Use streaming methods instead")]
-        public TVal[] ReadDataToEnd(TInd fromInclusive)
-        {
-            long firstItemIdx = FirstIndexToPos(fromInclusive);
-            return ReadDataToEnd(firstItemIdx);
-        }
-
-        /// <summary>
-        /// Read all available data begining at a given index
-        /// </summary>
-        [Obsolete("Use streaming methods instead")]
-        public TVal[] ReadDataToEnd(long firstItemIdx)
-        {
-            int reqSize = (Count - firstItemIdx).ToIntCountChecked();
-            var buffer = new TVal[reqSize];
-
-            PerformFileAccess(firstItemIdx, new ArraySegment<TVal>(buffer), false);
-
-            return buffer;
         }
 
         /// <summary>

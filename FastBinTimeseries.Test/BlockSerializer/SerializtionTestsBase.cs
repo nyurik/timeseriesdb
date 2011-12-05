@@ -70,7 +70,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             using (IEnumerator<T> enmr = values.GetEnumerator())
             {
                 bool moveNext = enmr.MoveNext();
-                var buff = new Buff<T>(new T[4]);
+                var buff = new Buffer<T>(new T[4]);
 
                 while (moveNext)
                 {
@@ -80,7 +80,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                         moveNext = ds.Serialize(codec, enmr);
 
                         codec.BufferPos = 0;
-                        buff.Reset();
+                        buff.Count = 0;
                         ds.DeSerialize(new CodecReader(codec.UsedBuffer), buff, int.MaxValue);
                     }
                     catch (Exception x)
@@ -98,7 +98,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
                         throw new SerializerException(x, msg);
                     }
-                    ArraySegment<T> result = buff.Buffer;
+                    ArraySegment<T> result = buff.AsArraySegment;
                     for (int i = result.Offset; i < result.Count; i++)
                         yield return result.Array[i];
                 }

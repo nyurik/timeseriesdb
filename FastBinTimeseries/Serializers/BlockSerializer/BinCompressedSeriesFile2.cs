@@ -20,8 +20,12 @@ namespace NYurik.FastBinTimeseries
             get { throw new NotImplementedException(); }
         }
 
-        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd @from, bool inReverse = false,
-                                                              IEnumerable<TVal[]> bufferProvider = null)
+        public IEnumerable<Buffer<TVal>> StreamSegments(TInd fromInd, bool inReverse = false, IEnumerable<Buffer<TVal>> bufferProvider = null, long maxItemCount = long.MaxValue)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
         {
             throw new NotImplementedException();
         }
@@ -38,7 +42,7 @@ namespace NYurik.FastBinTimeseries
             throw new NotImplementedException();
         }
 
-        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd @from, bool inReverse = false, int bufferSize = 0)
+        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false, int bufferSize = 0)
         {
             throw new NotImplementedException();
         }

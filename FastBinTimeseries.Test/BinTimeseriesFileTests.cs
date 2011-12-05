@@ -40,21 +40,21 @@ namespace NYurik.FastBinTimeseries.Test
                 {
                     for (int i = 0; i < Math.Min(repeatRuns, itemCount); i++)
                     {
-                        UtcDateTime from = _DatetimeByte_SeqPk1.New(itemCount - i).a;
-                        UtcDateTime until = _DatetimeByte_SeqPk1.New(itemCount).a;
+                        UtcDateTime fromInd = _DatetimeByte_SeqPk1.New(itemCount - i).a;
+                        UtcDateTime untilInd = _DatetimeByte_SeqPk1.New(itemCount).a;
 
-                        res = f.ReadData(from, until, int.MaxValue);
+                        res = f.ReadData(fromInd, untilInd, int.MaxValue);
 
                         _DatetimeByte_SeqPk1[] expected = TestUtils.GenerateData(
                             _DatetimeByte_SeqPk1.New, i, itemCount - i);
                         TestUtils.AreEqual(expected, res);
 
-                        List<_DatetimeByte_SeqPk1> res1 = f.Stream(@from, until.AddTicks(1)).ToList();
+                        List<_DatetimeByte_SeqPk1> res1 = f.Stream(fromInd, untilInd.AddTicks(1)).ToList();
                         CollectionAssert.AreEqual(expected, res1);
 
                         Array.Reverse(expected);
 
-                        List<_DatetimeByte_SeqPk1> res2 = f.Stream(until, @from, inReverse: true).ToList();
+                        List<_DatetimeByte_SeqPk1> res2 = f.Stream(untilInd, fromInd, inReverse: true).ToList();
                         CollectionAssert.AreEqual(expected, res2);
                     }
                 }

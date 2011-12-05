@@ -300,9 +300,9 @@ namespace NYurik.FastBinTimeseries
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount">Maximum number of items to return</param>
-        protected internal IEnumerable<ArraySegment<T>> PerformStreaming(long firstItemIdx, bool enumerateInReverse,
-                                                                         IEnumerable<T[]> bufferProvider = null,
-                                                                         long maxItemCount = 0)
+        protected internal IEnumerable<Buffer<T>> PerformStreaming(
+            long firstItemIdx, bool enumerateInReverse, IEnumerable<Buffer<T>> bufferProvider = null,
+            long maxItemCount = long.MaxValue)
         {
             ThrowOnNotInitialized();
             if (maxItemCount < 0)
@@ -338,14 +338,7 @@ namespace NYurik.FastBinTimeseries
                     yield break;
             }
 
-            IEnumerable<T[]> buffers;
-
-            bool limitByCount = maxItemCount > 0;
-
-            if (bufferProvider != null)
-                buffers = bufferProvider;
-            else
-                buffers = GetBuffers(maxItemCount);
+            IEnumerable<Buffer<T>> buffers = bufferProvider ?? GetBuffers(maxItemCount);
 
             bool? useMemMappedAccess = null;
 
@@ -356,27 +349,26 @@ namespace NYurik.FastBinTimeseries
                 if (itemsLeft <= 0)
                     yield break;
 
-                var readSize = (int) Math.Min(itemsLeft, buffer.Length);
-                if (limitByCount && readSize > maxItemCount)
+                int readSize = itemsLeft < buffer.Capacity ? (int) itemsLeft : buffer.Capacity;
+                if (readSize > maxItemCount)
                     readSize = (int) maxItemCount;
-
-                var block = new ArraySegment<T>(buffer, 0, readSize);
+                buffer.Count = readSize;
 
                 long readBlockFrom = enumerateInReverse ? idx - readSize + 1 : idx;
 
                 if (useMemMappedAccess == null)
-                    useMemMappedAccess = UseMemoryMappedAccess(block.Count, false);
+                    useMemMappedAccess = UseMemoryMappedAccess(readSize, false);
 
-                int read = PerformUnsafeBlockAccess(readBlockFrom, false, block, fileSize, useMemMappedAccess.Value);
+                int read = PerformUnsafeBlockAccess(readBlockFrom, false, buffer.AsArraySegment, fileSize, useMemMappedAccess.Value);
 
                 if (enumerateInReverse)
                 {
-                    if (read != block.Count)
+                    if (read != readSize)
                         throw new SerializerException(
                             "Unexpected number of items read during reverse traversal. {0} was expected, {1} returned",
-                            block.Count, read);
+                            readSize, read);
 
-                    yield return block;
+                    yield return buffer;
                     idx = idx - readSize;
                 }
                 else
@@ -384,13 +376,14 @@ namespace NYurik.FastBinTimeseries
                     if (read == 0)
                         yield break;
 
-                    yield return read < block.Count ? new ArraySegment<T>(block.Array, 0, read) : block;
+                    buffer.Count = read;
+                    yield return buffer;
 
                     if (canSeek)
                         idx += readSize;
                 }
 
-                if (limitByCount)
+                if (maxItemCount < long.MaxValue)
                 {
                     maxItemCount -= readSize;
                     if (maxItemCount <= 0)
@@ -399,10 +392,10 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        public virtual IEnumerable<T[]> GetBuffers(long maxItemCount)
+        public virtual IEnumerable<Buffer<T>> GetBuffers(long maxItemCount)
         {
             int initSize = 16*MinPageSize/ItemSize;
-            if (maxItemCount > 0 && initSize > maxItemCount)
+            if (initSize > maxItemCount)
                 initSize = (int) maxItemCount;
             if (BufferProvider == null)
                 BufferProvider = new BufferProvider<T>();
