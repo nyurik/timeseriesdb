@@ -213,9 +213,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         ///         if (!moveNext)
         ///             break;
         /// 
-        ///         codecPos = codec.BufferPos;
+        ///         codecPos = codec.Count;
         ///         if (! (codec.Write(delta1) && codec.Write(delta2) && ...) ) {
-        ///             codec.BufferPos = codecPos;
+        ///             codec.Count = codecPos;
         ///             break;
         ///         }
         /// 
@@ -256,8 +256,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // int codecPos;
             ParameterExpression codecPosExp = Expression.Parameter(typeof (int), "codecPos");
 
-            // codec.BufferPos
-            MemberExpression codecBufferPos = Expression.PropertyOrField(codecParam, "BufferPos");
+            // codec.Count
+            MemberExpression codecBufferPos = Expression.PropertyOrField(codecParam, "Count");
 
             // parameter codec, IEnumerator<T>
             parameters = new[] {codecParam, enumeratorParam};
@@ -297,13 +297,13 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                                         Expression.Block(
                                             // int codecPos;
                                             new[] {codecPosExp},
-                                            // codecPos = codec.BufferPos
+                                            // codecPos = codec.Count
                                             Expression.Assign(codecPosExp, codecBufferPos),
                                             // if (!writeDeltas)
                                             Expression.IfThen(
                                                 Expression.Not(srl.Item2),
                                                 Expression.Block(
-                                                    // codec.BufferPos = codecPos;
+                                                    // codec.Count = codecPos;
                                                     Expression.Assign(codecBufferPos, codecPosExp),
                                                     // break;
                                                     Expression.Break(breakLabel)

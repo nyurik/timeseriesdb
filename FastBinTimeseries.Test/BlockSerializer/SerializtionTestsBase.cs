@@ -53,10 +53,10 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             catch (Exception x)
             {
                 string msg = string.Format(
-                    "codec.BufferPos={0}, codec.Buffer[pos-1]={1}",
-                    codec.BufferPos,
-                    codec.BufferPos > 0
-                        ? codec.Buffer[codec.BufferPos - 1].ToString(CultureInfo.InvariantCulture)
+                    "codec.Count={0}, codec.Buffer[pos-1]={1}",
+                    codec.Count,
+                    codec.Count > 0
+                        ? codec.Buffer[codec.Count - 1].ToString(CultureInfo.InvariantCulture)
                         : "n/a");
                 if (x.GetType() == typeof (OverflowException))
                     throw new OverflowException(msg, x);
@@ -76,20 +76,20 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 {
                     try
                     {
-                        codec.BufferPos = 0;
+                        codec.Count = 0;
                         moveNext = ds.Serialize(codec, enmr);
 
-                        codec.BufferPos = 0;
+                        codec.Count = 0;
                         buff.Count = 0;
-                        ds.DeSerialize(new CodecReader(codec.UsedBuffer), buff, int.MaxValue);
+                        ds.DeSerialize(new CodecReader(new Buffer<byte>(codec.Buffer, codec.Count)), buff, int.MaxValue);
                     }
                     catch (Exception x)
                     {
                         string msg = string.Format(
-                            "codec.BufferPos={0}, codec.Buffer[pos-1]={1}, enmr.Value={2}",
-                            codec.BufferPos,
-                            codec.BufferPos > 0
-                                ? codec.Buffer[codec.BufferPos - 1].ToString(CultureInfo.InvariantCulture)
+                            "codec.Count={0}, codec.Buffer[pos-1]={1}, enmr.Value={2}",
+                            codec.Count,
+                            codec.Count > 0
+                                ? codec.Buffer[codec.Count - 1].ToString(CultureInfo.InvariantCulture)
                                 : "n/a",
                             moveNext ? enmr.Current.ToString() : "none left");
 

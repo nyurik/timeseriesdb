@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -22,17 +21,17 @@ namespace NYurik.FastBinTimeseries.Test
             {
                 f.BinarySearchCacheSize = enableCache ? 0 : -1;
 
-                IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> newData =
+                IEnumerable<Buffer<_DatetimeByte_SeqPk1>> newData =
                     TestUtils.GenerateDataStream(_DatetimeByte_SeqPk1.New, itemCount, 0, 1);
                 List<_DatetimeByte_SeqPk1> expected = newData.StreamSegmentValues().ToList();
 
                 if (AllowCreate)
                 {
                     f.InitializeNewFile();
-                    f.AppendData(newData);
+                    f.AppendData(newData.Select(i => i.AsArraySegment));
                 }
 
-                IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> res = f.StreamSegments(UtcDateTime.MinValue);
+                IEnumerable<Buffer<_DatetimeByte_SeqPk1>> res = f.StreamSegments(UtcDateTime.MinValue);
                 TestUtils.CollectionAssertEqual(expected, res.StreamSegmentValues());
 
                 expected.Reverse();

@@ -55,6 +55,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return new Tuple<Expression, Expression>(readMethod, readMethod);
         }
 
+        public override int GetMaxByteSize()
+        {
+            return 1;
+        }
+
         protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
         {
             base.InitExistingField(reader, typeMap);

@@ -167,7 +167,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         {
             var codec = new CodecWriter(10);
             const long signedVal = unchecked((long) 0xFFFFFFFFFF000000UL);
-            codec.BufferPos = 0;
+            codec.Count = 0;
             codec.WriteSignedValue(signedVal);
 
             fixed (byte* pbuf = codec.Buffer)
@@ -187,7 +187,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
             foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
             {
-                codec.BufferPos = 0;
+                codec.Count = 0;
                 foreach (long val in valList)
                     codec.WriteSignedValue(val);
 
@@ -197,7 +197,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     foreach (long val in valList)
                         if (val != CodecReader.ReadSignedValueUnsafe(pbuf, ref pos))
                             Assert.Fail("Failed ulong {0:X}", val);
-                    codec.BufferPos = pos;
+                    codec.Count = pos;
                 }
             }
         }
@@ -209,7 +209,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
             foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
             {
-                codec.BufferPos = 0;
+                codec.Count = 0;
                 foreach (ulong val in valList)
                     codec.WriteUnsignedValue(val);
 
@@ -219,7 +219,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     foreach (ulong val in valList)
                         if (val != CodecReader.ReadUnsignedValueUnsafe(pbuf, ref pos))
                             Assert.Fail("Failed ulong {0:X}", val);
-                    codec.BufferPos = pos;
+                    codec.Count = pos;
                 }
             }
         }

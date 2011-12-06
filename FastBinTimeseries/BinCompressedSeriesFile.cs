@@ -2,12 +2,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
 using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
+using System.Linq;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -43,7 +43,7 @@ namespace NYurik.FastBinTimeseries
         // ReSharper restore StaticFieldInGenericType
 
         private BufferProvider<TVal> _bufferProvider;
-        private BufferProvider<byte> _bufferByteProvider;
+        private BufferProvider<byte> _bufferByteProvider = new BufferProvider<byte>();
         private TInd? _firstIndex;
         private FieldInfo _indexFieldInfo;
         private TInd? _lastIndex;
@@ -51,6 +51,7 @@ namespace NYurik.FastBinTimeseries
         private Tuple<long, ConcurrentDictionary<long, TInd>> _searchCache;
         private DynamicSerializer<TVal> _serializer;
         private bool _uniqueIndexes;
+        private int _maxItemByteSize;
 
         private int BlockSize
         {
@@ -89,11 +90,11 @@ namespace NYurik.FastBinTimeseries
 
                 if (_firstIndex == null && count > 0)
                 {
-                    throw new NotImplementedException();
-//                    ArraySegment<byte> seg = PerformStreaming(0, false, 1).FirstOrDefault();
-//                    if (seg.Array != null && seg.Count > 0)
-//                        _firstIndex = IndexAccessor(seg.Array[seg.Offset]);
+                    TInd tmp;
+                    if (TryGetFirst(StreamSegments(default(TInd), maxItemCount: 1), out tmp))
+                        _firstIndex = tmp;
                 }
+
                 return _firstIndex;
             }
         }
@@ -107,13 +108,24 @@ namespace NYurik.FastBinTimeseries
 
                 if (_lastIndex == null && count > 0)
                 {
-                    throw new NotImplementedException();
-//                    ArraySegment<byte> seg = PerformStreaming(count - 1, false, 1).FirstOrDefault();
-//                    if (seg.Array != null && seg.Count > 0)
-//                        _lastIndex = IndexAccessor(seg.Array[seg.Offset]);
+                    TInd tmp;
+                    if (TryGetFirst(StreamSegments(TInd.MaxValue, maxItemCount: 1), out tmp))
+                        _firstIndex = tmp;
                 }
                 return _lastIndex;
             }
+        }
+
+        private bool TryGetFirst(IEnumerable<Buffer<TVal>> stream, out TInd value, bool inReverse = false)
+        {
+            foreach (var b in stream)
+            {
+                value = IndexAccessor(inReverse ? b.Array[b.Count - 1] : b.Array[0]);
+                return true;
+            }
+
+            value = default(TInd);
+            return false;
         }
 
         public bool UniqueIndexes
@@ -167,6 +179,7 @@ namespace NYurik.FastBinTimeseries
             IndexFieldInfo = fieldInfo;
 
             _serializer = DynamicSerializer<TVal>.CreateFromReader(reader, typeMap);
+            _maxItemByteSize = _serializer.RootField.GetMaxByteSize();
 
             return ver;
         }
@@ -182,6 +195,8 @@ namespace NYurik.FastBinTimeseries
             int minBlockSize = _serializer.GetMinimumBlockSize();
             if (BlockSize < minBlockSize)
                 throw new SerializerException("BlockSize ({0}) must be at least {1} bytes", BlockSize, minBlockSize);
+
+            _maxItemByteSize = _serializer.RootField.GetMaxByteSize();
 
             return Version10;
         }
@@ -201,40 +216,70 @@ namespace NYurik.FastBinTimeseries
             if (inReverse)
                 index--;
 
-            if (_bufferByteProvider == null)
-                _bufferByteProvider = new BufferProvider<byte>();
-
             CodecReader codec = null;
 
-            foreach (var seg in PerformStreaming(index, inReverse))
+            IEnumerator<Buffer<TVal>> bp = null;
+            try
             {
-                if (codec == null)
-                    codec = new CodecReader(seg);
-                else
-                    codec.AttachBuffer(seg);
-
-                var blocks = FastBinFileUtils.RoundUpToMultiple(seg.Count, BlockSize)/BlockSize;
-                for (int i = 0; i < blocks; i++)
+                foreach (var seg in PerformStreaming(index, inReverse, GetByteBuffers(maxItemCount)))
                 {
-                    codec.BufferPos = i*BlockSize;
-                    seg.Count = 0;
-                    _serializer.DeSerialize(codec, buff, int.MaxValue);
-                    yield return buff.AsArraySegment;
+                    if (bp == null)
+                        bp = (bufferProvider ?? GetBuffers(maxItemCount)).GetEnumerator();
+
+                    if(!bp.MoveNext())
+                        yield break;
+
+                    var retBuf = bp.Current;
+
+                    if (codec == null)
+                        codec = new CodecReader(seg);
+                    else
+                        codec.AttachBuffer(seg);
+
+                    var blocks = FastBinFileUtils.RoundUpToMultiple(seg.Count, BlockSize)/BlockSize;
+                    for (int i = 0; i < blocks; i++)
+                    {
+                        codec.BufferPos = i*BlockSize;
+                        _serializer.DeSerialize(codec, retBuf, int.MaxValue);
+                    }
+
+                    yield return retBuf;
                 }
+            }
+            finally
+            {
+                if (bp != null)
+                    bp.Dispose();
             }
         }
 
         #endregion
 
-        public override IEnumerable<Buffer<byte>> GetBuffers(long maxItemCount)
+        private IEnumerable<Buffer<TVal>> GetBuffers(long maxItemCount)
         {
-            var initSize = (int) FastBinFileUtils.RoundUpToMultiple(16*MinPageSize, BlockSize);
-            if (initSize > maxItemCount)
-                initSize = (int) FastBinFileUtils.RoundUpToMultiple(maxItemCount, BlockSize);
-            if (BufferProvider == null)
-                BufferProvider = new BufferProvider<byte>();
+            if (_bufferProvider == null)
+                _bufferProvider = new BufferProvider<TVal>();
 
-            return BufferProvider.GetBuffers(
+            return _bufferProvider.GetBuffers((int) Math.Min(maxItemCount, 1000), 10000, 10);
+    
+        }   
+        
+        private IEnumerable<Buffer<byte>> GetByteBuffers(long maxItemCount)
+        {
+            int initSize;
+            if (BlockSize / _maxItemByteSize > maxItemCount)
+                initSize = (int)maxItemCount * _maxItemByteSize; // buffer smaller than one block
+            else
+            {
+                initSize = (int) FastBinFileUtils.RoundUpToMultiple(16*MinPageSize, BlockSize);
+                if (initSize / _maxItemByteSize > maxItemCount)
+                    initSize = (int) FastBinFileUtils.RoundUpToMultiple(_maxItemByteSize*maxItemCount, BlockSize);
+            }
+            
+            if (_bufferByteProvider == null)
+                _bufferByteProvider = new BufferProvider<byte>();
+
+            return _bufferByteProvider.GetBuffers(
                 initSize, (int) FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/ItemSize, BlockSize), 10);
         }
 
@@ -449,12 +494,12 @@ namespace NYurik.FastBinTimeseries
                 var codec = new CodecWriter(BlockSize);
                 while (true)
                 {
-                    codec.BufferPos = 0;
+                    codec.Count = 0;
                     bool hasMore = _serializer.Serialize(codec, iterator);
-                    if (codec.BufferPos == 0)
+                    if (codec.Count == 0)
                         throw new SerializerException("Internal serializer error: buffer is empty");
 
-                    yield return new ArraySegment<byte>(codec.Buffer, 0, codec.BufferPos);
+                    yield return new ArraySegment<byte>(codec.Buffer, 0, codec.Count);
 
                     if (!hasMore)
                         break;

@@ -15,10 +15,11 @@ namespace NYurik.FastBinTimeseries
             _buffer = new T[bufferSize];
         }
 
-        public Buffer([NotNull] T[] buffer)
+        public Buffer([NotNull] T[] buffer, int count = 0)
         {
             if (buffer == null) throw new ArgumentNullException("buffer");
             _buffer = buffer;
+            _count = count;
         }
 
         [Pure]

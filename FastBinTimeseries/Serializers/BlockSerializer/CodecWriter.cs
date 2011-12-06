@@ -10,7 +10,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public readonly byte[] Buffer;
         public readonly int BufferSize;
-        private int _bufferPos;
+        private int _count;
 
         /// <summary> Create writing codec. The internal buffer is padded with extra space. </summary>
         public CodecWriter(int bufferSize)
@@ -21,28 +21,28 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             Buffer = new byte[bufferSize + PaddingSize];
         }
 
-        public int BufferPos
+        public int Count
         {
-            get { return _bufferPos; }
+            get { return _count; }
             set
             {
                 if (value < 0 || value > BufferSize)
                     throw new ArgumentOutOfRangeException("value", value, "Must be >= 0 && <= " + BufferSize);
-                _bufferPos = value;
+                _count = value;
             }
         }
 
         public ArraySegment<byte> UsedBuffer
         {
-            get { return new ArraySegment<byte>(Buffer, 0, BufferPos); }
+            get { return new ArraySegment<byte>(Buffer, 0, Count); }
         }
 
-            #region Header
+        #region Header
 
         [UsedImplicitly]
         internal void SkipHeader()
         {
-            _bufferPos += HeaderSize;
+            _count += HeaderSize;
         }
 
         [UsedImplicitly]
@@ -62,20 +62,20 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             ThrowIfNotEnoughSpace();
             while (value > 127)
             {
-                Buffer[_bufferPos++] = (byte) (value & 0x7F | 0x80);
+                Buffer[_count++] = (byte) (value & 0x7F | 0x80);
                 value >>= 7;
             }
-            Buffer[_bufferPos++] = (byte) value;
+            Buffer[_count++] = (byte) value;
         }
 
         [UsedImplicitly]
         internal bool WriteByte(byte value)
         {
             ThrowIfNotEnoughSpace();
-            if (_bufferPos >= BufferSize)
+            if (_count >= BufferSize)
                 return false;
 
-            Buffer[_bufferPos++] = value;
+            Buffer[_count++] = value;
             return true;
         }
 
@@ -83,7 +83,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         internal bool WriteSignedValue(long value)
         {
             ThrowIfNotEnoughSpace();
-            int pos = _bufferPos;
+            int pos = _count;
 
             if (value < 0)
             {
@@ -122,7 +122,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             if (pos > BufferSize)
                 return false;
 
-            _bufferPos = pos;
+            _count = pos;
             return true;
         }
 
@@ -138,9 +138,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         private void ThrowIfNotEnoughSpace()
         {
-            if (_bufferPos >= BufferSize + PaddingSize)
+            if (_count >= BufferSize + PaddingSize)
                 throw new SerializerException(
-                    "Unable to perform write operation - buffer[{0}] already has {1} bytes", BufferSize, BufferPos);
+                    "Unable to perform write operation - buffer[{0}] already has {1} bytes", BufferSize, Count);
         }
 
         #endregion

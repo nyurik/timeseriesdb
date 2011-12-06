@@ -51,6 +51,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
+        public override int GetMaxByteSize()
+        {
+            return _fields.Sum(i => i.Field.GetMaxByteSize());
+        }
+
         protected override void InitNewField(BinaryWriter writer)
         {
             base.InitNewField(writer);

@@ -20,7 +20,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         }
 
         /// <summary> Create codec for reading only </summary>
-        public CodecReader(ArraySegment<byte> buffer)
+        public CodecReader(Buffer<byte> buffer)
         {
             AttachBuffer(buffer);
         }
@@ -37,12 +37,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return count;
         }
 
-        public void AttachBuffer(ArraySegment<byte> value)
+        public void AttachBuffer(Buffer<byte> value)
         {
-            if (value.Array == null)
-                throw new ArgumentNullException("value");
             _buffer = value.Array;
-            _bufferPos = value.Offset;
+            _bufferPos = 0;
         }
 
         [UsedImplicitly]

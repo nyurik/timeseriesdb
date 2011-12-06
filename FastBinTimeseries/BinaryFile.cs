@@ -8,7 +8,7 @@ namespace NYurik.FastBinTimeseries
     public abstract class BinaryFile<T> : BinaryFile, IBinaryFile
     {
         private const int MinReqSizeToUseMapView = 4*1024; // 4 KB
-        protected BufferProvider<T> BufferProvider;
+        private BufferProvider<T> _bufferProvider;
         private IBinSerializer<T> _serializer;
 
         /// <summary>
@@ -392,15 +392,15 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        public virtual IEnumerable<Buffer<T>> GetBuffers(long maxItemCount)
+        private IEnumerable<Buffer<T>> GetBuffers(long maxItemCount)
         {
             int initSize = 16*MinPageSize/ItemSize;
             if (initSize > maxItemCount)
                 initSize = (int) maxItemCount;
-            if (BufferProvider == null)
-                BufferProvider = new BufferProvider<T>();
+            if (_bufferProvider == null)
+                _bufferProvider = new BufferProvider<T>();
 
-            return BufferProvider.GetBuffers(initSize, MaxLargePageSize/ItemSize, 10);
+            return _bufferProvider.GetBuffers(initSize, MaxLargePageSize/ItemSize, 10);
         }
 
         protected int PerformUnsafeBlockAccess(long firstItemIdx, bool isWriting, ArraySegment<T> buffer, long fileSize,
