@@ -112,10 +112,12 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         {
         }
 
-        /// * codec - writes output to this codec using Write*() methods
+        /// <summary>
+        ///  * codec - writes output to this codec using Write*() methods
         /// * enumerator to go through the input T values.
         ///     MoveNext() had to be called on it and returned true before passing it in.
         /// * returns false if no more items, or true if there are more items but the codec buffer is full
+        /// </summary>
         public Func<CodecWriter, IEnumerator<T>, bool> Serialize
         {
             get
@@ -125,9 +127,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
+        /// <summary>
         /// * codec to read the values from
         /// * result will get all the generated values
         /// * maxItemCount - maximum number of items to be deserialized
+        /// </summary>
         public Action<CodecReader, Buffer<T>, int> DeSerialize
         {
             get
@@ -185,7 +189,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             base.MakeReadonly();
         }
 
-        ///
+        /// <summary>
+        /// Generate bool Serialize(CodecWriter codec, IEnumerator&ltT> enumerator) method
+        /// </summary>
+        /// <remarks>
         /// Generated code:
         /// 
         /// 
@@ -226,6 +233,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// 
         ///     return moveNext;
         /// }
+        /// </remarks>
         private IEnumerable<Expression> GenerateSerializer(out ParameterExpression[] parameters,
                                                            out ParameterExpression[] localVars)
         {
@@ -320,7 +328,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     };
         }
 
-        ///
+        /// <summary>
+        /// Generate void DeSerialize(CodecReader codec, Buffer&lt;T> result, int maxItemCount) method
+        /// </summary>
+        /// <remarks> 
         /// Generated code:
         /// 
         /// * codec to read the values from
@@ -346,7 +357,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         ///         result.Add(ReadField(codec, ref state));
         ///     }
         /// }
-        /// 
+        /// </remarks>
         private IEnumerable<Expression> GenerateDeSerializer(out ParameterExpression[] parameters,
                                                              out ParameterExpression[] localVars)
         {

@@ -75,5 +75,10 @@ namespace NYurik.FastBinTimeseries
                 System.Array.Copy(_buffer, offset, _buffer, 0, count);
             Count = count;
         }
+
+        /// <summary>
+        /// Specifies the location from which the data was read
+        /// </summary>
+        public long Origin { get; set; }
     }
 }

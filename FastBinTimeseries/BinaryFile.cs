@@ -64,7 +64,7 @@ namespace NYurik.FastBinTimeseries
         [Obsolete("Use streaming methods instead")]
         Array IStoredSeries.GenericReadData(long firstItemIdx, int count)
         {
-            long fileCount = Count;
+            long fileCount = GetCount();
             if (firstItemIdx < 0 || firstItemIdx > fileCount)
                 throw new ArgumentOutOfRangeException(
                     "firstItemIdx", firstItemIdx, string.Format("Accepted range [0:{0}]", fileCount));
@@ -98,7 +98,7 @@ namespace NYurik.FastBinTimeseries
                     "firstItemIdx", firstItemIdx,
                     "Must be 0 when the base stream is not seekable");
 
-            if (canSeek && (firstItemIdx < 0 || firstItemIdx > Count))
+            if (canSeek && (firstItemIdx < 0 || firstItemIdx > GetCount()))
                 throw new ArgumentOutOfRangeException("firstItemIdx", firstItemIdx, "Must be >= 0 and <= Count");
 
             // Optimize empty requests
@@ -292,7 +292,7 @@ namespace NYurik.FastBinTimeseries
         {
             return callable.Run<T>(this, arg);
         }
-
+        
         /// <summary>
         /// Enumerate items by block either in order or in reverse order, begining at the <paramref name="firstItemIdx"/>.
         /// </summary>
@@ -300,21 +300,29 @@ namespace NYurik.FastBinTimeseries
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount">Maximum number of items to return</param>
+        /// <param name="fileSize">Use if the file size was known at the time of call (avoids additional kernel call)</param>
         protected internal IEnumerable<Buffer<T>> PerformStreaming(
             long firstItemIdx, bool enumerateInReverse, IEnumerable<Buffer<T>> bufferProvider = null,
-            long maxItemCount = long.MaxValue)
+            long maxItemCount = long.MaxValue, long fileSize = -1)
         {
             ThrowOnNotInitialized();
             if (maxItemCount < 0)
                 throw new ArgumentOutOfRangeException("maxItemCount", maxItemCount, "Must be >= 0");
 
             bool canSeek = BaseStream.CanSeek;
-            long fileSize = 0, fileCount = long.MaxValue;
+            long fileCount = long.MaxValue;
+
             if (canSeek)
             {
-                fileSize = BaseStream.Length;
+                if (fileSize < 0)
+                    fileSize = BaseStream.Length;
+
                 bool isAligned;
                 fileCount = CalculateItemCountFromFilePosition(fileSize, out isAligned);
+            }
+            else
+            {
+                fileSize = 0;
             }
 
             long idx;
@@ -368,6 +376,7 @@ namespace NYurik.FastBinTimeseries
                             "Unexpected number of items read during reverse traversal. {0} was expected, {1} returned",
                             readSize, read);
 
+                    buffer.Origin = readBlockFrom;
                     yield return buffer;
                     idx = idx - readSize;
                 }
@@ -377,6 +386,7 @@ namespace NYurik.FastBinTimeseries
                         yield break;
 
                     buffer.Count = read;
+                    buffer.Origin = readBlockFrom;
                     yield return buffer;
 
                     if (canSeek)

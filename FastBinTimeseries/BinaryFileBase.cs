@@ -93,20 +93,22 @@ namespace NYurik.FastBinTimeseries
 
         public abstract IBinSerializer NonGenericSerializer { get; }
 
-        public long Count
+        public virtual long Count
         {
-            get
-            {
-                ThrowOnNotInitialized();
-                if (!BaseStream.CanSeek)
-                    throw new NotSupportedException("Not supported for Stream.CanSeek == false");
-
-                bool isAligned;
-                return CalculateItemCountFromFilePosition(BaseStream.Length, out isAligned);
-            }
+            get { return GetCount(); }
         }
 
-        public int ItemSize
+        protected long GetCount()
+        {
+            ThrowOnNotInitialized();
+            if (!BaseStream.CanSeek)
+                throw new NotSupportedException("Not supported for Stream.CanSeek == false");
+
+            bool isAligned;
+            return CalculateItemCountFromFilePosition(BaseStream.Length, out isAligned);
+        }
+
+        public virtual int ItemSize
         {
             get
             {
@@ -117,7 +119,7 @@ namespace NYurik.FastBinTimeseries
 
         public abstract Type ItemType { get; }
 
-        public string Tag
+        public virtual string Tag
         {
             get
             {
@@ -135,7 +137,7 @@ namespace NYurik.FastBinTimeseries
 
         public bool IsEmpty
         {
-            get { return Count == 0; }
+            get { return GetCount() == 0; }
         }
 
         public bool IsOpen
@@ -683,6 +685,17 @@ namespace NYurik.FastBinTimeseries
         public override string ToString()
         {
             var fileStream = _stream as FileStream;
+            long count;
+
+            try
+            {
+                count = fileStream != null && IsOpen && fileStream.CanSeek ? Count : -1;
+            }
+            catch
+            {
+                count = -1;
+            }
+
             return string.Format(
                 "{0} file {1} of type {2}{3}",
                 IsDisposed ? "Disposed" : (IsInitialized ? "Open" : "Uninitialized"),
@@ -690,8 +703,8 @@ namespace NYurik.FastBinTimeseries
                     ? "(unknown)"
                     : (fileStream == null ? _stream.ToString() : fileStream.Name),
                 GetType().FullName,
-                fileStream != null && IsOpen && fileStream.CanSeek
-                    ? string.Format(" with {0} items", Count)
+                count >= 0
+                    ? string.Format(" with {0} items", count)
                     : "");
         }
 
@@ -707,7 +720,7 @@ namespace NYurik.FastBinTimeseries
         protected void PerformTruncateFile(long newCount)
         {
             ThrowOnNotInitialized();
-            long fileCount = Count;
+            long fileCount = GetCount();
             if (newCount < 0 || newCount > fileCount)
                 throw new ArgumentOutOfRangeException("newCount", newCount, "Must be >= 0 and <= Count");
 
@@ -719,7 +732,7 @@ namespace NYurik.FastBinTimeseries
             BaseStream.Flush();
 
             // Just in case, hope this will never happen
-            fileCount = Count;
+            fileCount = GetCount();
             if (newCount != fileCount)
                 throw new BinaryFileException(
                     "Internal error: the new file should have had {0} items, but was calculated to have {1}",

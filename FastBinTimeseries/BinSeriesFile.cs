@@ -120,7 +120,7 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                long count = Count;
+                long count = GetCount();
                 ResetOnChangedAndGetCache(count, false);
 
                 if (_firstIndex == null && count > 0)
@@ -137,7 +137,7 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                long count = Count;
+                long count = GetCount();
                 ResetOnChangedAndGetCache(count, false);
 
                 if (_lastIndex == null && count > 0)
@@ -195,7 +195,7 @@ namespace NYurik.FastBinTimeseries
         public long BinarySearch(TInd index, bool findFirst)
         {
             long start = 0L;
-            long count = Count;
+            long count = GetCount();
             long end = count - 1;
 
             // Optimize in case we search outside of the file
@@ -310,7 +310,7 @@ namespace NYurik.FastBinTimeseries
 
         public void TruncateFile(long newCount)
         {
-            long fileCount = Count;
+            long fileCount = GetCount();
             if (newCount == fileCount)
                 return;
 
@@ -372,7 +372,7 @@ namespace NYurik.FastBinTimeseries
 
             TInd lastTs = LastFileIndex ?? default(TInd);
             int segInd = 0;
-            bool isEmptyFile = Count == 0;
+            bool isEmptyFile = IsEmpty;
 
             foreach (var buffer in bufferStream)
             {
