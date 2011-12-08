@@ -102,7 +102,7 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                throw new NotImplementedException();
+                return null;
 //                long count = Count;
 //                ResetOnChangedAndGetCache(count, false);
 //
@@ -202,17 +202,19 @@ namespace NYurik.FastBinTimeseries
                                                         IEnumerable<Buffer<TVal>> bufferProvider = null,
                                                         long maxItemCount = long.MaxValue)
         {
-            long index = 0; // BUG: FirstIndexToPos(fromInd);
-            if (inReverse)
-                index--;
+            long count = GetCount();
 
-            return StreamSegments(index, GetCount(), inReverse, bufferProvider, maxItemCount);
+            // BUG: FirstIndexToPos(fromInd);
+            long index = inReverse ? FastBinFileUtils.RoundDownToMultiple(count, BlockSize) : 0;
+
+
+            return StreamSegments(index, count, inReverse, bufferProvider, maxItemCount);
         }
 
         /// <summary>
         /// Add new items at the end of the existing file
         /// </summary>
-        public void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
+        public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
         {
             if (bufferStream == null)
                 throw new ArgumentNullException("bufferStream");
@@ -242,25 +244,52 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        private IEnumerable<Buffer<TVal>> StreamSegments(long index, long count, bool inReverse = false,
+        private IEnumerable<Buffer<TVal>> StreamSegments(long index, long fileCount, bool inReverse = false,
                                                          IEnumerable<Buffer<TVal>> bufferProvider = null,
                                                          long maxItemCount = long.MaxValue)
         {
             CodecReader codec = null;
-            var blockInd = FastBinFileUtils.RoundDownToMultiple(index, BlockSize);
+            if (index % BlockSize != 0)
+                throw new ArgumentOutOfRangeException("index", index, "Must be a multiple of BlockSize=" + BlockSize);
 
-            IEnumerator<Buffer<TVal>> bp = null;
+            IEnumerator<Buffer<TVal>> valBufs = null;
             try
             {
-                foreach (var seg in PerformStreaming(index, inReverse, GetByteBuffers(maxItemCount)))
-                {
-                    if (bp == null)
-                        bp = (bufferProvider ?? GetBuffers(maxItemCount)).GetEnumerator();
+                if (_bufferByteProvider==null)
+                    _bufferByteProvider = new BufferProvider<byte>();
 
-                    if (!bp.MoveNext())
+                int firstBlockSize;
+
+                IEnumerable<Buffer<byte>> byteBuffs;
+                if (maxItemCount < BlockSize / _maxItemByteSize)
+                {
+                    firstBlockSize = (int) Math.Min(maxItemCount*_maxItemByteSize, fileCount);
+                    byteBuffs = _bufferByteProvider.YieldFixedSize(firstBlockSize);
+                }
+                else
+                {
+                    int smallSize = FastBinFileUtils.RoundUpToMultiple(16 * MinPageSize, BlockSize);
+                    firstBlockSize = inReverse && index > fileCount - BlockSize ? (int)(fileCount % BlockSize) : smallSize;
+                    
+                    byteBuffs = _bufferByteProvider.YieldFixed(
+                        firstBlockSize, smallSize, 4, FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize));
+                }
+
+                var firstItemIdx = inReverse ? index + firstBlockSize : index;
+
+                foreach (var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs))
+                {
+                    valBufs =
+                        (bufferProvider
+                         ?? (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
+                                .YieldMaxGrowingBuffer(
+                                    maxItemCount, 16*MinPageSize/ItemSize, 5, MaxLargePageSize/ItemSize))
+                            .GetEnumerator();
+
+                    if (!valBufs.MoveNext())
                         yield break;
 
-                    Buffer<TVal> retBuf = bp.Current;
+                    Buffer<TVal> retBuf = valBufs.Current;
 
                     if (codec == null)
                         codec = new CodecReader(seg);
@@ -279,36 +308,9 @@ namespace NYurik.FastBinTimeseries
             }
             finally
             {
-                if (bp != null)
-                    bp.Dispose();
+                if (valBufs != null)
+                    valBufs.Dispose();
             }
-        }
-
-        private IEnumerable<Buffer<TVal>> GetBuffers(long maxItemCount)
-        {
-            if (_bufferProvider == null)
-                _bufferProvider = new BufferProvider<TVal>();
-
-            return _bufferProvider.GetBuffers((int) Math.Min(maxItemCount, 1000), 10000, 10);
-        }
-
-        private IEnumerable<Buffer<byte>> GetByteBuffers(long maxItemCount)
-        {
-            int initSize;
-            if (BlockSize/_maxItemByteSize > maxItemCount)
-                initSize = (int) maxItemCount*_maxItemByteSize; // buffer smaller than one block
-            else
-            {
-                initSize = (int) FastBinFileUtils.RoundUpToMultiple(16*MinPageSize, BlockSize);
-                if (initSize/_maxItemByteSize > maxItemCount)
-                    initSize = (int) FastBinFileUtils.RoundUpToMultiple(_maxItemByteSize*maxItemCount, BlockSize);
-            }
-
-            if (_bufferByteProvider == null)
-                _bufferByteProvider = new BufferProvider<byte>();
-
-            return _bufferByteProvider.GetBuffers(
-                initSize, (int) FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/ItemSize, BlockSize), 10);
         }
 
         public long Search(TInd index)
@@ -482,7 +484,8 @@ namespace NYurik.FastBinTimeseries
             [NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
         {
             TInd lastTs = LastFileIndex ?? default(TInd);
-            bool isEmptyFile = Count == 0;
+            long count = GetCount();
+            bool isEmptyFile = count == 0;
 
             using (IEnumerator<TVal> iterator = VerifyValues(bufferStream).GetEnumerator())
             {

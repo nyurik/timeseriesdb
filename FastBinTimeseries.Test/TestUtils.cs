@@ -105,7 +105,7 @@ namespace NYurik.FastBinTimeseries.Test
                 yield break;
 
             for (int i = startFrom; i < maxValue; i += count)
-                yield return new Buffer<T>(GenerateData(converter, count, i));
+                yield return new Buffer<T>(GenerateData(converter, count, i), count);
         }
 
         public static byte NewByte(long i)

@@ -9,32 +9,36 @@ namespace NYurik.FastBinTimeseries
         private WeakReference _buffer;
 
         /// <summary>
-        /// With each yield, this method gives an array that could either be the same instance as before,
-        /// or a different (bigger) one. A weak reference will be kept so as to reduce the number of
-        /// memory allocations. The method is thread safe.
+        /// Yield maximum available buffer every time. If the buffer is smaller than initSize,
+        /// allocate [initSize] items first, and after growAfter iterations, grow it to the largeSize
         /// </summary>
-        public IEnumerable<Buffer<T>> GetBuffers(int initSize, int grownSize, int growupAfter)
+        public IEnumerable<Buffer<T>> YieldMaxGrowingBuffer(long maxItemCount, int initSize, int growAfter,
+                                                            int largeSize)
         {
-            WeakReference weakRef = Interlocked.Exchange(ref _buffer, null);
+            Buffer<T> buffer = GetBufferRef();
 
-            Buffer<T> buffer = (weakRef != null ? weakRef.Target as Buffer<T> : null);
-            if (buffer == null || buffer.Capacity < initSize)
-                buffer = new Buffer<T>(initSize);
+            int size = initSize > maxItemCount ? (int) maxItemCount : initSize;
+            if (buffer == null || buffer.Capacity < size)
+                buffer = new Buffer<T>(size);
 
             try
             {
-                int iterations = 0;
-                bool grow = true;
+                for (int i = 0; i < growAfter; i++)
+                {
+                    buffer.Count = buffer.Capacity;
+                    maxItemCount -= buffer.Capacity;
+                    yield return buffer;
+                }
+
+                size = largeSize > maxItemCount ? (int) maxItemCount : largeSize;
+
+                if (buffer.Capacity < size)
+                    buffer = new Buffer<T>(size);
 
                 while (true)
                 {
-                    if (grow)
-                    {
-                        if (iterations++ > growupAfter && buffer.Capacity < grownSize)
-                            buffer = new Buffer<T>(grownSize);
-                        grow = false;
-                    }
-
+                    buffer.Count = buffer.Capacity;
+                    maxItemCount -= buffer.Capacity;
                     yield return buffer;
                 }
             }
@@ -42,6 +46,64 @@ namespace NYurik.FastBinTimeseries
             {
                 _buffer = new WeakReference(buffer);
             }
+        }
+
+        public IEnumerable<Buffer<T>> YieldFixedSize(int size)
+        {
+            Buffer<T> buffer = GetBufferRef();
+
+            if (buffer == null || buffer.Capacity < size)
+                buffer = new Buffer<T>(size);
+
+            buffer.Count = size;
+            yield return buffer;
+        }
+
+        /// <summary>
+        /// Yield a buffer that could either be the same instance as before, or a larger one.
+        /// A weak reference will be kept so as to reduce the number of memory allocations. The method is thread safe.
+        /// </summary>
+        public IEnumerable<Buffer<T>> YieldFixed(int firstSize, int smallSize, int growAfter, int largeSize)
+        {
+            Buffer<T> buffer = GetBufferRef();
+
+            int size = firstSize;
+            if (buffer == null || buffer.Capacity < size)
+                buffer = new Buffer<T>(size);
+
+            try
+            {
+                buffer.Count = firstSize;
+                yield return buffer;
+
+                if (buffer.Capacity < smallSize)
+                    buffer = new Buffer<T>(smallSize);
+
+                for (int i = 0; i < growAfter; i++)
+                {
+                    buffer.Count = smallSize;
+                    yield return buffer;
+                }
+
+                if (buffer.Capacity < largeSize)
+                    buffer = new Buffer<T>(largeSize);
+
+                while (true)
+                {
+                    buffer.Count = largeSize;
+                    yield return buffer;
+                }
+            }
+            finally
+            {
+                _buffer = new WeakReference(buffer);
+            }
+        }
+
+        private Buffer<T> GetBufferRef()
+        {
+            WeakReference weakRef = Interlocked.Exchange(ref _buffer, null);
+            return (weakRef != null ? weakRef.Target as Buffer<T> : null);
         }
     }
 }

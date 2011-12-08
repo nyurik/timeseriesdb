@@ -18,7 +18,23 @@ namespace NYurik.FastBinTimeseries
             return value - value%multiple;
         }
 
+        public static int RoundDownToMultiple(int value, int multiple)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException("value", value, "Value must be >= 0");
+            return value - value%multiple;
+        }
+
         public static long RoundUpToMultiple(long value, long multiple)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException("value", value, "Value must be >= 0");
+            if (value == 0)
+                return 0;
+            return value - 1 + (multiple - (value - 1)%multiple);
+        }
+
+        public static int RoundUpToMultiple(int value, int multiple)
         {
             if (value < 0)
                 throw new ArgumentOutOfRangeException("value", value, "Value must be >= 0");

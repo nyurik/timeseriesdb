@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics.Contracts;
 using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries
@@ -22,13 +21,16 @@ namespace NYurik.FastBinTimeseries
             _count = count;
         }
 
-        [Pure]
+        /// <summary>
+        /// Specifies the location from which the data was read
+        /// </summary>
+        public long Origin { get; set; }
+
         public ArraySegment<T> AsArraySegment
         {
             get { return new ArraySegment<T>(Array, 0, _count); }
         }
 
-        [Pure]
         public int Capacity
         {
             get { return Array.Length; }
@@ -42,7 +44,7 @@ namespace NYurik.FastBinTimeseries
                 if (_count != value)
                 {
                     if (value < 0) throw new ArgumentOutOfRangeException("value", value, "<0");
-                    if (value > Capacity) throw new ArgumentOutOfRangeException("value", value, ">Capacity");
+                    if (value > Array.Length) throw new ArgumentOutOfRangeException("value", value, ">Capacity");
                     if (value < _count)
                         System.Array.Clear(Array, value, _count - value);
                     _count = value;
@@ -75,10 +77,5 @@ namespace NYurik.FastBinTimeseries
                 System.Array.Copy(_buffer, offset, _buffer, 0, count);
             Count = count;
         }
-
-        /// <summary>
-        /// Specifies the location from which the data was read
-        /// </summary>
-        public long Origin { get; set; }
     }
 }
