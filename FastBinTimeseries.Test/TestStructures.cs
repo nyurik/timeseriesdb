@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using NYurik.FastBinTimeseries.CommonCode;
@@ -61,6 +62,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public UtcDateTime a;
         public byte b;
+        public static _DatetimeByte_SeqPk1[] Empty = new _DatetimeByte_SeqPk1[0];
 
         #region Implementation
 

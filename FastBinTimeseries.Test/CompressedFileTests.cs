@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -48,23 +49,51 @@ namespace NYurik.FastBinTimeseries.Test
                     f.AppendData(newData.Select(i => i.AsArraySegment));
                 }
 
-                if (expected.Count > 0)
-                {
-//                    Assert.AreEqual(expected[0].a, f.FirstFileIndex);
-                    Assert.AreEqual(expected[expected.Count - 1].a, f.LastFileIndex);
-                }
-                else
-                {
-                    Assert.IsNull(f.FirstFileIndex);
-                    Assert.IsNull(f.LastFileIndex);
-                }
-
-                TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), name);
-
-                expected.Reverse();
+                _DatetimeByte_SeqPk1[] empty = _DatetimeByte_SeqPk1.Empty;
 
                 TestUtils.CollectionAssertEqual(
-                    expected, f.Stream(UtcDateTime.MaxValue, inReverse: true), "reverse " + name);
+                    empty, f.Stream(UtcDateTime.MinValue, inReverse: true),
+                    "{0} - nothing before 0", name);
+
+                TestUtils.CollectionAssertEqual(
+                    empty, f.Stream(UtcDateTime.MaxValue), "{0} - nothing after max", name);
+
+                if (expected.Count <= 0)
+                {
+                    Assert.IsNull(f.FirstFileIndex, "{0} null FirstInd", name);
+                    Assert.IsNull(f.LastFileIndex, "{0} null LastInd", name);
+                    TestUtils.CollectionAssertEqual(empty, f.Stream(UtcDateTime.MinValue), "{0} empty forward", name);
+                    TestUtils.CollectionAssertEqual(
+                        empty, f.Stream(UtcDateTime.MinValue, inReverse: true), "{0} empty backward", name);
+                    return;
+                }
+
+                Assert.AreEqual(expected[0].a, f.FirstFileIndex, name + " first");
+                Assert.AreEqual(expected[expected.Count - 1].a, f.LastFileIndex, "{0} last", name);
+
+
+                _DatetimeByte_SeqPk1[] expectedRev = expected.ToArray();
+                Array.Reverse(expectedRev);
+
+                TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), "{0} full forward", name);
+                TestUtils.CollectionAssertEqual(
+                    expectedRev, f.Stream(UtcDateTime.MaxValue, inReverse: true), "{0} full backward", name);
+
+                int maxSkip = Math.Min(10, expected.Count);
+                for (int skip = 0; skip < maxSkip; skip++)
+                {
+                    for (int take = 0; take < 10; take++)
+                    {
+                        TestUtils.CollectionAssertEqual(
+                            expected.Skip(skip).Take(take), f.Stream(expected[skip].a, maxItemCount: take),
+                            "{0} skip {1} take {2}", name, skip, take);
+
+                        TestUtils.CollectionAssertEqual(
+                            expectedRev.Skip(skip).Take(take),
+                            f.Stream(expectedRev[skip].a, maxItemCount: take, inReverse: true),
+                            "{0} backward skip {1} take {2}", name, skip, take);
+                    }
+                }
             }
         }
     }

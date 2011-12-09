@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using NUnit.Framework;
 
 namespace NYurik.FastBinTimeseries.Test
@@ -99,7 +100,8 @@ namespace NYurik.FastBinTimeseries.Test
             return rNew;
         }
 
-        public static IEnumerable<Buffer<T>> GenerateDataStream<T>(Func<long, T> converter, int count, int startFrom, int maxValue)
+        public static IEnumerable<Buffer<T>> GenerateDataStream<T>(Func<long, T> converter, int count, int startFrom,
+                                                                   int maxValue)
         {
             if (count <= 0)
                 yield break;
@@ -140,20 +142,27 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
-        public static void CollectionAssertEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual, string name = null,
-                                                    Func<T, T, bool> comparer = null)
+        [StringFormatMethod("format")]
+        public static void CollectionAssertEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
+                                                    string format = null, params object[] args)
+        {
+            CollectionAssertEqual(expected, actual, null, format, args);
+        }
+
+        [StringFormatMethod("format")]
+        public static void CollectionAssertEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
+                                                    Func<T, T, bool> comparer,
+                                                    string format = null, params object[] args)
         {
             if (comparer == null)
-            {
                 comparer = EqualityComparer<T>.Default.Equals;
-            }
 
-            string msg = name != null ? "In test " + name + ", " : "";
+            string msg = format != null ? string.Format(format + ": ", args) : "";
 
             int count = 0;
             T lastValue = default(T);
 
-            string format = typeof (T) == typeof (float) || typeof (T) == typeof (double) ? ":r" : "";
+            string fmt = typeof (T) == typeof (float) || typeof (T) == typeof (double) ? ":r" : "";
 
             using (IEnumerator<T> e = expected.GetEnumerator())
             using (IEnumerator<T> a = actual.GetEnumerator())
@@ -166,15 +175,19 @@ namespace NYurik.FastBinTimeseries.Test
                         if (eMoved)
                         {
                             Assert.Fail(
+                                // ReSharper disable FormatStringProblem
                                 "{0}After {1} items, actual list ended, while expected had more starting with {2" +
-                                format + "}",
+                                fmt + "}",
+                                // ReSharper restore FormatStringProblem
                                 msg, count, e.Current);
                         }
                         else
                         {
                             Assert.Fail(
+                                // ReSharper disable FormatStringProblem
                                 "{0}After {1} items, expected list ended, while actual had more starting with {2" +
-                                format + "}",
+                                fmt + "}",
+                                // ReSharper restore FormatStringProblem
                                 msg, count, a.Current);
                         }
                     }
@@ -184,12 +197,14 @@ namespace NYurik.FastBinTimeseries.Test
 
                     if (!comparer(e.Current, a.Current))
                     {
+                        // ReSharper disable FormatStringProblem
                         string failMsg =
                             string.Format(
-                                "{0}After {1} items, expected value {2" + format + "} != actual value {3" + format + "}",
+                                "{0}After {1} items, expected value {2" + fmt + "} != actual value {3" + fmt + "}",
                                 msg, count, e.Current, a.Current);
                         if (count > 0)
-                            failMsg += string.Format(", lastValue = {0" + format + "}", lastValue);
+                            failMsg += string.Format(", lastValue = {0" + fmt + "}", lastValue);
+                        // ReSharper restore FormatStringProblem
 
                         Assert.Fail(failMsg);
                     }

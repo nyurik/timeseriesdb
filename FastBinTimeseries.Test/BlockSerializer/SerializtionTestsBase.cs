@@ -46,9 +46,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
                 TestUtils.CollectionAssertEqual(
                     // ReSharper disable PossibleMultipleEnumeration
-                    values, RoundTrip(ds, codec, values),
-                    // ReSharper restore PossibleMultipleEnumeration
-                    typeof (T).Name + name, comparer);
+                    values, RoundTrip(ds, codec, values), comparer, "{0} {1}", typeof (T).Name, name);
             }
             catch (Exception x)
             {
