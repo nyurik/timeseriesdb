@@ -1,8 +1,29 @@
+using System;
+using JetBrains.Annotations;
+#if DEBUG_SERIALIZER
+
+#endif
+
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public class CodecBase
     {
-        internal const int HeaderSize = 4;
+        protected const byte MaxBytesFor64 = 64/7 + 1;
+        protected const byte MaxBytesFor32 = 32/7 + 1;
+        protected const byte MaxBytesFor8 = 1;
+
+        /// <summary>
+        /// Each block will have at least this many bytes reserved for hash value + UInt32 (count)
+        /// </summary>
+        public const int ReservedSpace = MaxBytesFor32 + 1;
+
+        protected int ValidateCount(ulong count)
+        {
+            if (count == 0 || count > int.MaxValue)
+                throw new SerializerException("Invalid count - must be >0 && <= int.MaxValue");
+
+            return (int) count;
+        }
 
         #region Debug
 
@@ -13,27 +34,27 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         private readonly Tuple<string, int, long>[] _debugLongHist = new Tuple<string, int, long>[DebugHistLength];
 
         [UsedImplicitly]
-        internal void DebugLong(long v, string name)
+        internal void DebugLong(long v, int position, string name)
         {
-            DebugValue(_debugLongHist, v, name);
+            DebugValue(_debugLongHist, position, v, name);
         }
 
         [UsedImplicitly]
-        internal void DebugFloat(float v, string name)
+        internal void DebugFloat(float v, int position, string name)
         {
-            DebugValue(_debugFloatHist, v, name);
+            DebugValue(_debugFloatHist, position, v, name);
         }
 
         [UsedImplicitly]
-        internal void DebugFloat(double v, string name)
+        internal void DebugDouble(double v, int position, string name)
         {
-            DebugValue(_debugDoubleHist, v, name);
+            DebugValue(_debugDoubleHist, position, v, name);
         }
 
-        internal void DebugValue<T>(Tuple<string, int, T>[] values, T v, string name)
+        internal void DebugValue<T>(Tuple<string, int, T>[] values, int position, T v, string name)
         {
             Array.Copy(values, 1, values, 0, values.Length - 1);
-            values[values.Length - 1] = Tuple.Create(name, BufferPos, v);
+            values[values.Length - 1] = Tuple.Create(name, position, v);
         }
 #endif
 

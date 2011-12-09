@@ -74,10 +74,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         }
 
         [Pure]
-        public static BaseField FieldFromReader(IStateStore stateStore, BinaryReader reader, IDictionary<string, Type> typeMap)
+        public static BaseField FieldFromReader(IStateStore stateStore, BinaryReader reader,
+                                                IDictionary<string, Type> typeMap)
         {
             var fld = reader.ReadTypeAndInstantiate<BaseField>(typeMap, true);
-            
+
             fld.StateStore = stateStore;
             fld.InitExistingField(reader, typeMap);
             fld.EnsureReadonly();
@@ -153,9 +154,17 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     throw new ArgumentOutOfRangeException("value", value.Type, "Unknown type");
             }
 
+            Expression posExp;
+            if (codec.Type == typeof (CodecWriter))
+                posExp = Expression.PropertyOrField(codec, "Count");
+            else
+                posExp = Expression.PropertyOrField(codec, "BufferPos");
+
             var prm = value as ParameterExpression;
             return Expression.Call(
-                codec, methodName, null, value.Type == destType ? value : Expression.Convert(value, destType),
+                codec, methodName, null,
+                value.Type == destType ? value : Expression.Convert(value, destType),
+                posExp,
                 Expression.Constant(name + (prm != null ? " " + prm.Name : null)));
 #else
             return Expression.Empty();

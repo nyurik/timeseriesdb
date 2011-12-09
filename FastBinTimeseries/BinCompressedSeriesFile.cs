@@ -52,7 +52,7 @@ namespace NYurik.FastBinTimeseries
         private DynamicSerializer<TVal> _serializer;
         private bool _uniqueIndexes;
 
-        private int BlockSize
+        public int BlockSize
         {
             get { return _blockSize; }
             set
@@ -84,13 +84,13 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                long count = Count;
-                ResetOnChangedAndGetCache(count, false);
+                long cachedFileCount = GetCount();
+                ResetOnChangedAndGetCache(cachedFileCount, false);
 
-                if (_firstIndex == null && count > 0)
+                if (_firstIndex == null && cachedFileCount > 0)
                 {
                     TInd tmp;
-                    if (TryGetFirst(StreamSegments(default(TInd), maxItemCount: 1), out tmp))
+                    if (TryGetFirst(StreamSegments(0, cachedFileCount, maxItemCount: 1), out tmp))
                         _firstIndex = tmp;
                 }
 
@@ -102,17 +102,17 @@ namespace NYurik.FastBinTimeseries
         {
             get
             {
-                return null;
-//                long count = Count;
-//                ResetOnChangedAndGetCache(count, false);
-//
-//                if (_lastIndex == null && count > 0)
-//                {
-//                    TInd tmp;
-//                    if (TryGetFirst(StreamSegments(TInd.MaxValue, maxItemCount: 1), out tmp))
-//                        _firstIndex = tmp;
-//                }
-//                return _lastIndex;
+                long cachedFileCount = GetCount();
+                ResetOnChangedAndGetCache(cachedFileCount, false);
+
+                if (_lastIndex == null && cachedFileCount > 0)
+                {
+                    TInd tmp;
+                    if (TryGetFirst(
+                        StreamSegments(long.MaxValue, cachedFileCount, inReverse: true, maxItemCount: 1), out tmp))
+                        _firstIndex = tmp;
+                }
+                return _lastIndex;
             }
         }
 
@@ -124,6 +124,16 @@ namespace NYurik.FastBinTimeseries
                 ThrowOnInitialized();
                 _uniqueIndexes = value;
             }
+        }
+
+        public override long Count
+        {
+            get { throw new InvalidOperationException("Count is not available for compressed files"); }
+        }
+
+        public DynamicSerializer<TVal> FieldSerializer
+        {
+            get { return _serializer; }
         }
 
         #region Constructors
@@ -167,7 +177,7 @@ namespace NYurik.FastBinTimeseries
             IndexFieldInfo = fieldInfo;
 
             _serializer = DynamicSerializer<TVal>.CreateFromReader(reader, typeMap);
-            _maxItemByteSize = _serializer.RootField.GetMaxByteSize();
+            _maxItemByteSize = FieldSerializer.RootField.GetMaxByteSize();
 
             return ver;
         }
@@ -178,13 +188,11 @@ namespace NYurik.FastBinTimeseries
             writer.Write(BlockSize);
             writer.Write(UniqueIndexes);
             writer.Write(IndexFieldInfo.Name);
-            _serializer.WriteCustomHeader(writer);
+            FieldSerializer.WriteCustomHeader(writer);
 
-            int minBlockSize = _serializer.GetMinimumBlockSize();
-            if (BlockSize < minBlockSize)
-                throw new SerializerException("BlockSize ({0}) must be at least {1} bytes", BlockSize, minBlockSize);
-
-            _maxItemByteSize = _serializer.RootField.GetMaxByteSize();
+            _maxItemByteSize = FieldSerializer.RootField.GetMaxByteSize();
+            if (BlockSize < _maxItemByteSize + CodecBase.ReservedSpace)
+                throw new SerializerException("BlockSize ({0}) must be at least {1} bytes", BlockSize, _maxItemByteSize);
 
             return Version10;
         }
@@ -202,13 +210,13 @@ namespace NYurik.FastBinTimeseries
                                                         IEnumerable<Buffer<TVal>> bufferProvider = null,
                                                         long maxItemCount = long.MaxValue)
         {
-            long count = GetCount();
+            long cachedFileCount = GetCount();
 
-            // BUG: FirstIndexToPos(fromInd);
-            long index = inReverse ? FastBinFileUtils.RoundDownToMultiple(count, BlockSize) : 0;
+            long start = Search(fromInd, cachedFileCount);
+            if (start < 0)
+                start = ~start;
 
-
-            return StreamSegments(index, count, inReverse, bufferProvider, maxItemCount);
+            return StreamSegments(start, cachedFileCount, inReverse, bufferProvider, maxItemCount);
         }
 
         /// <summary>
@@ -236,54 +244,54 @@ namespace NYurik.FastBinTimeseries
             return false;
         }
 
-        public override long Count
-        {
-            get
-            {
-                throw new InvalidOperationException("Unable to calculate Count for ");
-            }
-        }
-
-        private IEnumerable<Buffer<TVal>> StreamSegments(long index, long fileCount, bool inReverse = false,
+        private IEnumerable<Buffer<TVal>> StreamSegments(long blockIndex, long fileCount, bool inReverse = false,
                                                          IEnumerable<Buffer<TVal>> bufferProvider = null,
                                                          long maxItemCount = long.MaxValue)
         {
             CodecReader codec = null;
-            if (index % BlockSize != 0)
-                throw new ArgumentOutOfRangeException("index", index, "Must be a multiple of BlockSize=" + BlockSize);
+
+            long fileCountInBlocks = FastBinFileUtils.RoundUpToMultiple(fileCount, BlockSize)/BlockSize;
+
+            if (blockIndex < 0)
+                blockIndex = 0;
+            else if (blockIndex >= fileCountInBlocks)
+                blockIndex = fileCountInBlocks;
 
             IEnumerator<Buffer<TVal>> valBufs = null;
+            if (_bufferByteProvider == null)
+                _bufferByteProvider = new BufferProvider<byte>();
+
+            int firstBlockSize;
+
+            IEnumerable<Buffer<byte>> byteBuffs;
+            if (maxItemCount <= BlockSize/_maxItemByteSize)
+            {
+                firstBlockSize = (int) Math.Min(maxItemCount*_maxItemByteSize, fileCount);
+                byteBuffs = _bufferByteProvider.YieldFixedSize(firstBlockSize);
+            }
+            else
+            {
+                int smallSize = FastBinFileUtils.RoundUpToMultiple(MinPageSize, BlockSize);
+                if (!inReverse || blockIndex < fileCountInBlocks)
+                    firstBlockSize = smallSize;
+                else
+                    firstBlockSize = (int) (fileCount%BlockSize);
+
+                byteBuffs = _bufferByteProvider.YieldFixed(
+                    firstBlockSize, smallSize, 4, FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize));
+            }
+
+            long firstItemIdx = blockIndex*BlockSize + (inReverse ? firstBlockSize - 1 : 0);
+
             try
             {
-                if (_bufferByteProvider==null)
-                    _bufferByteProvider = new BufferProvider<byte>();
-
-                int firstBlockSize;
-
-                IEnumerable<Buffer<byte>> byteBuffs;
-                if (maxItemCount < BlockSize / _maxItemByteSize)
-                {
-                    firstBlockSize = (int) Math.Min(maxItemCount*_maxItemByteSize, fileCount);
-                    byteBuffs = _bufferByteProvider.YieldFixedSize(firstBlockSize);
-                }
-                else
-                {
-                    int smallSize = FastBinFileUtils.RoundUpToMultiple(16 * MinPageSize, BlockSize);
-                    firstBlockSize = inReverse && index > fileCount - BlockSize ? (int)(fileCount % BlockSize) : smallSize;
-                    
-                    byteBuffs = _bufferByteProvider.YieldFixed(
-                        firstBlockSize, smallSize, 4, FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize));
-                }
-
-                var firstItemIdx = inReverse ? index + firstBlockSize : index;
-
-                foreach (var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs))
+                foreach (var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs, cachedCount: fileCount))
                 {
                     valBufs =
                         (bufferProvider
                          ?? (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
                                 .YieldMaxGrowingBuffer(
-                                    maxItemCount, 16*MinPageSize/ItemSize, 5, MaxLargePageSize/ItemSize))
+                                    maxItemCount, MinPageSize/ItemSize, 5, MaxLargePageSize/ItemSize))
                             .GetEnumerator();
 
                     if (!valBufs.MoveNext())
@@ -296,14 +304,25 @@ namespace NYurik.FastBinTimeseries
                     else
                         codec.AttachBuffer(seg);
 
+                    retBuf.Count = 0; // ignore suggested count, fill in as much as possible
                     long blocks = FastBinFileUtils.RoundUpToMultiple(seg.Count, BlockSize)/BlockSize;
                     for (int i = 0; i < blocks; i++)
                     {
                         codec.BufferPos = i*BlockSize;
-                        _serializer.DeSerialize(codec, retBuf, int.MaxValue);
+
+                        long left = maxItemCount - retBuf.Count;
+                        int max = left > int.MaxValue ? int.MaxValue : (int) left;
+                        if (max <= 0)
+                            break;
+
+                        FieldSerializer.DeSerialize(codec, retBuf, max);
                     }
 
+                    maxItemCount -= retBuf.Count;
                     yield return retBuf;
+
+                    if (maxItemCount <= 0)
+                        yield break;
                 }
             }
             finally
@@ -313,26 +332,15 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        public long Search(TInd index)
-        {
-            if (!UniqueIndexes)
-                throw new InvalidOperationException(
-                    "This method call is only allowed for the unique index file. Use BinarySearch(TInd, bool) instead.");
-            return Search(index, true);
-        }
-
-        public long Search(TInd index, bool findFirst)
+        private long Search(TInd index, long cachedFileCount)
         {
             long start = 0L;
-            long blockCount = FastBinFileUtils.RoundUpToMultiple(Count, BlockSize)/BlockSize;
+            long blockCount = FastBinFileUtils.RoundUpToMultiple(cachedFileCount, BlockSize)/BlockSize;
             long end = blockCount - 1;
 
             // empty file
             if (blockCount <= 0)
                 return ~0;
-
-            var buff = new TVal[2];
-            var oneElementSegment = new ArraySegment<TVal>(buff, 0, 1);
 
             ConcurrentDictionary<long, TInd> cache = null;
             if (BinarySearchCacheSize >= 0)
@@ -342,49 +350,19 @@ namespace NYurik.FastBinTimeseries
                     cache.Clear();
             }
 
-            bool useMma = UseMemoryMappedAccess(1, false);
-
             while (start <= end)
             {
                 long mid = start + ((end - start) >> 1);
                 TInd timeAtMid;
-                TInd timeAtMid2 = default(TInd);
 
                 // Read new value from file unless we already have it pre-cached in the dictionary
-                if (end - start == 1 && !UniqueIndexes && !findFirst)
+                if (cache == null || !cache.TryGetValue(mid, out timeAtMid))
                 {
-                    // for the special case where we are left with two elements,
-                    // and searching for the last non-unique element,
-                    // read both elements to see if the 2nd one matches our search
-                    if (cache == null
-                        || !cache.TryGetValue(mid, out timeAtMid)
-                        || !cache.TryGetValue(mid + 1, out timeAtMid2))
-                    {
-                        throw new NotImplementedException();
-//                        if (PerformUnsafeBlockAccess(mid, false, new ArraySegment<TVal>(buff), count*ItemSize, useMma)
-//                            < 2)
-//                            throw new BinaryFileException("Unable to read two blocks");
+                    if (!TryGetFirst(StreamSegments(mid, cachedFileCount, false, maxItemCount: 1), out timeAtMid))
+                        throw new BinaryFileException("Unable to read index block #{0}", mid);
 
-                        timeAtMid = IndexAccessor(buff[0]);
-                        timeAtMid2 = IndexAccessor(buff[1]);
-                        if (cache != null)
-                        {
-                            cache.TryAdd(mid, timeAtMid);
-                            cache.TryAdd(mid + 1, timeAtMid2);
-                        }
-                    }
-                }
-                else
-                {
-                    if (cache == null || !cache.TryGetValue(mid, out timeAtMid))
-                    {
-                        throw new NotImplementedException();
-//                        if (PerformUnsafeBlockAccess(mid, false, oneElementSegment, count*ItemSize, useMma) < 1)
-//                            throw new BinaryFileException("Unable to read index block");
-                        timeAtMid = IndexAccessor(oneElementSegment.Array[0]);
-                        if (cache != null)
-                            cache.TryAdd(mid, timeAtMid);
-                    }
+                    if (cache != null)
+                        cache.TryAdd(mid, timeAtMid);
                 }
 
                 int comp = timeAtMid.CompareTo(index);
@@ -394,25 +372,11 @@ namespace NYurik.FastBinTimeseries
                         return mid;
 
                     // In case when the exact index has been found and not forcing uniqueness,
-                    // we must find the first/last of them in a row of equal indexes.
+                    // we must find the first of them in a row of equal indexes.
                     // To do that, we continue dividing until the last element.
-                    if (findFirst)
-                    {
-                        if (start == mid)
-                            return mid;
-                        end = mid;
-                    }
-                    else
-                    {
-                        if (end == mid)
-                            return mid;
-
-                        // special case - see above
-                        if (end - start == 1)
-                            return timeAtMid2.CompareTo(index) == 0 ? mid + 1 : mid;
-
-                        start = mid;
-                    }
+                    if (start == mid)
+                        return mid;
+                    end = mid;
                 }
                 else if (comp < 0)
                     start = mid + 1;
@@ -423,9 +387,9 @@ namespace NYurik.FastBinTimeseries
             return ~start;
         }
 
-        public void TruncateFile(TInd lastIndexToPreserve)
+        public void TruncateFile(TInd firstIndexToErase)
         {
-            long newCount = Search(lastIndexToPreserve, false);
+            long newCount = Search(firstIndexToErase, GetCount());
             newCount = newCount < 0 ? ~newCount : newCount + 1;
 
             TruncateFile(newCount);
@@ -515,11 +479,11 @@ namespace NYurik.FastBinTimeseries
                 while (true)
                 {
                     codec.Count = 0;
-                    bool hasMore = _serializer.Serialize(codec, iterator);
+                    bool hasMore = FieldSerializer.Serialize(codec, iterator);
                     if (codec.Count == 0)
                         throw new SerializerException("Internal serializer error: buffer is empty");
 
-                    yield return new ArraySegment<byte>(codec.Buffer, 0, codec.Count);
+                    yield return codec.UsedBuffer;
 
                     if (!hasMore)
                         break;
@@ -571,27 +535,6 @@ namespace NYurik.FastBinTimeseries
 
                 segInd++;
             }
-        }
-
-        /// <summary>
-        /// Returns the first index and the length of the data available in this file for the given range of dates
-        /// </summary>
-        protected Tuple<long, int> CalcNeededBuffer(TInd fromInclusive, TInd toExclusive)
-        {
-            if (fromInclusive.CompareTo(toExclusive) > 0)
-                throw new ArgumentOutOfRangeException("fromInclusive", "'from' must be <= 'to'");
-
-            long start = FirstIndexToPos(fromInclusive);
-            long end = FirstIndexToPos(toExclusive);
-            return Tuple.Create(start, (end - start).ToIntCountChecked());
-        }
-
-        private long FirstIndexToPos(TInd index)
-        {
-            long start = Search(index, true);
-            if (start < 0)
-                start = ~start;
-            return start;
         }
     }
 }

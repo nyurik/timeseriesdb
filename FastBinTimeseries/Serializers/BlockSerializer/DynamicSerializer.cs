@@ -141,13 +141,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
-        public int GetMinimumBlockSize()
-        {
-            ThrowOnNotInitialized();
-            // TODO: calculate!
-            return 1024;
-        }
-
         public override void MakeReadonly()
         {
             if (IsInitialized)
@@ -229,7 +222,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         ///         count++;
         ///     }
         /// 
-        ///     codec.WriteHeader(count);
+        ///     codec.FinishBlock(count, moveNext);
         /// 
         ///     return moveNext;
         /// }
@@ -280,8 +273,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                         Expression.Assign(countVar, Expression.Constant(1)),
                         // current = enumerator.Current;
                         setCurrentExp,
-                        // codec.SkipHeader();
-                        Expression.Call(codecParam, "SkipHeader", null),
                         // var state1 = current.Field1; codec.Write(state1); ...
                         srl.Item1,
                         // while (true)
@@ -321,8 +312,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                                         Expression.PreIncrementAssign(countVar)
                                     }),
                             breakLabel),
-                        // codec.WriteHeader();
-                        Expression.Call(codecParam, "WriteHeader", null, countVar),
+                        // codec.FinishBlock();
+                        Expression.Call(codecParam, "FinishBlock", null, countVar, moveNextVar),
                         // return moveNext;
                         moveNextVar,
                     };

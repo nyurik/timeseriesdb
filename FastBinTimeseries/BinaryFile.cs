@@ -299,10 +299,10 @@ namespace NYurik.FastBinTimeseries
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount">Maximum number of items to return</param>
-        /// <param name="fileSize">Use if the file size was known at the time of call (avoids additional kernel call)</param>
+        /// <param name="cachedCount">Use if <see cref="BinaryFile.GetCount"/> was called right before (avoids additional kernel call)</param>
         protected internal IEnumerable<Buffer<T>> PerformStreaming(
             long firstItemIdx, bool enumerateInReverse, IEnumerable<Buffer<T>> bufferProvider = null,
-            long maxItemCount = long.MaxValue, long fileSize = -1)
+            long maxItemCount = long.MaxValue, long cachedCount = -1)
         {
             ThrowOnNotInitialized();
             if (maxItemCount < 0)
@@ -310,17 +310,32 @@ namespace NYurik.FastBinTimeseries
 
             bool canSeek = BaseStream.CanSeek;
             long fileCount;
+            long fileSize;
 
             if (canSeek)
             {
-                if (fileSize < 0)
+                if (cachedCount < 0)
+                {
                     fileSize = BaseStream.Length;
-
-                bool isAligned;
-                fileCount = CalculateItemCountFromFilePosition(fileSize, out isAligned);
+                    bool isAligned;
+                    fileCount = CalculateItemCountFromFilePosition(fileSize, out isAligned);
+                }
+                else
+                {
+                    fileSize = ItemIdxToOffset(cachedCount);
+                    fileCount = cachedCount;
+                    
+                    // TODO: delete
+                    bool isAligned;
+                    if(fileCount != CalculateItemCountFromFilePosition(fileSize, out isAligned))
+                        throw new Exception();
+                }
             }
             else
+            {
                 fileCount = 0;
+                fileSize = 0;
+            }
 
             long idx;
             if (enumerateInReverse)
@@ -353,6 +368,9 @@ namespace NYurik.FastBinTimeseries
             // buffer provider should be an infinite loop
             foreach (var buffer in buffers)
             {
+                if (buffer.Count == 0)
+                    throw new BinaryFileException("BufferProvider returned an empty buffer");
+
                 long itemsLeft = !canSeek ? long.MaxValue : (enumerateInReverse ? idx + 1 : fileCount - idx);
                 if (itemsLeft <= 0)
                     yield break;

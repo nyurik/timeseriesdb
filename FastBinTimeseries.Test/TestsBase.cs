@@ -42,6 +42,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
 
             method = stackTrace.GetFrame(frameInd).GetMethod();
+            Assert.IsNotNull(method.DeclaringType, "method.DeclaringType != null");
             string filename = method.DeclaringType.Name + "." + method.Name + "_";
             filename = filename.Replace("<", "_").Replace(">", "_");
 

@@ -10,7 +10,8 @@ namespace NYurik.FastBinTimeseries
 
         /// <summary>
         /// Yield maximum available buffer every time. If the buffer is smaller than initSize,
-        /// allocate [initSize] items first, and after growAfter iterations, grow it to the largeSize
+        /// allocate [initSize] items first, and after growAfter iterations, grow it to the largeSize.
+        /// Buffer.Count will always be set to 0
         /// </summary>
         public IEnumerable<Buffer<T>> YieldMaxGrowingBuffer(long maxItemCount, int initSize, int growAfter,
                                                             int largeSize)
@@ -25,7 +26,7 @@ namespace NYurik.FastBinTimeseries
             {
                 for (int i = 0; i < growAfter; i++)
                 {
-                    buffer.Count = buffer.Capacity;
+					buffer.Count = buffer.Capacity;
                     maxItemCount -= buffer.Capacity;
                     yield return buffer;
                 }
@@ -37,7 +38,7 @@ namespace NYurik.FastBinTimeseries
 
                 while (true)
                 {
-                    buffer.Count = buffer.Capacity;
+					buffer.Count = buffer.Capacity;
                     maxItemCount -= buffer.Capacity;
                     yield return buffer;
                 }
@@ -65,18 +66,23 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public IEnumerable<Buffer<T>> YieldFixed(int firstSize, int smallSize, int growAfter, int largeSize)
         {
-            Buffer<T> buffer = GetBufferRef();
+            if (smallSize <= 0 || largeSize <= 0)
+                throw new ArgumentException("smallSize and largeSize must not be 0");
 
-            int size = firstSize;
-            if (buffer == null || buffer.Capacity < size)
-                buffer = new Buffer<T>(size);
+            Buffer<T> buffer = GetBufferRef();
 
             try
             {
-                buffer.Count = firstSize;
-                yield return buffer;
+                if (firstSize > 0)
+                {
+                    if (buffer == null || buffer.Capacity < firstSize)
+                        buffer = new Buffer<T>(firstSize);
 
-                if (buffer.Capacity < smallSize)
+                    buffer.Count = firstSize;
+                    yield return buffer;
+                }
+               
+                if (buffer == null || buffer.Capacity < smallSize)
                     buffer = new Buffer<T>(smallSize);
 
                 for (int i = 0; i < growAfter; i++)
@@ -96,7 +102,8 @@ namespace NYurik.FastBinTimeseries
             }
             finally
             {
-                _buffer = new WeakReference(buffer);
+                if (buffer != null)
+                    _buffer = new WeakReference(buffer);
             }
         }
 

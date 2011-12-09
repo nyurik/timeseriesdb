@@ -30,11 +30,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             get { return _buffer; }
         }
 
+        [UsedImplicitly]
         internal int ReadHeader()
         {
-            int count = BitConverter.ToInt32(Buffer, 0);
-            _bufferPos += HeaderSize;
-            return count;
+            return ValidateCount(ReadUnsignedValue());
         }
 
         public void AttachBuffer(Buffer<byte> value)
@@ -275,6 +274,110 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         internal byte ReadByte()
         {
             return Buffer[_bufferPos++];
+        }
+
+        [UsedImplicitly]
+        internal ulong ReadUnsignedValue()
+        {
+            int p = _bufferPos;
+            byte[] buff = Buffer;
+
+            int tmp32 = buff[p];
+            if (tmp32 < 128)
+            {
+                _bufferPos++;
+                return (ulong)tmp32;
+            }
+
+            int res32 = tmp32 & 0x7f;
+            if ((tmp32 = buff[p + 1]) < 128)
+            {
+                p += 2;
+                res32 |= tmp32 << 7 * 1;
+            }
+            else
+            {
+                res32 |= (tmp32 & 0x7f) << 7 * 1;
+                if ((tmp32 = buff[p + 2]) < 128)
+                {
+                    p += 3;
+                    res32 |= tmp32 << 7 * 2;
+                }
+                else
+                {
+                    res32 |= (tmp32 & 0x7f) << 7 * 2;
+                    if ((tmp32 = buff[p + 3]) < 128)
+                    {
+                        p += 4;
+                        res32 |= tmp32 << 7 * 3;
+                    }
+                    else
+                    {
+                        long tmp64;
+                        long res64 = res32 | (tmp32 & 0x7f) << 7 * 3;
+                        if ((tmp64 = buff[p + 4]) < 128)
+                        {
+                            p += 5;
+                            res64 |= tmp64 << 7 * 4;
+                        }
+                        else
+                        {
+                            res64 |= (tmp64 & 0x7f) << 7 * 4;
+                            if ((tmp64 = buff[p + 5]) < 128)
+                            {
+                                p += 6;
+                                res64 |= tmp64 << 7 * 5;
+                            }
+                            else
+                            {
+                                res64 |= (tmp64 & 0x7f) << 7 * 5;
+                                if ((tmp64 = buff[p + 6]) < 128)
+                                {
+                                    p += 7;
+                                    res64 |= tmp64 << 7 * 6;
+                                }
+                                else
+                                {
+                                    res64 |= (tmp64 & 0x7f) << 7 * 6;
+                                    if ((tmp64 = buff[p + 7]) < 128)
+                                    {
+                                        p += 8;
+                                        res64 |= tmp64 << 7 * 7;
+                                    }
+                                    else
+                                    {
+                                        res64 |= (tmp64 & 0x7f) << 7 * 7;
+                                        if ((tmp64 = buff[p + 8]) < 128)
+                                        {
+                                            p += 9;
+                                            res64 |= tmp64 << 7 * 8;
+                                        }
+                                        else
+                                        {
+                                            res64 |= (tmp64 & 0x7f) << 7 * 8;
+                                            if ((tmp64 = buff[p + 9]) > 127)
+                                            {
+                                                _bufferPos = p + 10;
+                                                ThrowOverflow();
+                                                return 0;
+                                            }
+
+                                            p += 10;
+                                            res64 |= tmp64 << 7 * 9;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        _bufferPos = p;
+                        return (ulong)res64;
+                    }
+                }
+            }
+
+            _bufferPos = p;
+            return (uint)res32;
         }
 
         [UsedImplicitly]

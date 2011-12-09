@@ -172,6 +172,7 @@ namespace NYurik.FastBinTimeseries
         {
             ThrowOnNotInitialized();
             if (fileStream == null) throw new ArgumentNullException("fileStream");
+            if (buffer.Count == 0) throw new ArgumentNullException("buffer");
             return _processFileStream(fileStream, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
@@ -179,6 +180,7 @@ namespace NYurik.FastBinTimeseries
         {
             ThrowOnNotInitialized();
             if (memPointer == IntPtr.Zero) throw new ArgumentNullException("memPointer");
+            if (buffer.Count == 0) throw new ArgumentNullException("buffer");
             _processMemoryPtr(memPointer, buffer.Array, buffer.Offset, buffer.Count, isWriting);
         }
 
