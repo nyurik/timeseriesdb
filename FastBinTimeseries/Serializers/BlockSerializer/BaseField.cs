@@ -86,6 +86,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return fld;
         }
 
+        public abstract int GetMinByteSize();
         public abstract int GetMaxByteSize();
 
         protected virtual void InitNewField(BinaryWriter writer)

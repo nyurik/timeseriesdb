@@ -21,16 +21,6 @@ namespace NYurik.FastBinTimeseries
             _count = count;
         }
 
-        /// <summary>
-        /// Specifies the location from which the data was read
-        /// </summary>
-        public long Origin { get; set; }
-
-        public ArraySegment<T> AsArraySegment
-        {
-            get { return new ArraySegment<T>(Array, 0, _count); }
-        }
-
         public int Capacity
         {
             get { return Array.Length; }

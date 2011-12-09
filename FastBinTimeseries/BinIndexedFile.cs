@@ -41,7 +41,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount"></param>
-        public IEnumerable<Buffer<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse,
+        public IEnumerable<ArraySegment<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse,
                                                            IEnumerable<Buffer<T>> bufferProvider = null, long maxItemCount = long.MaxValue)
         {
             return PerformStreaming(firstItemIdx, enumerateInReverse, bufferProvider, maxItemCount);

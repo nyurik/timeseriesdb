@@ -17,6 +17,7 @@ namespace NYurik.FastBinTimeseries.Test
         {
             var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName)
                          {UniqueIndexes = uniqueTimestamps};
+
             bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace + blockSizeExtra;
             return bf;
         }
@@ -28,7 +29,7 @@ namespace NYurik.FastBinTimeseries.Test
             [Values(true, false)] bool enableCache)
         {
             string name = string.Format(
-                "itemCount={0}, blockSizeExtra={1}, cache={2}", itemCount, blockSizeExtra, enableCache);
+                "in itemCount={0}, blockSizeExtra={1}, cache={2}", itemCount, blockSizeExtra, enableCache);
 
             string fileName = GetBinFileName();
             using (BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1> f =
@@ -38,60 +39,75 @@ namespace NYurik.FastBinTimeseries.Test
             {
                 f.BinarySearchCacheSize = enableCache ? 0 : -1;
 
-                IEnumerable<Buffer<_DatetimeByte_SeqPk1>> newData =
+                IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> newData =
                     TestUtils.GenerateDataStream(_DatetimeByte_SeqPk1.New, itemCount, 0, itemCount);
 
                 List<_DatetimeByte_SeqPk1> expected = newData.StreamSegmentValues().ToList();
+                Assert.AreEqual(itemCount, expected.Count);
+                _DatetimeByte_SeqPk1[] expectedRev = expected.ToArray();
+                Array.Reverse(expectedRev);
 
                 if (AllowCreate)
                 {
                     f.InitializeNewFile();
-                    f.AppendData(newData.Select(i => i.AsArraySegment));
+                    f.AppendData(newData.Select(i => new ArraySegment<_DatetimeByte_SeqPk1>(i.Array, 0, i.Count)));
                 }
 
                 _DatetimeByte_SeqPk1[] empty = _DatetimeByte_SeqPk1.Empty;
 
                 TestUtils.CollectionAssertEqual(
                     empty, f.Stream(UtcDateTime.MinValue, inReverse: true),
-                    "{0} - nothing before 0", name);
+                    "nothing before 0 {0}", name);
 
                 TestUtils.CollectionAssertEqual(
-                    empty, f.Stream(UtcDateTime.MaxValue), "{0} - nothing after max", name);
+                    empty, f.Stream(UtcDateTime.MaxValue), "nothing after max {0}", name);
 
-                if (expected.Count <= 0)
+                if (itemCount <= 0)
                 {
-                    Assert.IsNull(f.FirstFileIndex, "{0} null FirstInd", name);
-                    Assert.IsNull(f.LastFileIndex, "{0} null LastInd", name);
-                    TestUtils.CollectionAssertEqual(empty, f.Stream(UtcDateTime.MinValue), "{0} empty forward", name);
+                    Assert.IsNull(f.FirstFileIndex, "null FirstInd {0}", name);
+                    Assert.IsNull(f.LastFileIndex, "null LastInd {0}", name);
+                    TestUtils.CollectionAssertEqual(empty, f.Stream(UtcDateTime.MinValue), "empty forward {0}", name);
                     TestUtils.CollectionAssertEqual(
-                        empty, f.Stream(UtcDateTime.MinValue, inReverse: true), "{0} empty backward", name);
+                        empty, f.Stream(UtcDateTime.MinValue, inReverse: true), "empty backward {0}", name);
                     return;
                 }
 
                 Assert.AreEqual(expected[0].a, f.FirstFileIndex, name + " first");
-                Assert.AreEqual(expected[expected.Count - 1].a, f.LastFileIndex, "{0} last", name);
+                Assert.AreEqual(expected[itemCount - 1].a, f.LastFileIndex, "last {0}", name);
 
-
-                _DatetimeByte_SeqPk1[] expectedRev = expected.ToArray();
-                Array.Reverse(expectedRev);
-
-                TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), "{0} full forward", name);
+                TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), "full forward {0}", name);
                 TestUtils.CollectionAssertEqual(
-                    expectedRev, f.Stream(UtcDateTime.MaxValue, inReverse: true), "{0} full backward", name);
+                    expectedRev, f.Stream(UtcDateTime.MaxValue, inReverse: true), "full backward {0}", name);
 
-                int maxSkip = Math.Min(10, expected.Count);
-                for (int skip = 0; skip < maxSkip; skip++)
+                const int skipStart = 0;
+                const int takeStart = 2;
+
+                int maxSkip = Math.Min(10, itemCount);
+
+                for (int skip = skipStart; skip < maxSkip; skip++)
                 {
-                    for (int take = 0; take < 10; take++)
+                    int maxTake = Math.Min(10, itemCount - maxSkip + 1);
+                    for (int take = takeStart; take < maxTake; take++)
                     {
                         TestUtils.CollectionAssertEqual(
                             expected.Skip(skip).Take(take), f.Stream(expected[skip].a, maxItemCount: take),
-                            "{0} skip {1} take {2}", name, skip, take);
+                            "skip {1} take {2} {0}", name, skip, take);
 
                         TestUtils.CollectionAssertEqual(
                             expectedRev.Skip(skip).Take(take),
                             f.Stream(expectedRev[skip].a, maxItemCount: take, inReverse: true),
-                            "{0} backward skip {1} take {2}", name, skip, take);
+                            "backward skip {1} take {2} {0}", name, skip, take);
+
+                        if (itemCount < take)
+                            TestUtils.CollectionAssertEqual(
+                                expected.Skip(skip).Take(take - 1),
+                                f.Stream(expected[skip].a.AddSeconds(1), maxItemCount: take - 1),
+                                "next tick skip {1} take ({2}-1) {0}", name, skip, take);
+                        if (itemCount < skip)
+                            TestUtils.CollectionAssertEqual(
+                                expectedRev.Skip(skip - 1).Take(take),
+                                f.Stream(expectedRev[skip].a.AddSeconds(-1), maxItemCount: take, inReverse: true),
+                                "next tick backward skip ({1}-1) take {2} {0}", name, skip, take);
                     }
                 }
             }

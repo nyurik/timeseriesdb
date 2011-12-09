@@ -51,9 +51,14 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
+        public override int GetMinByteSize()
+        {
+            return _fields.Sum(fld => fld.Field.GetMinByteSize());
+        }
+
         public override int GetMaxByteSize()
         {
-            return _fields.Sum(i => i.Field.GetMaxByteSize());
+            return _fields.Sum(fld => fld.Field.GetMaxByteSize());
         }
 
         protected override void InitNewField(BinaryWriter writer)
@@ -70,7 +75,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             base.InitExistingField(reader, typeMap);
             if (Version != Version10)
                 throw new IncompatibleVersionException(GetType(), Version);
-            
+
             var fields = new SubFieldInfo[reader.ReadInt32()];
             for (int i = 0; i < fields.Length; i++)
                 fields[i] = new SubFieldInfo(StateStore, reader, typeMap);

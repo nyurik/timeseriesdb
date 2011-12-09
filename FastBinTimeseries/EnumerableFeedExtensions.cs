@@ -30,10 +30,10 @@ namespace NYurik.FastBinTimeseries
                 foreach (var segm in feed.StreamSegments(from, until, inReverse, bufferProvider, maxItemCount))
                 {
                     if (inReverse)
-                        for (int i = segm.Count - 1; i >= 0; i--)
+                        for (int i = segm.Offset + segm.Count - 1; i >= segm.Offset; i--)
                             yield return segm.Array[i];
                     else
-                        for (int i = 0; i < segm.Count; i++)
+                        for (int i = segm.Offset; i < segm.Offset + segm.Count; i++)
                             yield return segm.Array[i];
                 }
             }
@@ -58,7 +58,7 @@ namespace NYurik.FastBinTimeseries
 //                           (IEnumerableFeed<UtcDateTime, TVal>) feed, fromInd, untilInd.Value, inReverse, bufferSize);
 //        }
 //
-        public static IEnumerable<Buffer<TVal>> StreamSegments<TInd, TVal>(
+        public static IEnumerable<ArraySegment<TVal>> StreamSegments<TInd, TVal>(
             this IEnumerableFeed<TInd, TVal> feed, TInd fromInd, TInd? until = null, bool inReverse = false,
             IEnumerable<Buffer<TVal>> bufferProvider = null, long maxItemCount = long.MaxValue)
             where TInd : struct, IComparable<TInd>
@@ -71,49 +71,43 @@ namespace NYurik.FastBinTimeseries
                        : StreamSegmentsUntil(feed, fromInd, until.Value, inReverse, bufferProvider, maxItemCount);
         }
 
-        private static IEnumerable<Buffer<TVal>> StreamSegmentsUntil<TInd, TVal>(
+        private static IEnumerable<ArraySegment<TVal>> StreamSegmentsUntil<TInd, TVal>(
             IEnumerableFeed<TInd, TVal> feed, TInd fromInd, TInd untilInd, bool inReverse,
             IEnumerable<Buffer<TVal>> bufferProvider, long maxItemCount)
             where TInd : struct, IComparable<TInd>
         {
             Func<TVal, TInd> tsa = feed.IndexAccessor;
 
-            foreach (var buff in feed.StreamSegments(fromInd, inReverse, bufferProvider, maxItemCount))
+            foreach (var segm in feed.StreamSegments(fromInd, inReverse, bufferProvider, maxItemCount))
             {
-                if (buff.Count == 0)
+                if (segm.Count == 0)
                     continue;
 
                 if (inReverse
-                        ? tsa(buff.Array[0]).CompareTo(untilInd) >= 0
-                        : tsa(buff.Array[buff.Count - 1]).CompareTo(untilInd) < 0)
+                        ? tsa(segm.Array[segm.Offset]).CompareTo(untilInd) >= 0
+                        : tsa(segm.Array[segm.Offset + segm.Count - 1]).CompareTo(untilInd) < 0)
                 {
-                    yield return buff;
+                    yield return segm;
                     continue;
                 }
 
-                int pos = buff.Array.BinarySearch(
+                int pos = segm.Array.BinarySearch(
                     untilInd, (v, ts) => tsa(v).CompareTo(ts),
                     ListExtensions.Find.FirstEqual,
-                    0, buff.Count);
+                    segm.Offset, segm.Count);
                 if (pos < 0)
                     pos = ~pos;
 
                 if (inReverse)
                 {
-                    int count = buff.Count - pos;
+                    int count = segm.Count - pos;
                     if (count > 0)
-                    {
-                        buff.ShiftLeft(pos, count);
-                        yield return buff;
-                    }
+                        yield return new ArraySegment<TVal>(segm.Array, pos, count);
                 }
                 else
                 {
                     if (pos > 0)
-                    {
-                        buff.Count = pos;
-                        yield return buff;
-                    }
+                        yield return new ArraySegment<TVal>(segm.Array, segm.Offset, pos);
                 }
 
                 yield break;
@@ -121,7 +115,7 @@ namespace NYurik.FastBinTimeseries
         }
 
 
-        public static IEnumerable<T> StreamSegmentValues<T>(this IEnumerable<Buffer<T>> stream,
+        public static IEnumerable<T> StreamSegmentValues<T>(this IEnumerable<ArraySegment<T>> stream,
                                                             bool inReverse = false)
         {
             if (stream == null)
@@ -131,14 +125,14 @@ namespace NYurik.FastBinTimeseries
             {
                 foreach (var v in stream)
                     if (v.Count > 0)
-                        for (int i = v.Count - 1; i >= 0; i--)
+                        for (int i = v.Count - 1; i >= v.Offset; i--)
                             yield return v.Array[i];
             }
             else
             {
                 foreach (var v in stream)
                     if (v.Count > 0)
-                        for (int i = 0; i < v.Count; i++)
+                        for (int i = v.Offset; i < v.Count; i++)
                             yield return v.Array[i];
             }
         }

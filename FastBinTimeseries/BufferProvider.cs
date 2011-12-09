@@ -26,7 +26,7 @@ namespace NYurik.FastBinTimeseries
             {
                 for (int i = 0; i < growAfter; i++)
                 {
-					buffer.Count = buffer.Capacity;
+                    buffer.Count = buffer.Capacity;
                     maxItemCount -= buffer.Capacity;
                     yield return buffer;
                 }
@@ -38,7 +38,7 @@ namespace NYurik.FastBinTimeseries
 
                 while (true)
                 {
-					buffer.Count = buffer.Capacity;
+                    buffer.Count = buffer.Capacity;
                     maxItemCount -= buffer.Capacity;
                     yield return buffer;
                 }
@@ -64,7 +64,7 @@ namespace NYurik.FastBinTimeseries
         /// Yield a buffer that could either be the same instance as before, or a larger one.
         /// A weak reference will be kept so as to reduce the number of memory allocations. The method is thread safe.
         /// </summary>
-        public IEnumerable<Buffer<T>> YieldFixed(int firstSize, int smallSize, int growAfter, int largeSize)
+        public IEnumerable<Buffer<T>> YieldFixed(int blockOne, int blockTwo, int smallSize, int growAfter, int largeSize)
         {
             if (smallSize <= 0 || largeSize <= 0)
                 throw new ArgumentException("smallSize and largeSize must not be 0");
@@ -73,16 +73,20 @@ namespace NYurik.FastBinTimeseries
 
             try
             {
-                if (firstSize > 0)
-                {
-                    if (buffer == null || buffer.Capacity < firstSize)
-                        buffer = new Buffer<T>(firstSize);
+                // allocate blockTwo from the begining
+                if (buffer == null || buffer.Capacity < blockOne)
+                    buffer = new Buffer<T>(blockTwo);
 
-                    buffer.Count = firstSize;
-                    yield return buffer;
-                }
-               
-                if (buffer == null || buffer.Capacity < smallSize)
+                buffer.Count = blockOne;
+                yield return buffer;
+
+                if (buffer.Capacity < blockTwo)
+                    buffer = new Buffer<T>(blockTwo);
+
+                buffer.Count = blockTwo;
+                yield return buffer;
+
+                if (buffer.Capacity < smallSize)
                     buffer = new Buffer<T>(smallSize);
 
                 for (int i = 0; i < growAfter; i++)

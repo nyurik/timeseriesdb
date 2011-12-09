@@ -300,7 +300,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount">Maximum number of items to return</param>
         /// <param name="cachedCount">Use if <see cref="BinaryFile.GetCount"/> was called right before (avoids additional kernel call)</param>
-        protected internal IEnumerable<Buffer<T>> PerformStreaming(
+        protected internal IEnumerable<ArraySegment<T>> PerformStreaming(
             long firstItemIdx, bool enumerateInReverse, IEnumerable<Buffer<T>> bufferProvider = null,
             long maxItemCount = long.MaxValue, long cachedCount = -1)
         {
@@ -386,7 +386,7 @@ namespace NYurik.FastBinTimeseries
                     useMemMappedAccess = UseMemoryMappedAccess(readSize, false);
 
                 int read = PerformUnsafeBlockAccess(
-                    readBlockFrom, false, buffer.AsArraySegment, fileSize, useMemMappedAccess.Value);
+                    readBlockFrom, false, new ArraySegment<T>(buffer.Array, 0, buffer.Count), fileSize, useMemMappedAccess.Value);
 
                 if (enumerateInReverse)
                 {
@@ -395,8 +395,7 @@ namespace NYurik.FastBinTimeseries
                             "Unexpected number of items read during reverse traversal. {0} was expected, {1} returned",
                             readSize, read);
 
-                    buffer.Origin = readBlockFrom;
-                    yield return buffer;
+                    yield return new ArraySegment<T>(buffer.Array, 0, buffer.Count);
                     idx = idx - readSize;
                 }
                 else
@@ -404,9 +403,7 @@ namespace NYurik.FastBinTimeseries
                     if (read == 0)
                         yield break;
 
-                    buffer.Count = read;
-                    buffer.Origin = readBlockFrom;
-                    yield return buffer;
+                    yield return new ArraySegment<T>(buffer.Array, 0, read);
 
                     if (canSeek)
                         idx += readSize;

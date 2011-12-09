@@ -5,6 +5,7 @@ using System.IO;
 using System.Reflection;
 using JetBrains.Annotations;
 using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
@@ -47,6 +48,7 @@ namespace NYurik.FastBinTimeseries
         private FieldInfo _indexFieldInfo;
         private TInd? _lastIndex;
         private int _maxItemByteSize;
+        private int _minItemByteSize;
 
         private Tuple<long, ConcurrentDictionary<long, TInd>> _searchCache;
         private DynamicSerializer<TVal> _serializer;
@@ -90,7 +92,7 @@ namespace NYurik.FastBinTimeseries
                 if (_firstIndex == null && cachedFileCount > 0)
                 {
                     TInd tmp;
-                    if (TryGetValue(StreamSegments(0, cachedFileCount, maxItemCount: 1), out tmp))
+                    if (TryGetIndex(0, cachedFileCount, out tmp))
                         _firstIndex = tmp;
                 }
 
@@ -108,8 +110,7 @@ namespace NYurik.FastBinTimeseries
                 if (_lastIndex == null && cachedFileCount > 0)
                 {
                     TInd tmp;
-                    if (TryGetValue(
-                        StreamSegments(long.MaxValue, cachedFileCount, inReverse: true, maxItemCount: 1), out tmp, true))
+                    if (TryGetIndex(long.MaxValue, cachedFileCount, out tmp, inReverse: true))
                         _lastIndex = tmp;
                 }
 
@@ -178,6 +179,7 @@ namespace NYurik.FastBinTimeseries
             IndexFieldInfo = fieldInfo;
 
             _serializer = DynamicSerializer<TVal>.CreateFromReader(reader, typeMap);
+            _minItemByteSize = FieldSerializer.RootField.GetMinByteSize();
             _maxItemByteSize = FieldSerializer.RootField.GetMaxByteSize();
 
             return ver;
@@ -191,6 +193,7 @@ namespace NYurik.FastBinTimeseries
             writer.Write(IndexFieldInfo.Name);
             FieldSerializer.WriteCustomHeader(writer);
 
+            _minItemByteSize = FieldSerializer.RootField.GetMinByteSize();
             _maxItemByteSize = FieldSerializer.RootField.GetMaxByteSize();
             if (BlockSize < _maxItemByteSize + CodecBase.ReservedSpace)
                 throw new SerializerException("BlockSize ({0}) must be at least {1} bytes", BlockSize, _maxItemByteSize);
@@ -207,19 +210,19 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
-        public IEnumerable<Buffer<TVal>> StreamSegments(TInd fromInd, bool inReverse = false,
-                                                        IEnumerable<Buffer<TVal>> bufferProvider = null,
-                                                        long maxItemCount = long.MaxValue)
+        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false,
+                                                              IEnumerable<Buffer<TVal>> bufferProvider = null,
+                                                              long maxItemCount = long.MaxValue)
         {
             long cachedFileCount = GetCount();
 
-            long start = Search(fromInd, cachedFileCount);
-            if (start < 0)
-                start = ~start - 1;
+            long block = Search(fromInd, cachedFileCount);
+            if (block < 0)
+                block = ~block - 1;
             else if (!UniqueIndexes)
-                start--;
+                block--;
 
-            return StreamSegments(start, cachedFileCount, inReverse, bufferProvider, maxItemCount);
+            return StreamSegments(fromInd, block, cachedFileCount, inReverse, bufferProvider, maxItemCount);
         }
 
         /// <summary>
@@ -235,91 +238,51 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        private bool TryGetValue(IEnumerable<Buffer<TVal>> stream, out TInd value, bool inReverse = false)
+        private IEnumerable<ArraySegment<TVal>> StreamSegments(TInd firstInd, long firstBlockInd, long cachedFileCount,
+                                                               bool inReverse = false,
+                                                               IEnumerable<Buffer<TVal>> bufferProvider = null,
+                                                               long maxItemCount = long.MaxValue)
         {
-            foreach (var b in stream)
-            {
-                value = IndexAccessor(inReverse ? b.Array[b.Count - 1] : b.Array[0]);
-                return true;
-            }
-
-            value = default(TInd);
-            return false;
-        }
-
-        private IEnumerable<Buffer<TVal>> StreamSegments(long blockIndex, long fileCount, bool inReverse = false,
-                                                         IEnumerable<Buffer<TVal>> bufferProvider = null,
-                                                         long maxItemCount = long.MaxValue,
-                                                         bool blockInitValOnly = false)
-        {
-            if (fileCount == 0)
+            if (cachedFileCount == 0)
                 yield break;
 
-            long fileCountInBlocks = FastBinFileUtils.RoundUpToMultiple(fileCount, BlockSize)/BlockSize;
+            long fileCountInBlocks = CalcBlockCount(cachedFileCount);
 
-            if (blockIndex < 0)
+            if (firstBlockInd < 0)
             {
                 if (inReverse)
                     yield break;
-                blockIndex = 0;
+                firstBlockInd = 0;
             }
-            else if (blockIndex >= fileCountInBlocks)
+            else if (firstBlockInd >= fileCountInBlocks)
             {
                 if (!inReverse)
                     yield break;
-                blockIndex = fileCountInBlocks - 1;
+                firstBlockInd = fileCountInBlocks - 1;
             }
 
             if (_bufferByteProvider == null)
                 _bufferByteProvider = new BufferProvider<byte>();
 
+            int firstBlockSize = GetBlockSize(firstBlockInd, cachedFileCount);
             int smallSize = FastBinFileUtils.RoundUpToMultiple(MinPageSize, BlockSize);
             int largeSize = FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize);
 
-            int firstBlockSize;
-            if (maxItemCount <= BlockSize / _maxItemByteSize)
-            {
-                if (inReverse)
-                    firstBlockSize = BlockSize;
-                else
-                    firstBlockSize = (int) (maxItemCount*_maxItemByteSize);
-            } 
-            else
-                firstBlockSize = smallSize;
-            
-            if (blockIndex == fileCountInBlocks - 1)
-            {
-                var lastFileBlockSize = (int) (fileCount%BlockSize);
-                if (lastFileBlockSize == 0)
-                    lastFileBlockSize = BlockSize;
-
-                if (firstBlockSize > lastFileBlockSize)
-                    firstBlockSize = lastFileBlockSize;
-            }
-
             IEnumerable<Buffer<byte>> byteBuffs = _bufferByteProvider.YieldFixed(
-                firstBlockSize, smallSize, 4, largeSize);
+                firstBlockSize, BlockSize, smallSize, 4, largeSize);
 
-            long firstItemIdx = blockIndex*BlockSize + (inReverse ? firstBlockSize - 1 : 0);
+            long firstItemIdx = firstBlockInd*BlockSize + (inReverse ? firstBlockSize - 1 : 0);
 
             CodecReader codec = null;
-            IEnumerator<Buffer<TVal>> valBufs = null;
-            try
+
+            foreach (var retBuf in 
+                (bufferProvider
+                 ?? (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
+                        .YieldMaxGrowingBuffer(
+                            maxItemCount, MinPageSize/ItemSize, 5, MaxLargePageSize/ItemSize)))
             {
-                foreach (var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs, cachedCount: fileCount))
+                foreach (var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs, cachedCount: cachedFileCount))
                 {
-                    valBufs =
-                        (bufferProvider
-                         ?? (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
-                                .YieldMaxGrowingBuffer(
-                                    maxItemCount, MinPageSize/ItemSize, 5, MaxLargePageSize/ItemSize))
-                            .GetEnumerator();
-
-                    if (!valBufs.MoveNext())
-                        yield break;
-
-                    Buffer<TVal> retBuf = valBufs.Current;
-
                     if (codec == null)
                         codec = new CodecReader(seg);
                     else
@@ -328,47 +291,122 @@ namespace NYurik.FastBinTimeseries
                     // ignore suggested count, fill in as much as possible
                     retBuf.Count = 0;
 
-                    long blocks = FastBinFileUtils.RoundUpToMultiple(seg.Count, BlockSize)/BlockSize;
+                    long blocks = CalcBlockCount(seg.Count);
                     for (int i = 0; i < blocks; i++)
                     {
                         codec.BufferPos = i*BlockSize;
-
-                        int max;
-                        if (!inReverse)
-                        {
-                            long left = maxItemCount - retBuf.Count;
-                            max = left > int.MaxValue ? int.MaxValue : (int) left;
-                            if (max <= 0)
-                                break;
-                        }
-                        else
-                        {
-                            // on reverse we must decode the whole seg to preserve the order
-                            max = int.MaxValue;
-                        }
-
-                        // InReverse we always decode the whole block
-                        FieldSerializer.DeSerialize(codec, retBuf, max);
+                        FieldSerializer.DeSerialize(codec, retBuf, int.MaxValue);
                     }
 
-                    maxItemCount -= retBuf.Count;
-                    yield return retBuf;
+                    int pos = retBuf.Array.BinarySearch(
+                        firstInd, (val, ind) => IndexAccessor(val).CompareTo(ind),
+                        UniqueIndexes ? ListExtensions.Find.AnyEqual : ListExtensions.Find.FirstEqual, 0,
+                        retBuf.Count);
 
-                    if (maxItemCount <= 0)
-                        yield break;
+                    int count, offset;
+                    if (inReverse)
+                    {
+                        offset = 0;
+                        count = pos < 0 ? ~pos : pos + 1;
+                        if (count > maxItemCount)
+                        {
+                            int shrinkBy = count - (int) maxItemCount;
+                            offset += shrinkBy;
+                            count -= shrinkBy;
+                        }
+                    }
+                    else
+                    {
+                        offset = pos < 0 ? ~pos : pos;
+                        count = retBuf.Count - offset;
+                        if (count > maxItemCount)
+                            count = (int) maxItemCount;
+                    }
+
+                    if (count > 0)
+                    {
+                        maxItemCount -= count;
+                        yield return new ArraySegment<TVal>(retBuf.Array, offset, count);
+
+                        if (maxItemCount <= 0)
+                            yield break;
+                    }
+
+//                    if (oneBlockOnly)
+//                        yield break;
+                }
+
+                yield break;
+            }
+        }
+
+        private bool TryGetIndex(long blockIndex, long cachedFileCount, out TInd index, bool inReverse = false)
+        {
+            index = default(TInd);
+
+            if (cachedFileCount == 0)
+                return false;
+
+            long fileCountInBlocks = CalcBlockCount(cachedFileCount);
+
+            if (blockIndex < 0)
+            {
+                if (inReverse)
+                    return false;
+                blockIndex = 0;
+            }
+            else if (blockIndex >= fileCountInBlocks)
+            {
+                if (!inReverse)
+                    return false;
+                blockIndex = fileCountInBlocks - 1;
+            }
+
+            if (_bufferByteProvider == null)
+                _bufferByteProvider = new BufferProvider<byte>();
+
+            // calc byte buffer size for one item or one block if going backwards
+            int byteBufSize = inReverse
+                                  ? GetBlockSize(blockIndex, cachedFileCount)
+                                  : _maxItemByteSize + CodecBase.ReservedSpace;
+
+            IEnumerable<Buffer<byte>> byteBuffs = _bufferByteProvider.YieldFixedSize(byteBufSize);
+
+            long firstItemIdx = blockIndex*BlockSize + (inReverse ? byteBufSize - 1 : 0);
+
+            foreach (var retBuf in
+                (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
+                    .YieldFixedSize(inReverse ? CalcMaxItemsInBlock(byteBufSize) : 1))
+            {
+                foreach (var seg in
+                    // ReSharper disable PossibleMultipleEnumeration
+                    PerformStreaming(firstItemIdx, inReverse, byteBuffs, cachedCount: cachedFileCount))
+                    // ReSharper restore PossibleMultipleEnumeration
+                {
+                    // ignore suggested count, fill in as much as possible
+                    retBuf.Count = 0;
+
+                    if (seg.Count > BlockSize)
+                        throw new InvalidOperationException(
+                            "Logic error: seg.Count " + seg.Count + " > BlockSize " + BlockSize);
+
+                    var codec = new CodecReader(seg);
+
+                    // InReverse we always decode the whole block
+                    FieldSerializer.DeSerialize(codec, retBuf, inReverse ? int.MaxValue : 1);
+
+                    index = IndexAccessor(inReverse ? retBuf.Array[retBuf.Count - 1] : retBuf.Array[0]);
+                    return true;
                 }
             }
-            finally
-            {
-                if (valBufs != null)
-                    valBufs.Dispose();
-            }
+
+            throw new InvalidOperationException("Logic error: buffer provider did not yield one buffer");
         }
 
         private long Search(TInd index, long cachedFileCount)
         {
             long start = 0L;
-            long blockCount = FastBinFileUtils.RoundUpToMultiple(cachedFileCount, BlockSize)/BlockSize;
+            long blockCount = CalcBlockCount(cachedFileCount);
             long end = blockCount - 1;
 
             // empty file
@@ -391,7 +429,7 @@ namespace NYurik.FastBinTimeseries
                 // Read new value from file unless we already have it pre-cached in the dictionary
                 if (cache == null || !cache.TryGetValue(mid, out timeAtMid))
                 {
-                    if (!TryGetValue(StreamSegments(mid, cachedFileCount, false, maxItemCount: 1), out timeAtMid))
+                    if (!TryGetIndex(mid, cachedFileCount, out timeAtMid))
                         throw new BinaryFileException("Unable to read index block #{0}", mid);
 
                     if (cache != null)
@@ -568,6 +606,37 @@ namespace NYurik.FastBinTimeseries
 
                 segInd++;
             }
+        }
+
+        private int GetBlockSize(long blockIndex, long cachedFileCount)
+        {
+            int byteBufSize = BlockSize;
+
+            // if last block
+            if (blockIndex == CalcBlockCount(cachedFileCount) - 1)
+            {
+                // adjust for last block which may be smaller
+                var lastSize = (int) (cachedFileCount%BlockSize);
+                if (lastSize > 0 && byteBufSize > lastSize)
+                    byteBufSize = lastSize;
+            }
+
+            return byteBufSize;
+        }
+
+        private int CalcMaxItemsInBlock(int blockSize)
+        {
+            return 1 + (blockSize - _maxItemByteSize)/_minItemByteSize;
+        }
+
+        private int CalcMinItemsInBlock(int blockSize)
+        {
+            return 1 + (blockSize - _maxItemByteSize)/_maxItemByteSize;
+        }
+
+        private long CalcBlockCount(long byteSize)
+        {
+            return FastBinFileUtils.RoundUpToMultiple(byteSize, BlockSize)/BlockSize;
         }
     }
 }

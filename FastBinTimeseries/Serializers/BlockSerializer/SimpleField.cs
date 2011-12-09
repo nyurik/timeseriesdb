@@ -55,6 +55,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return new Tuple<Expression, Expression>(readMethod, readMethod);
         }
 
+        public override int GetMinByteSize()
+        {
+            return CodecBase.MaxBytesFor8;
+        }
+
         public override int GetMaxByteSize()
         {
             return CodecBase.MaxBytesFor8;
