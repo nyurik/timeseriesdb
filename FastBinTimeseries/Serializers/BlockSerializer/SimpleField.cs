@@ -57,7 +57,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public override int GetMaxByteSize()
         {
-            return 1;
+            return CodecBase.MaxBytesFor8;
         }
 
         protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)

@@ -58,7 +58,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         public override int GetMaxByteSize()
         {
             // TODO: optimize to make this number smaller depending on the field type and scaling parameters
-            return 10; // ceiling(64 / 7) -- 64 bits with 7 bits per byte
+            return CodecBase.MaxBytesFor64;
         }
 
         protected override void InitNewField(BinaryWriter writer)

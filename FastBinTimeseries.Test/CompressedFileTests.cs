@@ -50,13 +50,13 @@ namespace NYurik.FastBinTimeseries.Test
 
                 if (expected.Count > 0)
                 {
-                    Assert.AreEqual(expected[0].a, f.FirstFileIndex);
-                    //Assert.AreEqual(expected[expected.Count - 1].a, f.LastFileIndex);
+//                    Assert.AreEqual(expected[0].a, f.FirstFileIndex);
+                    Assert.AreEqual(expected[expected.Count - 1].a, f.LastFileIndex);
                 }
                 else
                 {
                     Assert.IsNull(f.FirstFileIndex);
-                    //Assert.IsNull(f.LastFileIndex);
+                    Assert.IsNull(f.LastFileIndex);
                 }
 
                 TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), name);

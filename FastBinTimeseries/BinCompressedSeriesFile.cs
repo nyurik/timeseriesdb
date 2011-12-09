@@ -110,7 +110,7 @@ namespace NYurik.FastBinTimeseries
                     TInd tmp;
                     if (TryGetFirst(
                         StreamSegments(long.MaxValue, cachedFileCount, inReverse: true, maxItemCount: 1), out tmp))
-                        _firstIndex = tmp;
+                        _lastIndex = tmp;
                 }
                 return _lastIndex;
             }
@@ -248,41 +248,48 @@ namespace NYurik.FastBinTimeseries
                                                          IEnumerable<Buffer<TVal>> bufferProvider = null,
                                                          long maxItemCount = long.MaxValue)
         {
-            CodecReader codec = null;
+            if (fileCount == 0)
+                yield break;
 
             long fileCountInBlocks = FastBinFileUtils.RoundUpToMultiple(fileCount, BlockSize)/BlockSize;
 
             if (blockIndex < 0)
+            {
+                if (inReverse)
+                    yield break;
                 blockIndex = 0;
+            }
             else if (blockIndex >= fileCountInBlocks)
-                blockIndex = fileCountInBlocks;
+            {
+                if (!inReverse)
+                    yield break;
+                blockIndex = fileCountInBlocks - 1;
+            }
 
-            IEnumerator<Buffer<TVal>> valBufs = null;
             if (_bufferByteProvider == null)
                 _bufferByteProvider = new BufferProvider<byte>();
 
             int firstBlockSize;
 
-            IEnumerable<Buffer<byte>> byteBuffs;
-            if (maxItemCount <= BlockSize/_maxItemByteSize)
+            if (blockIndex == fileCountInBlocks - 1)
             {
-                firstBlockSize = (int) Math.Min(maxItemCount*_maxItemByteSize, fileCount);
-                byteBuffs = _bufferByteProvider.YieldFixedSize(firstBlockSize);
+                firstBlockSize = (int) (fileCount%BlockSize);
+                if (firstBlockSize == 0)
+                    firstBlockSize = BlockSize;
             }
             else
-            {
-                int smallSize = FastBinFileUtils.RoundUpToMultiple(MinPageSize, BlockSize);
-                if (!inReverse || blockIndex < fileCountInBlocks)
-                    firstBlockSize = smallSize;
-                else
-                    firstBlockSize = (int) (fileCount%BlockSize);
+                firstBlockSize = 0;
 
-                byteBuffs = _bufferByteProvider.YieldFixed(
-                    firstBlockSize, smallSize, 4, FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize));
-            }
+            int smallSize = FastBinFileUtils.RoundUpToMultiple(MinPageSize, BlockSize);
+            int largeSize = FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize);
+
+            IEnumerable<Buffer<byte>> byteBuffs = _bufferByteProvider.YieldFixed(
+                firstBlockSize, smallSize, 4, largeSize);
 
             long firstItemIdx = blockIndex*BlockSize + (inReverse ? firstBlockSize - 1 : 0);
 
+            CodecReader codec = null;
+            IEnumerator<Buffer<TVal>> valBufs = null;
             try
             {
                 foreach (var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs, cachedCount: fileCount))
@@ -315,7 +322,8 @@ namespace NYurik.FastBinTimeseries
                         if (max <= 0)
                             break;
 
-                        FieldSerializer.DeSerialize(codec, retBuf, max);
+                        // InReverse we always decode the whole block
+                        FieldSerializer.DeSerialize(codec, retBuf, inReverse ? int.MaxValue : max);
                     }
 
                     maxItemCount -= retBuf.Count;

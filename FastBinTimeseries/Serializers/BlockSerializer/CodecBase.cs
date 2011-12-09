@@ -8,9 +8,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public class CodecBase
     {
-        protected const byte MaxBytesFor64 = 64/7 + 1;
-        protected const byte MaxBytesFor32 = 32/7 + 1;
-        protected const byte MaxBytesFor8 = 1;
+        public const byte MaxBytesFor64 = 64/7 + 1;
+        public const byte MaxBytesFor32 = 32/7 + 1;
+        public const byte MaxBytesFor8 = 1;
 
         /// <summary>
         /// Each block will have at least this many bytes reserved for hash value + UInt32 (count)
