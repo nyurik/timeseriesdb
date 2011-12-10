@@ -100,14 +100,14 @@ namespace NYurik.FastBinTimeseries.Test
             return rNew;
         }
 
-        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(Func<long, T> converter, int count, int startFrom,
+        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(Func<long, T> converter, int segSize, int startFrom,
                                                                    int maxValue)
         {
-            if (count <= 0)
+            if (segSize <= 0)
                 yield break;
 
-            for (int i = startFrom; i < maxValue; i += count)
-                yield return new ArraySegment<T>(GenerateData(converter, count, i));
+            for (int i = startFrom; i < maxValue; i += segSize)
+                yield return new ArraySegment<T>(GenerateData(converter, Math.Min(segSize, maxValue - i), i));
         }
 
         public static byte NewByte(long i)
@@ -140,6 +140,13 @@ namespace NYurik.FastBinTimeseries.Test
             catch (TEx)
             {
             }
+        }
+
+        [StringFormatMethod("format")]
+        public static void CollectionAssertEqual<T>(IEnumerable<ArraySegment<T>> expected, IEnumerable<T> actual,
+                                                    string format = null, params object[] args)
+        {
+            CollectionAssertEqual(expected.StreamSegmentValues(), actual, null, format, args);
         }
 
         [StringFormatMethod("format")]

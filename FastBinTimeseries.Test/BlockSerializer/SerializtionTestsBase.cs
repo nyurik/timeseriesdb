@@ -35,7 +35,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                            Action<BaseField> updateSrlzr = null, Func<T, T, bool> comparer = null)
         {
             var codec = new CodecWriter(10000);
-            var ds = DynamicSerializer<T>.CreateDefault();
+            DynamicSerializer<T> ds = DynamicSerializer<T>.CreateDefault();
 
             try
             {
@@ -79,7 +79,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
                         codec.Count = 0;
                         buff.Count = 0;
-                        ds.DeSerialize(new CodecReader(new ArraySegment<byte>(codec.Buffer, 0, codec.Count)), buff, int.MaxValue);
+                        ds.DeSerialize(
+                            new CodecReader(new ArraySegment<byte>(codec.Buffer, 0, codec.Count)), buff, int.MaxValue);
                     }
                     catch (Exception x)
                     {
@@ -96,7 +97,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
                         throw new SerializerException(x, msg);
                     }
-                    ArraySegment<T> result = new ArraySegment<T>(buff.Array, 0, buff.Count);
+
+                    var result = new ArraySegment<T>(buff.Array, 0, buff.Count);
                     for (int i = result.Offset; i < result.Count; i++)
                         yield return result.Array[i];
                 }
