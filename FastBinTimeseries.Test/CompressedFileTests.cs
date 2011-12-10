@@ -7,37 +7,28 @@ using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
 namespace NYurik.FastBinTimeseries.Test
 {
+    using BinCompressedFile = BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>;
+    using BinUncompressedFile = BinTimeseriesFile<_DatetimeByte_SeqPk1>;
+
     // ReSharper disable PossibleMultipleEnumeration
 
     [TestFixture]
     public class CompressedFileTests : TestsBase
     {
-        private static BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1> NewBinCompressedSeriesFile(
-            string fileName, bool uniqueTimestamps, int blockSizeExtra)
+        private void Run(string name, int itemCount,
+                         Func<string, IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
+                         Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
+                         Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
         {
-            var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName)
-                         {UniqueIndexes = uniqueTimestamps};
-
-            bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace + blockSizeExtra;
-            return bf;
-        }
-
-        [Test, Combinatorial]
-        public void VariousLengthNonDuplTimeseries(
-            [Values(0, 1, 2, 3, 4, 5, 10, 100, 10000)] int itemCount,
-            [Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 20, 200, 10000)] int blockSizeExtra,
-            [Values(true, false)] bool enableCache)
-        {
-            string name = string.Format(
-                "in itemCount={0}, blockSizeExtra={1}, cache={2}", itemCount, blockSizeExtra, enableCache);
-
             string fileName = GetBinFileName();
-            using (BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1> f =
-                AllowCreate
-                    ? NewBinCompressedSeriesFile(fileName, true, blockSizeExtra)
-                    : (BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false))
+            using (
+                IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1> f
+                    = !AllowCreate
+                          ? (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false)
+                          : newFile(fileName))
             {
-                f.BinarySearchCacheSize = enableCache ? 0 : -1;
+                if (update != null)
+                    update(f);
 
                 IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> newData =
                     TestUtils.GenerateDataStream(_DatetimeByte_SeqPk1.New, itemCount, 0, itemCount);
@@ -49,7 +40,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                 if (AllowCreate)
                 {
-                    f.InitializeNewFile();
+                    init(f);
                     f.AppendData(newData.Select(i => new ArraySegment<_DatetimeByte_SeqPk1>(i.Array, 0, i.Count)));
                 }
 
@@ -80,13 +71,14 @@ namespace NYurik.FastBinTimeseries.Test
                     expectedRev, f.Stream(UtcDateTime.MaxValue, inReverse: true), "full backward {0}", name);
 
                 const int skipStart = 0;
-                const int takeStart = 2;
+                const int takeStart = 0;
 
-                int maxSkip = Math.Min(10, itemCount);
+                const int maxSkipCount = 50;
 
+                int maxSkip = Math.Min(maxSkipCount, itemCount);
                 for (int skip = skipStart; skip < maxSkip; skip++)
                 {
-                    int maxTake = Math.Min(10, itemCount - maxSkip + 1);
+                    int maxTake = Math.Min(maxSkipCount, itemCount - maxSkip + 1);
                     for (int take = takeStart; take < maxTake; take++)
                     {
                         TestUtils.CollectionAssertEqual(
@@ -111,6 +103,50 @@ namespace NYurik.FastBinTimeseries.Test
                     }
                 }
             }
+        }
+
+        [Test, Combinatorial]
+        public void CompressedGeneralTest(
+            [Values(0, 1, 2, 3, 4, 5, 10, 100, 10000)] int itemCount,
+            [Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 20, 200, 10000)] int blockSizeExtra,
+            [Values(true, false)] bool enableCache)
+        {
+            Run(
+                string.Format(
+                    "in itemCount={0}, blockSizeExtra={1}, cache={2}", itemCount, blockSizeExtra, enableCache),
+                itemCount,
+                fileName =>
+                    {
+                        var bf = new BinCompressedFile(fileName)
+                                     {UniqueIndexes = true};
+
+                        bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
+                                       + blockSizeExtra;
+                        return bf;
+                    },
+                f => ((BinCompressedFile) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f => ((BinCompressedFile) f).InitializeNewFile()
+                );
+        }
+
+        [Test]
+        public void AppendTest()
+        {
+            throw new NotImplementedException("Need to implement incremental file addition");
+        }
+        
+        [Test, Combinatorial]
+        public void UncompressedGeneralTimeseries(
+            [Values(0, 1, 2, 3, 4, 5, 10, 100, 10000)] int itemCount,
+            [Values(true, false)] bool enableCache)
+        {
+            Run(
+                string.Format("in itemCount={0}, cache={1}", itemCount, enableCache),
+                itemCount,
+                fileName => new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = true},
+                f => ((BinUncompressedFile) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f => ((BinUncompressedFile) f).InitializeNewFile()
+                );
         }
     }
 }

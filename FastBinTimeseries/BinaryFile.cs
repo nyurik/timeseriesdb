@@ -307,6 +307,8 @@ namespace NYurik.FastBinTimeseries
             ThrowOnNotInitialized();
             if (maxItemCount < 0)
                 throw new ArgumentOutOfRangeException("maxItemCount", maxItemCount, "Must be >= 0");
+            if (maxItemCount == 0)
+                yield break;
 
             bool canSeek = BaseStream.CanSeek;
             long fileCount;

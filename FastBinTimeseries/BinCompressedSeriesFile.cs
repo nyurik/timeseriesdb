@@ -230,9 +230,6 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
         {
-            if (bufferStream == null)
-                throw new ArgumentNullException("bufferStream");
-
             PerformWriteStreaming(ProcessWriteStream(bufferStream, allowFileTruncation));
         }
 
@@ -243,7 +240,10 @@ namespace NYurik.FastBinTimeseries
                                                                IEnumerable<Buffer<TVal>> bufferProvider = null,
                                                                long maxItemCount = long.MaxValue)
         {
-            if (cachedFileCount == 0)
+            if (maxItemCount < 0)
+                throw new ArgumentOutOfRangeException("maxItemCount", maxItemCount, "<0");
+
+            if (cachedFileCount == 0 || maxItemCount == 0)
                 yield break;
 
             long fileCountInBlocks = CalcBlockCount(cachedFileCount);
@@ -518,6 +518,9 @@ namespace NYurik.FastBinTimeseries
         private IEnumerable<ArraySegment<byte>> ProcessWriteStream(
             [NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
         {
+            if (bufferStream == null)
+                throw new ArgumentNullException("bufferStream");
+
             TInd lastTs = LastFileIndex ?? default(TInd);
             long count = GetCount();
             bool isEmptyFile = count == 0;
@@ -627,11 +630,6 @@ namespace NYurik.FastBinTimeseries
         private int CalcMaxItemsInBlock(int blockSize)
         {
             return 1 + (blockSize - _maxItemByteSize)/_minItemByteSize;
-        }
-
-        private int CalcMinItemsInBlock(int blockSize)
-        {
-            return 1 + (blockSize - _maxItemByteSize)/_maxItemByteSize;
         }
 
         private long CalcBlockCount(long byteSize)
