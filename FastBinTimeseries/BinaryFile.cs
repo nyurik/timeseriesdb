@@ -439,9 +439,9 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Write segment stream to internal stream, optionally truncating the file so that <paramref name="firstItemIdx"/> would be the first written item.
         /// </summary>
-        /// <param name="stream">The stream of array segments to write</param>
+        /// <param name="streamEnmr">The stream of array segments to write, with a single MoveNext() already performed (returned true)</param>
         /// <param name="firstItemIdx">The index of the first element in the stream. The file will be truncated if the value is less than or equal to Count</param>
-        protected void PerformWriteStreaming(IEnumerable<ArraySegment<T>> stream, long firstItemIdx = long.MaxValue)
+        protected void PerformWriteStreaming(IEnumerator<ArraySegment<T>> streamEnmr, long firstItemIdx = long.MaxValue)
         {
             ThrowOnNotInitialized();
             if (firstItemIdx < long.MaxValue)
@@ -459,8 +459,9 @@ namespace NYurik.FastBinTimeseries
             bool? useMemMappedAccess = null;
 
             // Have to call Count on every access 
-            foreach (var seg in stream)
+            do
             {
+                var seg = streamEnmr.Current;
                 if (seg.Count == 0)
                     continue;
 
@@ -474,7 +475,7 @@ namespace NYurik.FastBinTimeseries
                     itemIdx += read;
                     fileSize += read*ItemSize;
                 }
-            }
+            } while (streamEnmr.MoveNext());
 
             if (useMemMappedAccess == false)
                 BaseStream.Flush();

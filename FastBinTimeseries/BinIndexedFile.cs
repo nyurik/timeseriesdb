@@ -54,7 +54,9 @@ namespace NYurik.FastBinTimeseries
         /// <param name="firstItemIdx">The index of the first element in the stream. The file will be truncated if the value is less than or equal to Count</param>
         public void WriteStream(IEnumerable<ArraySegment<T>> stream, long firstItemIdx = long.MaxValue)
         {
-            PerformWriteStreaming(stream, firstItemIdx);
+            using (var streamEnmr = stream.GetEnumerator())
+                if (streamEnmr.MoveNext())
+                    PerformWriteStreaming(streamEnmr, firstItemIdx);
         }
 
         protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)

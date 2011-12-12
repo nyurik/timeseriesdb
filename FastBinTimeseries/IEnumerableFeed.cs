@@ -22,8 +22,20 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         Func<TVal, TInd> IndexAccessor { get; }
 
+        /// <summary>
+        /// If available, returns the first index of the feed
+        /// </summary>
         TInd? FirstFileIndex { get; }
+
+        /// <summary>
+        /// If available, returns the last index of the feed
+        /// </summary>
         TInd? LastFileIndex { get; }
+
+        /// <summary>
+        /// False if more than one identical index is allowed in the feed, True otherwise
+        /// </summary>
+        bool UniqueIndexes { get; }
 
         /// <summary>
         /// Enumerate all items one block at a time using an internal buffer.

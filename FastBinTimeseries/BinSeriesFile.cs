@@ -359,7 +359,9 @@ namespace NYurik.FastBinTimeseries
             if (bufferStream == null)
                 throw new ArgumentNullException("bufferStream");
 
-            PerformWriteStreaming(ProcessWriteStream(bufferStream, allowFileTruncation));
+            using (var streamEnmr = ProcessWriteStream(bufferStream, allowFileTruncation).GetEnumerator())
+                if (streamEnmr.MoveNext())
+                    PerformWriteStreaming(streamEnmr);
         }
 
         /// <summary>

@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using JetBrains.Annotations;
 using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers;
@@ -79,52 +78,6 @@ namespace NYurik.FastBinTimeseries
 
                 IndexAccessor = DynamicCodeFactory.Instance.Value.GetIndexAccessor<TVal, TInd>(value);
                 _indexFieldInfo = value;
-            }
-        }
-
-        public TInd? FirstFileIndex
-        {
-            get
-            {
-                long cachedFileCount = GetCount();
-                ResetOnChangedAndGetCache(cachedFileCount, false);
-
-                if (_firstIndex == null && cachedFileCount > 0)
-                {
-                    TInd tmp;
-                    if (TryGetIndex(0, cachedFileCount, out tmp))
-                        _firstIndex = tmp;
-                }
-
-                return _firstIndex;
-            }
-        }
-
-        public TInd? LastFileIndex
-        {
-            get
-            {
-                long cachedFileCount = GetCount();
-                ResetOnChangedAndGetCache(cachedFileCount, false);
-
-                if (_lastIndex == null && cachedFileCount > 0)
-                {
-                    TInd tmp;
-                    if (TryGetIndex(long.MaxValue, cachedFileCount, out tmp, inReverse: true))
-                        _lastIndex = tmp;
-                }
-
-                return _lastIndex;
-            }
-        }
-
-        public bool UniqueIndexes
-        {
-            get { return _uniqueIndexes; }
-            set
-            {
-                ThrowOnInitialized();
-                _uniqueIndexes = value;
             }
         }
 
@@ -205,6 +158,52 @@ namespace NYurik.FastBinTimeseries
 
         #region IEnumerableFeed<TInd,TVal> Members
 
+        public TInd? FirstFileIndex
+        {
+            get
+            {
+                long cachedFileCount = GetCount();
+                ResetOnChangedAndGetCache(cachedFileCount, false);
+
+                if (_firstIndex == null && cachedFileCount > 0)
+                {
+                    TInd tmp;
+                    if (TryGetIndex(0, cachedFileCount, out tmp))
+                        _firstIndex = tmp;
+                }
+
+                return _firstIndex;
+            }
+        }
+
+        public TInd? LastFileIndex
+        {
+            get
+            {
+                long cachedFileCount = GetCount();
+                ResetOnChangedAndGetCache(cachedFileCount, false);
+
+                if (_lastIndex == null && cachedFileCount > 0)
+                {
+                    TInd tmp;
+                    if (TryGetIndex(long.MaxValue, cachedFileCount, out tmp, inReverse: true))
+                        _lastIndex = tmp;
+                }
+
+                return _lastIndex;
+            }
+        }
+
+        public bool UniqueIndexes
+        {
+            get { return _uniqueIndexes; }
+            set
+            {
+                ThrowOnInitialized();
+                _uniqueIndexes = value;
+            }
+        }
+
         /// <summary>
         /// A delegate to a function that extracts index of a given item
         /// </summary>
@@ -230,7 +229,77 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
         {
-            PerformWriteStreaming(ProcessWriteStream(bufferStream, allowFileTruncation));
+            if (bufferStream == null)
+                throw new ArgumentNullException("bufferStream");
+
+            long count = GetCount();
+            bool isEmptyFile = count == 0;
+
+            using (IEnumerator<TVal> newValues = VerifyValues(bufferStream).GetEnumerator())
+            {
+                if (!newValues.MoveNext())
+                    return;
+
+                TInd firstBufferInd = IndexAccessor(newValues.Current);
+
+                IEnumerator<TVal> iterToDispose = null;
+                try
+                {
+                    long firstBufferBlock;
+                    IEnumerator<TVal> mergedIter;
+                    if (!isEmptyFile)
+                    {
+                        if (!allowFileTruncation)
+                        {
+                            TInd? lastInd = LastFileIndex;
+                            if (lastInd == null)
+                                throw new InvalidOperationException("Logic error: last is not available");
+                            if (firstBufferInd.CompareTo(lastInd.Value) <= 0)
+                                throw new BinaryFileException(
+                                    "Last index in file ({0}) is greater or equal to the first new item's index ({1})",
+                                    lastInd, firstBufferInd);
+
+                            // Round down so that if we have incomplete block, it will be appended.
+                            firstBufferBlock = FastBinFileUtils.RoundDownToMultiple(count, BlockSize)/BlockSize;
+                        }
+                        else
+                        {
+                            firstBufferBlock = Search(firstBufferInd, count);
+                        }
+
+                        // start at the begining of the found block
+                        iterToDispose = JoinStreams(
+                            firstBufferInd, newValues,
+                            StreamSegments(default(TInd), firstBufferBlock, count).StreamSegmentValues()
+                            ).GetEnumerator();
+
+                        mergedIter = iterToDispose;
+                        if (!mergedIter.MoveNext())
+                            throw new InvalidOperationException("Logic error: mergedIter must have at least one value");
+                    }
+                    else
+                    {
+                        mergedIter = newValues;
+                        firstBufferBlock = 0;
+                    }
+
+                    using (IEnumerator<ArraySegment<byte>> mergedEnmr = SerializeStream(mergedIter).GetEnumerator())
+                    {
+                        if (mergedEnmr.MoveNext())
+                            PerformWriteStreaming(mergedEnmr, firstBufferBlock*BlockSize);
+                    }
+
+                    if (isEmptyFile)
+                        _firstIndex = firstBufferInd;
+                    _lastIndex = null;
+                }
+                finally
+                {
+                    // newValues is disposed as part of using() statement
+                    if (iterToDispose != null)
+                        iterToDispose.Dispose();
+                }
+            }
         }
 
         #endregion
@@ -298,6 +367,7 @@ namespace NYurik.FastBinTimeseries
                         FieldSerializer.DeSerialize(codec, retBuf, int.MaxValue);
                     }
 
+                    // todo: search should only be performed on first iteration
                     int pos = retBuf.Array.BinarySearch(
                         firstInd, (val, ind) => IndexAccessor(val).CompareTo(ind),
                         UniqueIndexes ? ListExtensions.Find.AnyEqual : ListExtensions.Find.FirstEqual, 0,
@@ -458,28 +528,6 @@ namespace NYurik.FastBinTimeseries
             return ~start;
         }
 
-        public void TruncateFile(TInd firstIndexToErase)
-        {
-            long newCount = Search(firstIndexToErase, GetCount());
-            newCount = newCount < 0 ? ~newCount : newCount + 1;
-
-            TruncateFile(newCount);
-        }
-
-        public void TruncateFile(long newCount)
-        {
-            long fileCount = Count;
-            if (newCount == fileCount)
-                return;
-
-            PerformTruncateFile(newCount);
-
-            // Invalidate index
-            if (newCount == 0)
-                _firstIndex = null;
-            _lastIndex = null;
-        }
-
         private ConcurrentDictionary<long, TInd> ResetOnChangedAndGetCache(long count, bool createCache)
         {
             Tuple<long, ConcurrentDictionary<long, TInd>> sc = _searchCache;
@@ -512,61 +560,38 @@ namespace NYurik.FastBinTimeseries
             return sc.Item2;
         }
 
-        /// <summary>
-        /// Add new items at the end of the existing file
-        /// </summary>
-        private IEnumerable<ArraySegment<byte>> ProcessWriteStream(
-            [NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
+        private IEnumerable<ArraySegment<byte>> SerializeStream(IEnumerator<TVal> mergedIter)
         {
-            if (bufferStream == null)
-                throw new ArgumentNullException("bufferStream");
-
-            TInd lastTs = LastFileIndex ?? default(TInd);
-            long count = GetCount();
-            bool isEmptyFile = count == 0;
-
-            using (IEnumerator<TVal> iterator = VerifyValues(bufferStream).GetEnumerator())
+            var codec = new CodecWriter(BlockSize);
+            while (true)
             {
-                if (!iterator.MoveNext())
-                    yield break;
+                codec.Count = 0;
+                bool hasMore = FieldSerializer.Serialize(codec, mergedIter);
+                if (codec.Count == 0)
+                    throw new SerializerException("Internal serializer error: buffer is empty");
 
-                TInd firstBufferTs = IndexAccessor(iterator.Current);
-                TInd newTs = firstBufferTs;
+                yield return codec.UsedBuffer;
 
-                if (!isEmptyFile)
-                {
-                    // Make sure new data goes after the last item
-                    if (newTs.CompareTo(lastTs) < 0)
-                    {
-                        if (!allowFileTruncations)
-                            throw new BinaryFileException(
-                                "Last index in file ({0}) is greater than the first new item's index ({1})",
-                                lastTs, newTs);
-                    }
-                    else if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
-                        throw new BinaryFileException(
-                            "Last index in file ({0}) equals to the first new item's index (enfocing uniqueness)",
-                            lastTs);
-                }
-
-                var codec = new CodecWriter(BlockSize);
-                while (true)
-                {
-                    codec.Count = 0;
-                    bool hasMore = FieldSerializer.Serialize(codec, iterator);
-                    if (codec.Count == 0)
-                        throw new SerializerException("Internal serializer error: buffer is empty");
-
-                    yield return codec.UsedBuffer;
-
-                    if (!hasMore)
-                        break;
-                }
-
-                if (isEmptyFile)
-                    _firstIndex = firstBufferTs;
-                _lastIndex = null;
+                if (!hasMore)
+                    break;
             }
+        }
+
+        /// <summary>
+        /// Slightly hacky merge of an old values enumerable with an iterator over the new ones.
+        /// This code assumes that it will be called only once for this IEnumerator.
+        /// </summary>
+        private IEnumerable<TVal> JoinStreams(TInd firstNewInd, IEnumerator<TVal> newValues,
+                                              IEnumerable<TVal> existingValues)
+        {
+            foreach (TVal v in existingValues)
+                if (IndexAccessor(v).CompareTo(firstNewInd) < 0)
+                    yield return v;
+
+            do
+            {
+                yield return newValues.Current;
+            } while (newValues.MoveNext());
         }
 
         private IEnumerable<TVal> VerifyValues(IEnumerable<ArraySegment<TVal>> stream)

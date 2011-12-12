@@ -100,13 +100,13 @@ namespace NYurik.FastBinTimeseries.Test
             return rNew;
         }
 
-        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(Func<long, T> converter, int segSize, int startFrom,
-                                                                   int maxValue)
+        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(Func<long, T> converter, int segSize,
+                                                                         int minValue, int maxValue)
         {
             if (segSize <= 0)
                 yield break;
 
-            for (int i = startFrom; i < maxValue; i += segSize)
+            for (int i = minValue; i < maxValue; i += segSize)
                 yield return new ArraySegment<T>(GenerateData(converter, Math.Min(segSize, maxValue - i), i));
         }
 

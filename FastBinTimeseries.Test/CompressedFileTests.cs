@@ -137,19 +137,32 @@ namespace NYurik.FastBinTimeseries.Test
                         f.Stream(UtcDateTime.MinValue),
                         "adding {0} to {1} {2}", lastStep, step, name);
 
-                    lastStep = step;
+                    lastStep = step + (f.UniqueIndexes ? 0 : 1);
                 }
 
-                f.AppendData(Data(1, 0, 1));
-                TestUtils.CollectionAssertEqual(
-                    Data(1, 0, 1), f.Stream(UtcDateTime.MinValue),
-                    "nothing before 0 {0}", name);
+                if (itemCount >= 2)
+                {
+                    f.AppendData(Data(segSize, 0, itemCount/2), true);
+                    TestUtils.CollectionAssertEqual(
+                        Data(segSize, 0, itemCount/2), f.Stream(UtcDateTime.MinValue),
+                        "nothing before 0 {0}", name);
+                }
+
+                if (itemCount / 2 > 2)
+                {
+                    TestUtils.AssertException<BinaryFileException>(
+                        () => f.AppendData(Data(segSize, itemCount/2, itemCount/2 + 1)));
+                    TestUtils.AssertException<BinaryFileException>(
+                        () => f.AppendData(Data(segSize, itemCount/2 - 1, itemCount/2)));
+                    TestUtils.AssertException<BinaryFileException>(
+                        () => f.AppendData(Data(segSize, itemCount/2 - 1, itemCount/2 + 1)));
+                }
             }
         }
 
-        private static IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> Data(int segSize, int startFrom, int maxValue)
+        private static IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> Data(int segSize, int minValue, int maxValue)
         {
-            return TestUtils.GenerateDataStream(_DatetimeByte_SeqPk1.New, segSize, startFrom, maxValue);
+            return TestUtils.GenerateDataStream(_DatetimeByte_SeqPk1.New, segSize, minValue, maxValue);
         }
 
         [Test]
