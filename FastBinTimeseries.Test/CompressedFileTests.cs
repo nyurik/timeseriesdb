@@ -140,22 +140,29 @@ namespace NYurik.FastBinTimeseries.Test
                     lastStep = step + (f.UniqueIndexes ? 0 : 1);
                 }
 
+                int halfItemCnt = itemCount/2;
                 if (itemCount >= 2)
                 {
-                    f.AppendData(Data(segSize, 0, itemCount/2), true);
+                    f.AppendData(Data(segSize, 0, halfItemCnt), true);
                     TestUtils.CollectionAssertEqual(
-                        Data(segSize, 0, itemCount/2), f.Stream(UtcDateTime.MinValue),
+                        Data(segSize, 0, halfItemCnt), f.Stream(UtcDateTime.MinValue),
                         "nothing before 0 {0}", name);
                 }
 
-                if (itemCount / 2 > 2)
+                if (halfItemCnt > 2)
                 {
+                    // ReSharper disable AccessToDisposedClosure
                     TestUtils.AssertException<BinaryFileException>(
-                        () => f.AppendData(Data(segSize, itemCount/2, itemCount/2 + 1)));
+                        () => f.AppendData(Data(segSize, halfItemCnt - 1, halfItemCnt)));
                     TestUtils.AssertException<BinaryFileException>(
-                        () => f.AppendData(Data(segSize, itemCount/2 - 1, itemCount/2)));
+                        () => f.AppendData(Data(segSize, halfItemCnt - 1, halfItemCnt + 1)));
                     TestUtils.AssertException<BinaryFileException>(
-                        () => f.AppendData(Data(segSize, itemCount/2 - 1, itemCount/2 + 1)));
+                        () => f.AppendData(Data(segSize, halfItemCnt - 2, halfItemCnt - 1)));
+                    TestUtils.AssertException<BinaryFileException>(
+                        () => f.AppendData(Data(segSize, halfItemCnt - 2, halfItemCnt + 1)));
+                    // ReSharper restore AccessToDisposedClosure
+
+                    //var duplIdsData = Data(segSize, 0, halfItemCnt);
                 }
             }
         }
