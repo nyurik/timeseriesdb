@@ -41,10 +41,10 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(b.ItemSize, b2.ItemSize);
 
                 b2.ReadData(0, new ArraySegment<byte>(data2));
-                CollectionAssert.AreEqual(TestUtils.GenerateData(NewByte, data.Length/2, 0), data2);
+                TestUtils.CollectionAssertEqual(TestUtils.GenerateData(NewByte, data.Length/2, 0), data2);
 
                 b2.ReadData(0, new ArraySegment<byte>(data2));
-                CollectionAssert.AreEqual(TestUtils.GenerateData(NewByte, data.Length/2, data.Length/2), data2);
+                TestUtils.CollectionAssertEqual(TestUtils.GenerateData(NewByte, data.Length/2, data.Length/2), data2);
             }
         }
     }

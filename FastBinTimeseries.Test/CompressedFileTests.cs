@@ -63,13 +63,13 @@ namespace NYurik.FastBinTimeseries.Test
                         _empty, f.Stream(UtcDateTime.MinValue, inReverse: true), "empty backward {0}", name);
                     return;
                 }
-
-                Assert.AreEqual(expected[0].a, f.FirstFileIndex, name + " first");
-                Assert.AreEqual(expected[itemCount - 1].a, f.LastFileIndex, "last {0}", name);
-
-                TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), "full forward {0}", name);
-                TestUtils.CollectionAssertEqual(
-                    expectedRev, f.Stream(UtcDateTime.MaxValue, inReverse: true), "full backward {0}", name);
+//
+//                Assert.AreEqual(expected[0].a, f.FirstFileIndex, name + " first");
+//                Assert.AreEqual(expected[itemCount - 1].a, f.LastFileIndex, "last {0}", name);
+//
+//                TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), "full forward {0}", name);
+//                TestUtils.CollectionAssertEqual(
+//                    expectedRev, f.Stream(UtcDateTime.MaxValue, inReverse: true), "full backward {0}", name);
 
                 const int skipStart = 0;
                 const int takeStart = 0;
@@ -82,26 +82,28 @@ namespace NYurik.FastBinTimeseries.Test
                     int maxTake = Math.Min(maxSkipCount, itemCount - maxSkip + 1);
                     for (int take = takeStart; take < maxTake; take++)
                     {
-                        TestUtils.CollectionAssertEqual(
-                            expected.Skip(skip).Take(take), f.Stream(expected[skip].a, maxItemCount: take),
-                            "skip {1} take {2} {0}", name, skip, take);
-
-                        TestUtils.CollectionAssertEqual(
-                            expectedRev.Skip(skip).Take(take),
-                            f.Stream(expectedRev[skip].a, maxItemCount: take, inReverse: true),
-                            "backward skip {1} take {2} {0}", name, skip, take);
-
-                        if (itemCount < take)
-                            TestUtils.CollectionAssertEqual(
-                                expected.Skip(skip).Take(take - 1),
-                                f.Stream(expected[skip].a.AddSeconds(1), maxItemCount: take - 1),
-                                "next tick skip {1} take ({2}-1) {0}", name, skip, take);
+//                        TestUtils.CollectionAssertEqual(
+//                            expected.Skip(skip).Take(take), f.Stream(expected[skip].a, maxItemCount: take),
+//                            "skip {1} take {2} {0}", name, skip, take);
+//
+//                        if (itemCount < take)
+//                            TestUtils.CollectionAssertEqual(
+//                                expected.Skip(skip).Take(take - 1),
+//                                f.Stream(expected[skip].a.AddSeconds(1), maxItemCount: take - 1),
+//                                "next tick skip {1} take ({2}-1) {0}", name, skip, take);
 
                         if (itemCount < skip)
+                        {
+                            TestUtils.CollectionAssertEqual(
+                                expectedRev.Skip(skip - 1).Take(take),
+                                f.Stream(expectedRev[skip].a, maxItemCount: take, inReverse: true),
+                                "backward, existing item, skip {1} take {2} {0}", name, skip, take);
+
                             TestUtils.CollectionAssertEqual(
                                 expectedRev.Skip(skip - 1).Take(take),
                                 f.Stream(expectedRev[skip].a.AddSeconds(-1), maxItemCount: take, inReverse: true),
-                                "next tick backward skip ({1}-1) take {2} {0}", name, skip, take);
+                                "backward, non-existing, skip {1} take {2} {0}", name, skip, take);
+                        }
                     }
                 }
             }

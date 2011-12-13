@@ -31,10 +31,10 @@ namespace NYurik.FastBinTimeseries.Test
                 _DatetimeByte_SeqPk1[] res = f.ReadData(UtcDateTime.MinValue, UtcDateTime.MaxValue, int.MaxValue);
                 TestUtils.AreEqual(newData, res);
 
-                CollectionAssert.AreEqual(newData, f.Stream(UtcDateTime.MinValue));
+                TestUtils.CollectionAssertEqual(newData, f.Stream(UtcDateTime.MinValue));
 
                 Array.Reverse(newData);
-                CollectionAssert.AreEqual(newData, f.Stream(UtcDateTime.MaxValue, inReverse: true));
+                TestUtils.CollectionAssertEqual(newData, f.Stream(UtcDateTime.MaxValue, inReverse: true));
 
                 if (itemCount > 0)
                 {
@@ -50,12 +50,12 @@ namespace NYurik.FastBinTimeseries.Test
                         TestUtils.AreEqual(expected, res);
 
                         List<_DatetimeByte_SeqPk1> res1 = f.Stream(fromInd, untilInd.AddTicks(1)).ToList();
-                        CollectionAssert.AreEqual(expected, res1);
+                        TestUtils.CollectionAssertEqual(expected, res1);
 
                         Array.Reverse(expected);
 
                         List<_DatetimeByte_SeqPk1> res2 = f.Stream(untilInd, fromInd, inReverse: true).ToList();
-                        CollectionAssert.AreEqual(expected, res2);
+                        TestUtils.CollectionAssertEqual(expected, res2);
                     }
                 }
             }
@@ -96,16 +96,13 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         [Test, Combinatorial]
-        public void VariousLengthNonDuplTimeseries([Values(true, false)] bool uniqueTimestamps,
-                                                   [Values(true, false)] bool enableCache)
+        public void VariousLengthNonDuplTimeseries(
+            [Values(0, 1, 10, 100, 1000, 10000)] int itemCount,
+            [Values(true, false)] bool uniqueTimestamps,
+            [Values(true, false)] bool enableCache)
         {
             const int repeatRuns = 10;
-            RunTest(0, repeatRuns, uniqueTimestamps, enableCache);
-            RunTest(1, repeatRuns, uniqueTimestamps, enableCache);
-            RunTest(10, repeatRuns, uniqueTimestamps, enableCache);
-            RunTest(100, repeatRuns, uniqueTimestamps, enableCache);
-            RunTest(1000, repeatRuns, uniqueTimestamps, enableCache);
-            RunTest(10000, repeatRuns, uniqueTimestamps, enableCache);
+            RunTest(itemCount, repeatRuns, uniqueTimestamps, enableCache);
         }
     }
 }

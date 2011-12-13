@@ -65,8 +65,6 @@ namespace NYurik.FastBinTimeseries.Test
                 TimeSpan elapsed = _stopwatch.Elapsed;
                 Console.WriteLine("{0}: Total test time {1}", GetType().Name, elapsed);
                 _stopwatch.Reset();
-//                GC.Collect();
-//                GC.WaitForFullGCComplete(300);
             }
             else
                 _stopwatch.Start();
@@ -78,6 +76,9 @@ namespace NYurik.FastBinTimeseries.Test
         {
             if (RunMode == Mode.OneTime)
             {
+//                GC.Collect();
+//                GC.WaitForFullGCComplete();
+                //GC.WaitForFullGCComplete(300);
                 foreach (string file in Directory.GetFiles(".", "*" + TestFileSuffix, SearchOption.TopDirectoryOnly))
                     File.Delete(file);
             }
