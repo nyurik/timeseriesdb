@@ -110,6 +110,7 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         private void AppendTest(string name, int segSize, int itemCount,
+            Func<int , int , int ,IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data,
                                 Func<string, IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
                                 Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
                                 Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
@@ -132,10 +133,10 @@ namespace NYurik.FastBinTimeseries.Test
                 int lastStep = 0;
                 foreach (int step in new[] {itemCount/10, itemCount/5, itemCount/3, itemCount})
                 {
-                    f.AppendData(Data(segSize, lastStep, step));
+                    f.AppendData(data(segSize, lastStep, step));
 
                     TestUtils.CollectionAssertEqual(
-                        Data(itemCount, 0, step),
+                        data(itemCount, 0, step),
                         f.Stream(UtcDateTime.MinValue),
                         "adding {0} to {1} {2}", lastStep, step, name);
 
@@ -145,9 +146,9 @@ namespace NYurik.FastBinTimeseries.Test
                 int halfItemCnt = itemCount/2;
                 if (itemCount >= 2)
                 {
-                    f.AppendData(Data(segSize, 0, halfItemCnt), true);
+                    f.AppendData(data(segSize, 0, halfItemCnt), true);
                     TestUtils.CollectionAssertEqual(
-                        Data(segSize, 0, halfItemCnt), f.Stream(UtcDateTime.MinValue),
+                        data(segSize, 0, halfItemCnt), f.Stream(UtcDateTime.MinValue),
                         "nothing before 0 {0}", name);
                 }
 
@@ -155,16 +156,16 @@ namespace NYurik.FastBinTimeseries.Test
                 {
                     // ReSharper disable AccessToDisposedClosure
                     TestUtils.AssertException<BinaryFileException>(
-                        () => f.AppendData(Data(segSize, halfItemCnt - 1, halfItemCnt)));
+                        () => f.AppendData(data(segSize, halfItemCnt - 1, halfItemCnt)));
                     TestUtils.AssertException<BinaryFileException>(
-                        () => f.AppendData(Data(segSize, halfItemCnt - 1, halfItemCnt + 1)));
+                        () => f.AppendData(data(segSize, halfItemCnt - 1, halfItemCnt + 1)));
                     TestUtils.AssertException<BinaryFileException>(
-                        () => f.AppendData(Data(segSize, halfItemCnt - 2, halfItemCnt - 1)));
+                        () => f.AppendData(data(segSize, halfItemCnt - 2, halfItemCnt - 1)));
                     TestUtils.AssertException<BinaryFileException>(
-                        () => f.AppendData(Data(segSize, halfItemCnt - 2, halfItemCnt + 1)));
+                        () => f.AppendData(data(segSize, halfItemCnt - 2, halfItemCnt + 1)));
                     // ReSharper restore AccessToDisposedClosure
 
-                    //var duplIdsData = Data(segSize, 0, halfItemCnt);
+                    //var duplIdsData = data(segSize, 0, halfItemCnt);
                 }
             }
         }
@@ -174,21 +175,32 @@ namespace NYurik.FastBinTimeseries.Test
             return TestUtils.GenerateDataStream(_DatetimeByte_SeqPk1.New, segSize, minValue, maxValue);
         }
 
+        private static IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> DataDupl(int segSize, int minValue, int maxValue)
+        {
+            return TestUtils.GenerateDataStream(
+                i => _DatetimeByte_SeqPk1.New((long) (i*0.9)), segSize, minValue, maxValue);
+        }
+
         [Test]
         public void AppendTest(
             [Values(1, 2, 3, 5, 10, 100)] int segSize,
             [Values(0, 1, 2, 3, 4, 5, 10, 100, 10000)] int itemCount,
             [Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 20, 200, 10000)] int blockSizeExtra,
-            [Values(true, false)] bool enableCache)
+            [Values(true, false)] bool enableCache,
+            [Values(true, false)] bool uniqueIndexes)
         {
+            var data = uniqueIndexes
+                           ? Data
+                           : (Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>>) DataDupl;
+
             AppendTest(
                 string.Format(
-                    "in segSize={0}, itemCount={1}, blockSizeExtra={2}, cache={3}", segSize, itemCount, blockSizeExtra,
-                    enableCache),
-                segSize, itemCount,
+                    "in segSize={0}, itemCount={1}, blockSizeExtra={2}, cache={3}, uniqueIndexes={4}", segSize, itemCount, blockSizeExtra,
+                    enableCache, uniqueIndexes),
+                segSize, itemCount, data,
                 fileName =>
                     {
-                        var bf = new BinCompressedFile(fileName) {UniqueIndexes = true};
+                        var bf = new BinCompressedFile(fileName) { UniqueIndexes = uniqueIndexes};
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;
