@@ -110,7 +110,7 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         private void AppendTest(string name, int segSize, int itemCount,
-            Func<int , int , int ,IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data,
+                                Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data,
                                 Func<string, IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
                                 Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
                                 Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
@@ -140,7 +140,7 @@ namespace NYurik.FastBinTimeseries.Test
                         f.Stream(UtcDateTime.MinValue),
                         "adding {0} to {1} {2}", lastStep, step, name);
 
-                    lastStep = step + (f.UniqueIndexes ? 0 : 1);
+                    lastStep = step; // +(f.UniqueIndexes ? 0 : 1);
                 }
 
                 int halfItemCnt = itemCount/2;
@@ -164,9 +164,87 @@ namespace NYurik.FastBinTimeseries.Test
                     TestUtils.AssertException<BinaryFileException>(
                         () => f.AppendData(data(segSize, halfItemCnt - 2, halfItemCnt + 1)));
                     // ReSharper restore AccessToDisposedClosure
-
-                    //var duplIdsData = data(segSize, 0, halfItemCnt);
                 }
+            }
+        }
+
+        private IEnumerable<T> DuplicatesEvery<T>(long start, long until, long duplEvery, Func<long, T> converter)
+        {
+            int cnt = 0;
+            for (long i = start; i < until; i++)
+            {
+                T v = converter(i);
+                yield return v;
+                if (++cnt%duplEvery == 0)
+                    yield return v;
+            }
+        }
+
+        private IEnumerable<int> SameValue(int value)
+        {
+            while (true)
+                yield return value;
+// ReSharper disable FunctionNeverReturns
+        }
+// ReSharper restore FunctionNeverReturns
+
+        private IEnumerable<ArraySegment<T>> Segments<T>(IEnumerable<T> values, IEnumerable<int> segSizes)
+        {
+            using (IEnumerator<T> vals = values.GetEnumerator())
+            {
+                T[] array = null;
+                foreach (int count in segSizes)
+                {
+                    if (array == null || array.Length < count)
+                        array = new T[count];
+
+                    int i;
+                    for (i = 0; i < count; i++)
+                    {
+                        if (!vals.MoveNext())
+                            yield break;
+                        array[i] = vals.Current;
+                    }
+
+                    yield return new ArraySegment<T>(array, 0, i);
+                }
+            }
+        }
+
+        private void AppendDuplTest(string name, int segSize,
+                                    Func<string, IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
+                                    Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
+                                    Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
+        {
+            if (RunMode != Mode.OneTime)
+                Assert.Inconclusive("RunMode={0} is not supported", RunMode);
+
+            string fileName = GetBinFileName();
+            using (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1> f = newFile(fileName))
+            {
+                if (update != null)
+                    update(f);
+
+                init(f);
+
+                IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> dat =
+                    Segments(DuplicatesEvery(0, 2, 1, _DatetimeByte_SeqPk1.New), SameValue(segSize));
+
+                f.AppendData(dat);
+
+                TestUtils.CollectionAssertEqual(
+                    dat, f.Stream(UtcDateTime.MinValue),
+                    "adding dupl start={0}, until={1}, duplEvery={2}, fixedSegments={3} {4}", 0, 2, 1, segSize,
+                    name);
+
+                dat = Segments(DuplicatesEvery(0, 2, 1, _DatetimeByte_SeqPk1.New), SameValue(segSize));
+
+                f.AppendData(dat);
+
+                TestUtils.CollectionAssertEqual(
+                    dat, f.Stream(UtcDateTime.MinValue),
+                    "adding dupl start={0}, until={1}, duplEvery={2}, fixedSegments={3} {4}", 0, 2, 1, segSize,
+                    name);
             }
         }
 
@@ -181,6 +259,38 @@ namespace NYurik.FastBinTimeseries.Test
                 i => _DatetimeByte_SeqPk1.New((long) (i*0.9)), segSize, minValue, maxValue);
         }
 
+//        static void Main(string[] args)
+//        {
+//            var t = new CompressedFileTests();
+//            t.Cleanup();
+//            t.AppendTest(10, 10, 20, false, false);
+//            t.Cleanup();
+//        }
+//
+
+        [Test]
+        public void AppendDuplTest(
+            [Values(1, 2, 3, 5, 10, 100)] int segSize,
+            [Values(0, 1, 2, 3, 11, 200, 10000)] int blockSizeExtra,
+            [Values(true, false)] bool enableCache)
+        {
+            AppendDuplTest(
+                string.Format(
+                    "in segSize={0}, blockSizeExtra={1}, cache={2}", 
+                    segSize, blockSizeExtra, enableCache),
+                segSize, 
+                fileName =>
+                    {
+                        var bf = new BinCompressedFile(fileName) {UniqueIndexes = false};
+
+                        bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
+                                       + blockSizeExtra;
+                        return bf;
+                    },
+                f => ((BinCompressedFile) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f => ((BinCompressedFile) f).InitializeNewFile());
+        }
+
         [Test]
         public void AppendTest(
             [Values(1, 2, 3, 5, 10, 100)] int segSize,
@@ -189,18 +299,26 @@ namespace NYurik.FastBinTimeseries.Test
             [Values(true, false)] bool enableCache,
             [Values(true, false)] bool uniqueIndexes)
         {
-            var data = uniqueIndexes
-                           ? Data
-                           : (Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>>) DataDupl;
+            Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data = uniqueIndexes
+                                                                                            ? Data
+                                                                                            : (
+                                                                                              Func
+                                                                                                  <int, int, int,
+                                                                                                  IEnumerable
+                                                                                                  <
+                                                                                                  ArraySegment
+                                                                                                  <_DatetimeByte_SeqPk1>
+                                                                                                  >>) DataDupl;
 
             AppendTest(
                 string.Format(
-                    "in segSize={0}, itemCount={1}, blockSizeExtra={2}, cache={3}, uniqueIndexes={4}", segSize, itemCount, blockSizeExtra,
+                    "in segSize={0}, itemCount={1}, blockSizeExtra={2}, cache={3}, uniqueIndexes={4}", segSize,
+                    itemCount, blockSizeExtra,
                     enableCache, uniqueIndexes),
                 segSize, itemCount, data,
                 fileName =>
                     {
-                        var bf = new BinCompressedFile(fileName) { UniqueIndexes = uniqueIndexes};
+                        var bf = new BinCompressedFile(fileName) {UniqueIndexes = uniqueIndexes};
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;

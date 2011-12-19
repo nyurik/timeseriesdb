@@ -135,7 +135,6 @@
     <Compile Include="Initializable.cs" />
     <Compile Include="Serializers\BlockSerializer\BinBlockSerializer.cs" />
     <Compile Include="Buffer.cs" />
-    <Compile Include="Serializers\BlockSerializer\DeltaSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\DynamicSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\FieldAttribute.cs" />
     <Compile Include="Serializers\BlockSerializer\BaseField.cs" />
