@@ -72,7 +72,6 @@
     <Compile Include="BlockSerializer\BinBlockSerializerTests.cs" />
     <Compile Include="BinIndexedFileCoreTests.cs" />
     <Compile Include="BlockSerializer\ComplexTypeTests.cs" />
-    <Compile Include="BlockSerializer\DeltaSerializerTests.cs" />
     <Compile Include="BlockSerializer\SerializtionTestsBase.cs" />
     <Compile Include="BlockSerializer\StreamCodecTests.cs" />
     <Compile Include="CompressedFileTests.cs" />

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using NUnit.Framework;
+using NYurik.FastBinTimeseries.Serializers;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
 namespace NYurik.FastBinTimeseries.Test.BlockSerializer
@@ -123,103 +124,181 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             const int valCount = bufSize/10;
             const int runs = 100;
 
-            var codec = new CodecWriter(bufSize);
-
-            ulong[] valList = TestValuesGenerator().Take(valCount).ToArray();
-            foreach (ulong val in valList)
-                codec.WriteUnsignedValue(val);
-
-            // precache
-            fixed (byte* buff2 = codec.Buffer)
+            Stopwatch sw;
+            using (var codec = new CodecWriter(bufSize))
             {
-                int pos = 0;
-                CodecReader.ReadSignedValueUnsafe(buff2, ref pos);
-                CodecReader.ReadUnsignedValueUnsafe(buff2, ref pos);
-            }
+                ulong[] valList = TestValuesGenerator().Take(valCount).ToArray();
+                foreach (ulong val in valList)
+                    codec.WriteUnsignedValue(val);
 
-            Stopwatch sw = Stopwatch.StartNew();
-            for (int i = 0; i < runs; i++)
-            {
-                fixed (byte* pbuff = codec.Buffer)
+                // precache
+                fixed (byte* buff2 = codec.Buffer)
                 {
                     int pos = 0;
-                    for (int r = 0; r < valCount; r++)
-                        CodecReader.ReadSignedValueUnsafe(pbuff, ref pos);
+                    CodecReader.ReadSignedValueUnsafe(buff2, ref pos);
+                    CodecReader.ReadUnsignedValueUnsafe(buff2, ref pos);
                 }
-            }
-            Console.WriteLine("{0} ReadSignedValueUnsafe() time", sw.Elapsed);
 
-            sw.Restart();
-            for (int i = 0; i < runs; i++)
-            {
-                fixed (byte* pbuff = codec.Buffer)
+                sw = Stopwatch.StartNew();
+                for (int i = 0; i < runs; i++)
                 {
-                    int pos = 0;
-                    for (int r = 0; r < valCount; r++)
-                        CodecReader.ReadUnsignedValueUnsafe(pbuff, ref pos);
+                    fixed (byte* pbuff = codec.Buffer)
+                    {
+                        int pos = 0;
+                        for (int r = 0; r < valCount; r++)
+                            CodecReader.ReadSignedValueUnsafe(pbuff, ref pos);
+                    }
+                }
+                Console.WriteLine("{0} ReadSignedValueUnsafe() time", sw.Elapsed);
+
+                sw.Restart();
+                for (int i = 0; i < runs; i++)
+                {
+                    fixed (byte* pbuff = codec.Buffer)
+                    {
+                        int pos = 0;
+                        for (int r = 0; r < valCount; r++)
+                            CodecReader.ReadUnsignedValueUnsafe(pbuff, ref pos);
+                    }
                 }
             }
             Console.WriteLine("{0} ReadUnsignedValueUnsafe() time", sw.Elapsed);
         }
 
         [Test]
-        public unsafe void OneValueTest()
+        public unsafe void ErrorValuesTests()
         {
-            var codec = new CodecWriter(10);
-            const long signedVal = unchecked((long) 0xFFFFFFFFFF000000UL);
-            codec.Count = 0;
-            codec.WriteSignedValue(signedVal);
+            var buf = new byte[10];
+            for (int i = 0; i < buf.Length; i++)
+                buf[i] = 0xFF;
 
-            fixed (byte* pbuf = codec.Buffer)
+            int pos = 0;
+
+            // ReSharper disable AccessToModifiedClosure
+            TestUtils.AssertException<SerializerException>(
+                () =>
+                    {
+                        fixed (byte* pbuf = buf)
+                            CodecReader.ReadSignedValueUnsafe(pbuf, ref pos);
+                    });
+            // ReSharper restore AccessToModifiedClosure
+
+            Assert.AreEqual(0, pos, "ReadSignedValueUnsafe pos shifted");
+
+            TestUtils.AssertException<SerializerException>(
+                () =>
+                    {
+                        fixed (byte* pbuf = buf)
+                            return CodecReader.ReadUnsignedValueUnsafe(
+                                pbuf, ref pos);
+                    });
+
+            Assert.AreEqual(0, pos, "ReadSignedValueUnsafe pos shifted");
+
+
+            using (var codecRdr = new CodecReader(new ArraySegment<byte>(buf)))
             {
-                int pos = 0;
-                long v = CodecReader.ReadSignedValueUnsafe(pbuf, ref pos);
+                // ReSharper disable AccessToDisposedClosure
+                TestUtils.AssertException<SerializerException>(() => codecRdr.ReadSignedValue());
+                // ReSharper restore AccessToDisposedClosure
+                Assert.AreEqual(0, codecRdr.BufferPos, "ReadSignedValue pos shifted");
 
-                if (signedVal != v)
-                    Assert.Fail("Failed signed long {0:X}", signedVal);
+                // ReSharper disable AccessToDisposedClosure
+                TestUtils.AssertException<SerializerException>(() => codecRdr.ReadUnsignedValue());
+                // ReSharper restore AccessToDisposedClosure
+                Assert.AreEqual(0, codecRdr.BufferPos, "ReadUnsignedValue pos shifted");
             }
         }
 
-        [Test, Explicit, Category("Long test")]
-        public unsafe void SignedValues()
+        [Test]
+        public unsafe void OneValueTest([Values(unchecked((long) 0xFFFFFFFFFF000000UL))] long value)
         {
-            var codec = new CodecWriter(BufferSize);
-
-            foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
+            using (var codec = new CodecWriter(10))
             {
                 codec.Count = 0;
-                foreach (long val in valList)
-                    codec.WriteSignedValue(val);
+                codec.WriteSignedValue(value);
 
                 fixed (byte* pbuf = codec.Buffer)
                 {
                     int pos = 0;
-                    foreach (long val in valList)
-                        if (val != CodecReader.ReadSignedValueUnsafe(pbuf, ref pos))
-                            Assert.Fail("Failed ulong {0:X}", val);
-                    codec.Count = pos;
+                    long v = CodecReader.ReadSignedValueUnsafe(pbuf, ref pos);
+
+                    if (value != v)
+                        Assert.Fail("Failed signed long {0:X}", value);
+                }
+
+                using (var codecRdr = new CodecReader(codec.UsedBuffer))
+                {
+                    long v = codecRdr.ReadSignedValue();
+
+                    if (value != v)
+                        Assert.Fail("Failed signed long {0:X}", value);
                 }
             }
         }
 
         [Test, Explicit, Category("Long test")]
-        public unsafe void UnsignedValues()
+        public unsafe void SignedValuesUnsafe()
         {
-            var codec = new CodecWriter(BufferSize);
-
-            foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
+            using (var codec = new CodecWriter(BufferSize))
             {
-                codec.Count = 0;
-                foreach (ulong val in valList)
-                    codec.WriteUnsignedValue(val);
-
-                fixed (byte* pbuf = codec.Buffer)
+                foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
                 {
-                    int pos = 0;
+                    codec.Count = 0;
+                    foreach (long val in valList)
+                        codec.WriteSignedValue(val);
+
+                    fixed (byte* pbuf = codec.Buffer)
+                    {
+                        int pos = 0;
+                        foreach (long val in valList)
+                            if (val != CodecReader.ReadSignedValueUnsafe(pbuf, ref pos))
+                                Assert.Fail("Failed ulong {0:X}", val);
+                        codec.Count = pos;
+                    }
+                }
+            }
+        }
+
+        [Test, Explicit, Category("Long test")]
+        public void UnsignedValues()
+        {
+            using (var codec = new CodecWriter(BufferSize))
+            using (var codecRdr = new CodecReader(codec.UsedBuffer))
+            {
+                foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
+                {
+                    codec.Count = 0;
                     foreach (ulong val in valList)
-                        if (val != CodecReader.ReadUnsignedValueUnsafe(pbuf, ref pos))
+                        codec.WriteUnsignedValue(val);
+
+                    codecRdr.AttachBuffer(codec.UsedBuffer);
+                    foreach (ulong val in valList)
+                        if (val != codecRdr.ReadUnsignedValue())
                             Assert.Fail("Failed ulong {0:X}", val);
-                    codec.Count = pos;
+                }
+            }
+        }
+
+        [Test, Explicit, Category("Long test")]
+        public unsafe void UnsignedValuesUnsafe()
+        {
+            using (var codec = new CodecWriter(BufferSize))
+            {
+                foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
+                {
+                    codec.Count = 0;
+                    foreach (ulong val in valList)
+                        codec.WriteUnsignedValue(val);
+
+                    fixed (byte* pbuf = codec.Buffer)
+                    {
+                        int pos = 0;
+                        foreach (ulong val in valList)
+                            if (val != CodecReader.ReadUnsignedValueUnsafe(pbuf, ref pos))
+                                Assert.Fail("Failed ulong {0:X}", val);
+                        codec.Count = pos;
+                    }
                 }
             }
         }

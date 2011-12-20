@@ -34,32 +34,34 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         public void Run<T>(IEnumerable<T> values, string name = null,
                            Action<BaseField> updateSrlzr = null, Func<T, T, bool> comparer = null)
         {
-            var codec = new CodecWriter(10000);
-            DynamicSerializer<T> ds = DynamicSerializer<T>.CreateDefault();
-
-            try
+            using (var codec = new CodecWriter(10000))
             {
-                if (updateSrlzr != null)
-                    updateSrlzr(ds.RootField);
+                DynamicSerializer<T> ds = DynamicSerializer<T>.CreateDefault();
 
-                ds.MakeReadonly();
+                try
+                {
+                    if (updateSrlzr != null)
+                        updateSrlzr(ds.RootField);
 
-                TestUtils.CollectionAssertEqual(
-                    // ReSharper disable PossibleMultipleEnumeration
-                    values, RoundTrip(ds, codec, values), comparer, "{0} {1}", typeof (T).Name, name);
-            }
-            catch (Exception x)
-            {
-                string msg = string.Format(
-                    "codec.Count={0}, codec.Buffer[pos-1]={1}",
-                    codec.Count,
-                    codec.Count > 0
-                        ? codec.Buffer[codec.Count - 1].ToString(CultureInfo.InvariantCulture)
-                        : "n/a");
-                if (x.GetType() == typeof (OverflowException))
-                    throw new OverflowException(msg, x);
+                    ds.MakeReadonly();
 
-                throw new SerializerException(x, msg);
+                    TestUtils.CollectionAssertEqual(
+                        // ReSharper disable PossibleMultipleEnumeration
+                        values, RoundTrip(ds, codec, values), comparer, "{0} {1}", typeof (T).Name, name);
+                }
+                catch (Exception x)
+                {
+                    string msg = string.Format(
+                        "codec.Count={0}, codec.Buffer[pos-1]={1}",
+                        codec.Count,
+                        codec.Count > 0
+                            ? codec.Buffer[codec.Count - 1].ToString(CultureInfo.InvariantCulture)
+                            : "n/a");
+                    if (x.GetType() == typeof (OverflowException))
+                        throw new OverflowException(msg, x);
+
+                    throw new SerializerException(x, msg);
+                }
             }
         }
 
@@ -79,8 +81,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
                         codec.Count = 0;
                         buff.Count = 0;
-                        ds.DeSerialize(
-                            new CodecReader(new ArraySegment<byte>(codec.Buffer, 0, codec.Count)), buff, int.MaxValue);
+                        using (var cdcRdr = new CodecReader(new ArraySegment<byte>(codec.Buffer, 0, codec.Count)))
+                            ds.DeSerialize(cdcRdr, buff, int.MaxValue);
                     }
                     catch (Exception x)
                     {

@@ -63,13 +63,13 @@ namespace NYurik.FastBinTimeseries.Test
                         _empty, f.Stream(UtcDateTime.MinValue, inReverse: true), "empty backward {0}", name);
                     return;
                 }
-//
-//                Assert.AreEqual(expected[0].a, f.FirstFileIndex, name + " first");
-//                Assert.AreEqual(expected[itemCount - 1].a, f.LastFileIndex, "last {0}", name);
-//
-//                TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), "full forward {0}", name);
-//                TestUtils.CollectionAssertEqual(
-//                    expectedRev, f.Stream(UtcDateTime.MaxValue, inReverse: true), "full backward {0}", name);
+
+                Assert.AreEqual(expected[0].a, f.FirstFileIndex, name + " first");
+                Assert.AreEqual(expected[itemCount - 1].a, f.LastFileIndex, "last {0}", name);
+
+                TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), "full forward {0}", name);
+                TestUtils.CollectionAssertEqual(
+                    expectedRev, f.Stream(UtcDateTime.MaxValue, inReverse: true), "full backward {0}", name);
 
                 const int skipStart = 0;
                 const int takeStart = 0;
@@ -82,15 +82,15 @@ namespace NYurik.FastBinTimeseries.Test
                     int maxTake = Math.Min(maxSkipCount, itemCount - maxSkip + 1);
                     for (int take = takeStart; take < maxTake; take++)
                     {
-//                        TestUtils.CollectionAssertEqual(
-//                            expected.Skip(skip).Take(take), f.Stream(expected[skip].a, maxItemCount: take),
-//                            "skip {1} take {2} {0}", name, skip, take);
-//
-//                        if (itemCount < take)
-//                            TestUtils.CollectionAssertEqual(
-//                                expected.Skip(skip).Take(take - 1),
-//                                f.Stream(expected[skip].a.AddSeconds(1), maxItemCount: take - 1),
-//                                "next tick skip {1} take ({2}-1) {0}", name, skip, take);
+                        TestUtils.CollectionAssertEqual(
+                            expected.Skip(skip).Take(take), f.Stream(expected[skip].a, maxItemCount: take),
+                            "skip {1} take {2} {0}", name, skip, take);
+
+                        if (itemCount < take)
+                            TestUtils.CollectionAssertEqual(
+                                expected.Skip(skip).Take(take - 1),
+                                f.Stream(expected[skip].a.AddSeconds(1), maxItemCount: take - 1),
+                                "next tick skip {1} take ({2}-1) {0}", name, skip, take);
 
                         if (itemCount < skip)
                         {
@@ -180,13 +180,15 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        // ReSharper disable FunctionNeverReturns
+
         private IEnumerable<int> SameValue(int value)
         {
             while (true)
                 yield return value;
-// ReSharper disable FunctionNeverReturns
         }
-// ReSharper restore FunctionNeverReturns
+
+        // ReSharper restore FunctionNeverReturns
 
         private IEnumerable<ArraySegment<T>> Segments<T>(IEnumerable<T> values, IEnumerable<int> segSizes)
         {
@@ -276,9 +278,9 @@ namespace NYurik.FastBinTimeseries.Test
         {
             AppendDuplTest(
                 string.Format(
-                    "in segSize={0}, blockSizeExtra={1}, cache={2}", 
+                    "in segSize={0}, blockSizeExtra={1}, cache={2}",
                     segSize, blockSizeExtra, enableCache),
-                segSize, 
+                segSize,
                 fileName =>
                     {
                         var bf = new BinCompressedFile(fileName) {UniqueIndexes = false};
@@ -344,6 +346,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;
+                        bf.ValidateOnRead = true;
                         return bf;
                     },
                 f => ((BinCompressedFile) f).BinarySearchCacheSize = enableCache ? 0 : -1,

@@ -53,6 +53,8 @@ namespace NYurik.FastBinTimeseries
         private DynamicSerializer<TVal> _serializer;
         private bool _uniqueIndexes;
 
+        public bool ValidateOnRead { get; set; }
+
         public int BlockSize
         {
             get { return _blockSize; }
@@ -343,70 +345,80 @@ namespace NYurik.FastBinTimeseries
             long firstItemIdx = firstBlockInd*BlockSize + (inReverse ? firstBlockSize - 1 : 0);
 
             CodecReader codec = null;
-
-            foreach (var retBuf in 
-                (bufferProvider
-                 ?? (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
-                        .YieldMaxGrowingBuffer(
-                            maxItemCount, MinPageSize/ItemSize, 5, MaxLargePageSize/ItemSize)))
+            try
             {
-                foreach (var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs, cachedCount: cachedFileCount))
+                foreach (var retBuf in
+                    (bufferProvider
+                     ?? (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
+                            .YieldMaxGrowingBuffer(
+                                maxItemCount, MinPageSize / ItemSize, 5, MaxLargePageSize / ItemSize)))
                 {
-                    if (codec == null)
-                        codec = new CodecReader(seg);
-                    else
-                        codec.AttachBuffer(seg);
-
-                    // ignore suggested count, fill in as much as possible
-                    retBuf.Count = 0;
-
-                    long blocks = CalcBlockCount(seg.Count);
-                    for (int i = 0; i < blocks; i++)
+                    foreach (
+                        var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs, cachedCount: cachedFileCount))
                     {
-                        codec.BufferPos = i*BlockSize;
-                        FieldSerializer.DeSerialize(codec, retBuf, int.MaxValue);
-                    }
+                        if (codec == null)
+                            codec = new CodecReader(seg);
+                        else
+                            codec.AttachBuffer(seg);
 
-                    // todo: search should only be performed on first iteration
-                    int pos = retBuf.Array.BinarySearch(
-                        firstInd, (val, ind) => IndexAccessor(val).CompareTo(ind),
-                        UniqueIndexes ? ListExtensions.Find.AnyEqual : ListExtensions.Find.FirstEqual, 0,
-                        retBuf.Count);
+                        // ignore suggested count, fill in as much as possible
+                        retBuf.Count = 0;
 
-                    int count, offset;
-                    if (inReverse)
-                    {
-                        offset = 0;
-                        count = pos < 0 ? ~pos : pos + 1;
-                        if (count > maxItemCount)
+                        long blocks = CalcBlockCount(seg.Count);
+                        for (int i = 0; i < blocks; i++)
                         {
-                            int shrinkBy = count - (int) maxItemCount;
-                            offset += shrinkBy;
-                            count -= shrinkBy;
+                            codec.BufferPos = i * BlockSize;
+                            FieldSerializer.DeSerialize(codec, retBuf, int.MaxValue);
+                            if (ValidateOnRead)
+                                codec.Validate(BlockSize);
                         }
-                    }
-                    else
-                    {
-                        offset = pos < 0 ? ~pos : pos;
-                        count = retBuf.Count - offset;
-                        if (count > maxItemCount)
-                            count = (int) maxItemCount;
+
+                        // todo: search should only be performed on first iteration
+                        int pos = retBuf.Array.BinarySearch(
+                            firstInd, (val, ind) => IndexAccessor(val).CompareTo(ind),
+                            UniqueIndexes ? ListExtensions.Find.AnyEqual : ListExtensions.Find.FirstEqual, 0,
+                            retBuf.Count);
+
+                        int count, offset;
+                        if (inReverse)
+                        {
+                            offset = 0;
+                            count = pos < 0 ? ~pos : pos + 1;
+                            if (count > maxItemCount)
+                            {
+                                int shrinkBy = count - (int)maxItemCount;
+                                offset += shrinkBy;
+                                count -= shrinkBy;
+                            }
+                        }
+                        else
+                        {
+                            offset = pos < 0 ? ~pos : pos;
+                            count = retBuf.Count - offset;
+                            if (count > maxItemCount)
+                                count = (int)maxItemCount;
+                        }
+
+                        if (count > 0)
+                        {
+                            maxItemCount -= count;
+                            yield return new ArraySegment<TVal>(retBuf.Array, offset, count);
+
+                            if (maxItemCount <= 0)
+                                yield break;
+                        }
+
+                        //                    if (oneBlockOnly)
+                        //                        yield break;
                     }
 
-                    if (count > 0)
-                    {
-                        maxItemCount -= count;
-                        yield return new ArraySegment<TVal>(retBuf.Array, offset, count);
-
-                        if (maxItemCount <= 0)
-                            yield break;
-                    }
-
-//                    if (oneBlockOnly)
-//                        yield break;
+                    yield break;
                 }
-
-                yield break;
+            }
+            finally
+            {
+                if (codec != null)
+                    codec.Dispose();
             }
         }
 
@@ -460,10 +472,8 @@ namespace NYurik.FastBinTimeseries
                         throw new InvalidOperationException(
                             "Logic error: seg.Count " + seg.Count + " > BlockSize " + BlockSize);
 
-                    var codec = new CodecReader(seg);
-
-                    // InReverse we always decode the whole block
-                    FieldSerializer.DeSerialize(codec, retBuf, inReverse ? int.MaxValue : 1);
+                    using (var codec = new CodecReader(seg))
+                        FieldSerializer.DeSerialize(codec, retBuf, inReverse ? int.MaxValue : 1);
 
                     index = IndexAccessor(inReverse ? retBuf.Array[retBuf.Count - 1] : retBuf.Array[0]);
                     return true;
@@ -562,18 +572,20 @@ namespace NYurik.FastBinTimeseries
 
         private IEnumerable<ArraySegment<byte>> SerializeStream(IEnumerator<TVal> mergedIter)
         {
-            var codec = new CodecWriter(BlockSize);
-            while (true)
+            using (var codec = new CodecWriter(BlockSize))
             {
-                codec.Count = 0;
-                bool hasMore = FieldSerializer.Serialize(codec, mergedIter);
-                if (codec.Count == 0)
-                    throw new SerializerException("Internal serializer error: buffer is empty");
+                while (true)
+                {
+                    codec.Count = 0;
+                    bool hasMore = FieldSerializer.Serialize(codec, mergedIter);
+                    if (codec.Count == 0)
+                        throw new SerializerException("Internal serializer error: buffer is empty");
 
-                yield return codec.UsedBuffer;
+                    yield return codec.UsedBuffer;
 
-                if (!hasMore)
-                    break;
+                    if (!hasMore)
+                        break;
+                }
             }
         }
 

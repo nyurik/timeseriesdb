@@ -121,7 +121,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                                             res64 |= (tmp64 & 0x7f) << 7*8;
                                             if ((tmp64 = buff[p + 9]) > 127)
                                             {
-                                                pos = p + 10;
                                                 ThrowOverflow();
                                                 return 0;
                                             }
@@ -250,7 +249,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                                             res64 |= (tmp64 & 0x7f) << 7*8;
                                             if ((tmp64 = buff[p + 9]) > 127)
                                             {
-                                                pos = p + 10;
                                                 ThrowOverflow();
                                                 return 0;
                                             }
@@ -357,7 +355,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                                             res64 |= (tmp64 & 0x7f) << 7 * 8;
                                             if ((tmp64 = buff[p + 9]) > 127)
                                             {
-                                                _bufferPos = p + 10;
                                                 ThrowOverflow();
                                                 return 0;
                                             }
@@ -487,7 +484,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                                             res64 |= (tmp64 & 0x7f) << 7*8;
                                             if ((tmp64 = buff[p + 9]) > 127)
                                             {
-                                                _bufferPos = p + 10;
                                                 ThrowOverflow();
                                                 return 0;
                                             }
@@ -510,6 +506,21 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         private static void ThrowOverflow()
         {
             throw new SerializerException("64bit value read overflow");
+        }
+
+        public void Validate(int blockSize)
+        {
+            var pos = FastBinFileUtils.RoundDownToMultiple(_bufferPos, blockSize);
+            if (pos == _bufferPos)
+                throw new SerializerException("Cannot validate when BlockPos={0}, blockSize={1}", _bufferPos, blockSize);
+            var dataSize = _bufferPos - pos;
+            var hash = HashAlgorithm.ComputeHash(_buffer, pos, dataSize);
+            int hashSize = hash.Length;
+            if (hashSize >= blockSize - dataSize)
+                hashSize = blockSize - dataSize;
+            for (int i = 0; i < hashSize; i++)
+                if (hash[i] != _buffer[_bufferPos + i])
+                    throw new SerializerException("Block validation failed, data might be corrupted");
         }
     }
 }

@@ -1,12 +1,14 @@
 using System;
+using System.Security.Cryptography;
 using JetBrains.Annotations;
+
 #if DEBUG_SERIALIZER
 
 #endif
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    public class CodecBase
+    public class CodecBase : IDisposable
     {
         public const byte MaxBytesFor64 = 64/7 + 1;
         public const byte MaxBytesFor32 = 32/7 + 1;
@@ -16,6 +18,13 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         /// Each block will have at least this many bytes reserved for hash value + UInt32 (count)
         /// </summary>
         public const int ReservedSpace = MaxBytesFor32 + 1;
+
+        private HashAlgorithm _hashAlgorithm;
+
+        protected HashAlgorithm HashAlgorithm
+        {
+            get { return _hashAlgorithm ?? (_hashAlgorithm = new MD5CryptoServiceProvider()); }
+        }
 
         protected int ValidateCount(ulong count)
         {
@@ -57,6 +66,18 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             values[values.Length - 1] = Tuple.Create(name, position, v);
         }
 #endif
+
+        #endregion
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            HashAlgorithm ha = HashAlgorithm;
+            _hashAlgorithm = null;
+            if (ha != null)
+                ha.Dispose();
+        }
 
         #endregion
     }

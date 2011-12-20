@@ -1,17 +1,15 @@
 using System;
-using System.Security.Cryptography;
 using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    public class CodecWriter : CodecBase, IDisposable
+    public class CodecWriter : CodecBase
     {
         /// All buffers are created slightly bigger than needed so that WriteOperations do not need to check for buffer end for every byte
         private const int PaddingSize = MaxBytesFor64;
 
         public readonly byte[] Buffer;
         public readonly int BufferSize;
-        private readonly HashAlgorithm _hashAlgorithm;
         private int _count;
 
         /// <summary> Create writing codec. The internal buffer is padded with extra space. </summary>
@@ -21,7 +19,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 throw new ArgumentOutOfRangeException("bufferSize", bufferSize, "Must be > " + ReservedSpace);
             BufferSize = bufferSize;
             Buffer = new byte[bufferSize + PaddingSize];
-            _hashAlgorithm = new MD5CryptoServiceProvider();
         }
 
         public int Count
@@ -57,7 +54,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             Array.Copy(Buffer, _count, Buffer, 0, tmp);
 
             // Write as many bytes as would fit of the MD5 signature
-            byte[] hash = _hashAlgorithm.ComputeHash(Buffer, 0, _count);
+            byte[] hash = HashAlgorithm.ComputeHash(Buffer, 0, _count);
             int hashSize = hash.Length;
             if (hashSize >= BufferSize - _count)
                 hashSize = BufferSize - _count;
@@ -177,15 +174,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 throw new SerializerException(
                     "Unable to perform write operation requiring {0} bytes - buffer[{1}] is {2} bytes full",
                     neededSpace, BufferSize, Count);
-        }
-
-        #endregion
-
-        #region IDisposable Members
-
-        public void Dispose()
-        {
-            _hashAlgorithm.Dispose();
         }
 
         #endregion
