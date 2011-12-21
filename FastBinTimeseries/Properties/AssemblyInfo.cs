@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("FastBinTimeseries")]
-[assembly: AssemblyCopyright("Copyright ©  2009")]
+[assembly: AssemblyCopyright("Copyright © Yuri Astrakhan 2009-2011")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
