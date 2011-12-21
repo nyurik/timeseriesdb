@@ -1,4 +1,5 @@
 #region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,6 +19,7 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 using System;
@@ -348,10 +350,10 @@ namespace NYurik.FastBinTimeseries
                 {
                     fileSize = ItemIdxToOffset(cachedCount);
                     fileCount = cachedCount;
-                    
+
                     // TODO: delete
                     bool isAligned;
-                    if(fileCount != CalculateItemCountFromFilePosition(fileSize, out isAligned))
+                    if (fileCount != CalculateItemCountFromFilePosition(fileSize, out isAligned))
                         throw new Exception();
                 }
             }
@@ -410,7 +412,8 @@ namespace NYurik.FastBinTimeseries
                     useMemMappedAccess = UseMemoryMappedAccess(readSize, false);
 
                 int read = PerformUnsafeBlockAccess(
-                    readBlockFrom, false, new ArraySegment<T>(buffer.Array, 0, buffer.Count), fileSize, useMemMappedAccess.Value);
+                    readBlockFrom, false, new ArraySegment<T>(buffer.Array, 0, buffer.Count), fileSize,
+                    useMemMappedAccess.Value);
 
                 if (enumerateInReverse)
                 {
@@ -483,7 +486,7 @@ namespace NYurik.FastBinTimeseries
             // Have to call Count on every access 
             do
             {
-                var seg = streamEnmr.Current;
+                ArraySegment<T> seg = streamEnmr.Current;
                 if (seg.Count == 0)
                     continue;
 

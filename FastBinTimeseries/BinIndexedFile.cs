@@ -1,4 +1,5 @@
 #region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,6 +19,7 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 using System;
@@ -64,7 +66,8 @@ namespace NYurik.FastBinTimeseries
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount"></param>
         public IEnumerable<ArraySegment<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse,
-                                                           IEnumerable<Buffer<T>> bufferProvider = null, long maxItemCount = long.MaxValue)
+                                                           IEnumerable<Buffer<T>> bufferProvider = null,
+                                                           long maxItemCount = long.MaxValue)
         {
             return PerformStreaming(firstItemIdx, enumerateInReverse, bufferProvider, maxItemCount);
         }
@@ -76,7 +79,7 @@ namespace NYurik.FastBinTimeseries
         /// <param name="firstItemIdx">The index of the first element in the stream. The file will be truncated if the value is less than or equal to Count</param>
         public void WriteStream(IEnumerable<ArraySegment<T>> stream, long firstItemIdx = long.MaxValue)
         {
-            using (var streamEnmr = stream.GetEnumerator())
+            using (IEnumerator<ArraySegment<T>> streamEnmr = stream.GetEnumerator())
                 if (streamEnmr.MoveNext())
                     PerformWriteStreaming(streamEnmr, firstItemIdx);
         }

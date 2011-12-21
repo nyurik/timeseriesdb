@@ -1,4 +1,5 @@
 ﻿#region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,6 +19,7 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer

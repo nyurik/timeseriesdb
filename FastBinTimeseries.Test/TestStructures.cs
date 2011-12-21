@@ -1,4 +1,5 @@
 #region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,10 +19,10 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using NYurik.FastBinTimeseries.CommonCode;
@@ -455,8 +456,8 @@ namespace NYurik.FastBinTimeseries.Test
     {
         private const int ArrayLenA = 3;
         private const int ArrayLenB = 4;
-        public unsafe fixed byte a [ArrayLenA];
-        private unsafe fixed byte b [ArrayLenB];
+        public unsafe fixed byte a[ArrayLenA];
+        private unsafe fixed byte b[ArrayLenB];
 
         #region Implementation
 

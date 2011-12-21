@@ -1,4 +1,5 @@
 #region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,6 +19,7 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 using System;
@@ -39,9 +41,13 @@ namespace NYurik.FastBinTimeseries.Test
         [UsedImplicitly]
         private struct GenType<T>
         {
+            #region Nested type: GenSubType
+
             public struct GenSubType
             {
             }
+
+            #endregion
         }
 
         [UsedImplicitly]
@@ -76,8 +82,6 @@ namespace NYurik.FastBinTimeseries.Test
 
             TestUtils.AssertException<SerializerException>(
                 () => DynamicCodeFactory.Instance.Value.CreateSerializer<ValTypeWithGen>());
-
-
         }
     }
 }

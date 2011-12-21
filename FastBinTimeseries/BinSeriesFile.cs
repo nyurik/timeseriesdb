@@ -1,4 +1,5 @@
 #region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,6 +19,7 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 using System;
@@ -138,6 +140,8 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+        #region IEnumerableFeed<TInd,TVal> Members
+
         public TInd? FirstFileIndex
         {
             get
@@ -147,7 +151,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_firstIndex == null && count > 0)
                 {
-                    var seg = PerformStreaming(0, false, maxItemCount: 1).FirstOrDefault();
+                    ArraySegment<TVal> seg = PerformStreaming(0, false, maxItemCount: 1).FirstOrDefault();
                     if (seg.Count > 0)
                         _firstIndex = IndexAccessor(seg.Array[0]);
                 }
@@ -164,7 +168,7 @@ namespace NYurik.FastBinTimeseries
 
                 if (_lastIndex == null && count > 0)
                 {
-                    var seg = PerformStreaming(count - 1, false, maxItemCount: 1).FirstOrDefault();
+                    ArraySegment<TVal> seg = PerformStreaming(count - 1, false, maxItemCount: 1).FirstOrDefault();
                     if (seg.Count > 0)
                         _lastIndex = IndexAccessor(seg.Array[0]);
                 }
@@ -182,20 +186,32 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        #region IEnumerableFeed<TInd,TVal> Members
-
         /// <summary>
         /// A delegate to a function that extracts index of a given item
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
-        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false, IEnumerable<Buffer<TVal>> bufferProvider = null, long maxItemCount = long.MaxValue)
+        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false,
+                                                              IEnumerable<Buffer<TVal>> bufferProvider = null,
+                                                              long maxItemCount = long.MaxValue)
         {
             long index = FirstIndexToPos(fromInd);
             if (inReverse)
                 index--;
 
             return PerformStreaming(index, inReverse, bufferProvider, maxItemCount);
+        }
+
+        public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
+        {
+            if (bufferStream == null)
+                throw new ArgumentNullException("bufferStream");
+
+            using (
+                IEnumerator<ArraySegment<TVal>> streamEnmr =
+                    ProcessWriteStream(bufferStream, allowFileTruncation).GetEnumerator())
+                if (streamEnmr.MoveNext())
+                    PerformWriteStreaming(streamEnmr);
         }
 
         #endregion
@@ -374,16 +390,6 @@ namespace NYurik.FastBinTimeseries
             }
 
             return sc.Item2;
-        }
-
-        public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
-        {
-            if (bufferStream == null)
-                throw new ArgumentNullException("bufferStream");
-
-            using (var streamEnmr = ProcessWriteStream(bufferStream, allowFileTruncation).GetEnumerator())
-                if (streamEnmr.MoveNext())
-                    PerformWriteStreaming(streamEnmr);
         }
 
         /// <summary>

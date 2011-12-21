@@ -1,4 +1,5 @@
 #region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,6 +19,7 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 using System;
@@ -373,7 +375,7 @@ namespace NYurik.FastBinTimeseries
                     (bufferProvider
                      ?? (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
                             .YieldMaxGrowingBuffer(
-                                maxItemCount, MinPageSize / ItemSize, 5, MaxLargePageSize / ItemSize)))
+                                maxItemCount, MinPageSize/ItemSize, 5, MaxLargePageSize/ItemSize)))
                 {
                     foreach (
                         var seg in PerformStreaming(firstItemIdx, inReverse, byteBuffs, cachedCount: cachedFileCount))
@@ -389,7 +391,7 @@ namespace NYurik.FastBinTimeseries
                         long blocks = CalcBlockCount(seg.Count);
                         for (int i = 0; i < blocks; i++)
                         {
-                            codec.BufferPos = i * BlockSize;
+                            codec.BufferPos = i*BlockSize;
                             FieldSerializer.DeSerialize(codec, retBuf, int.MaxValue);
                             if (ValidateOnRead)
                                 codec.Validate(BlockSize);
@@ -408,7 +410,7 @@ namespace NYurik.FastBinTimeseries
                             count = pos < 0 ? ~pos : pos + 1;
                             if (count > maxItemCount)
                             {
-                                int shrinkBy = count - (int)maxItemCount;
+                                int shrinkBy = count - (int) maxItemCount;
                                 offset += shrinkBy;
                                 count -= shrinkBy;
                             }
@@ -418,7 +420,7 @@ namespace NYurik.FastBinTimeseries
                             offset = pos < 0 ? ~pos : pos;
                             count = retBuf.Count - offset;
                             if (count > maxItemCount)
-                                count = (int)maxItemCount;
+                                count = (int) maxItemCount;
                         }
 
                         if (count > 0)

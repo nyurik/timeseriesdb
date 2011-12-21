@@ -1,112 +1,88 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1" GroupingSetting="Access">
   <Class Name="NYurik.FastBinTimeseries.BinaryFile&lt;T&gt;">
-    <Position X="3.75" Y="0.5" Width="2" />
+    <Position X="3.75" Y="2.25" Width="2" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>AAAAAAAEAAAAACAAACCIABAAACQAiAQQAQAAAAAQAgA=</HashCode>
+      <HashCode>AAAAAAAkAAAAmCAAADABAAAAACQACAQQIQAEAAAAAgA=</HashCode>
       <FileName>BinaryFile.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="NYurik.FastBinTimeseries.BinaryFile">
-    <Position X="0.75" Y="0.5" Width="2.25" />
+    <Position X="0.75" Y="2.25" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
       <Compartment Name="Protected" Collapsed="true" />
       <Compartment Name="ProtectedInternal" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>KADBgEFYQCCgIAYMECBIBxTgEHBAgAQlIAAXRAXBAgA=</HashCode>
+      <HashCode>KgTBAEFYQCCgIAZMECBJJxTgkHBAAAQlAAAXRADBAhA=</HashCode>
       <FileName>BinaryFileBase.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="NYurik.FastBinTimeseries.BinIndexedFile&lt;T&gt;">
-    <Position X="9.5" Y="2.25" Width="2.25" />
+    <Position X="6.75" Y="7" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
-    <InheritanceLine Type="NYurik.FastBinTimeseries.BinaryFile&lt;T&gt;" FixedFromPoint="true" FixedToPoint="true">
+    <InheritanceLine Type="NYurik.FastBinTimeseries.BinaryFile&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true">
       <Path>
-        <Point X="5.75" Y="1.397" />
-        <Point X="10.438" Y="1.397" />
-        <Point X="10.438" Y="2.25" />
+        <Point X="5.688" Y="5.647" />
+        <Point X="5.688" Y="6.592" />
+        <Point X="7.875" Y="6.592" />
+        <Point X="7.875" Y="7" />
       </Path>
     </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AACAAEAAAAABAAAAAAAAAAABAAAgAAAAAAACAAAAAAA=</HashCode>
+      <HashCode>ABCAAEAAAAAAAAAAAAAAAAABAAAAAAAAAAACAAAAAAA=</HashCode>
       <FileName>BinIndexedFile.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.FastBinTimeseries.BinUniformTimeseriesFile&lt;T&gt;">
-    <Position X="6.5" Y="2.25" Width="2.75" />
+    <Position X="7.25" Y="2.75" Width="2.75" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
-    <InheritanceLine Type="NYurik.FastBinTimeseries.BinaryFile&lt;T&gt;" FixedFromPoint="true" FixedToPoint="true">
-      <Path>
-        <Point X="5.75" Y="1.397" />
-        <Point X="7" Y="1.397" />
-        <Point X="7" Y="2.25" />
-      </Path>
-    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AACAQkAAAAgJAIAGEAAAAAAAAIAgABAAAIACABAACAA=</HashCode>
+      <HashCode>AACAQEAAAAgBAIAGEAAAAAAAAIAgABAAAAACABAACAA=</HashCode>
       <FileName>BinUniformTimeseriesFile.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="1.21" />
+    <Lollipop Orientation="Right" Position="0.263" />
   </Class>
   <Class Name="NYurik.FastBinTimeseries.DefaultTypeSerializer&lt;T&gt;" BaseTypeListCollapsed="true">
-    <Position X="15.5" Y="9.25" Width="2.25" />
+    <Position X="15.5" Y="11.25" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>ZQAACEAIAAAAMAAAAAAAAAAAAAAAQIAJAAAAAQAAlgA=</HashCode>
+      <HashCode>ZQAACEAAAAABMAAAAAAAAAAAEAAAAIABAAAAAQgAlgA=</HashCode>
       <FileName>Serializers\DefaultTypeSerializer.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="1.324" />
   </Class>
   <Class Name="NYurik.FastBinTimeseries.BinTimeseriesFile&lt;T&gt;">
-    <Position X="12" Y="2.25" Width="2.25" />
+    <Position X="12" Y="7.25" Width="2.5" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
-    <InheritanceLine Type="NYurik.FastBinTimeseries.BinaryFile&lt;T&gt;" FixedFromPoint="true">
+    <InheritanceLine Type="NYurik.FastBinTimeseries.BinSeriesFile&lt;TInd, TVal&gt;" FixedToPoint="true">
       <Path>
-        <Point X="5.75" Y="1.375" />
-        <Point X="13.125" Y="1.375" />
-        <Point X="13.125" Y="2.25" />
+        <Point X="13.25" Y="6.002" />
+        <Point X="13.25" Y="7.25" />
       </Path>
     </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AECARmAAAAgJQAAEgAAAAAARAcAAAAAAKIACAAACCgA=</HashCode>
+      <HashCode>AEAAACAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAgA=</HashCode>
       <FileName>BinTimeseriesFile.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="1.498" />
   </Class>
-  <Class Name="NYurik.FastBinTimeseries.DynamicCodeFactory">
-    <Position X="12.25" Y="9.25" Width="2.25" />
-    <Compartments>
-      <Compartment Name="Private" Collapsed="true" />
-    </Compartments>
-    <NestedTypes>
-      <Class Name="NYurik.FastBinTimeseries.DynamicCodeFactory.BinSerializerInfo" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Serializers\DynamicCodeFactory.cs</NewMemberFileName>
-        </TypeIdentifier>
-      </Class>
-    </NestedTypes>
-    <TypeIdentifier>
-      <HashCode>AAAGAAAAAgEAAACAAgAEAAAAAAQACQBAQAIAAAAAIAA=</HashCode>
-      <FileName>Serializers\DynamicCodeFactory.cs</FileName>
-    </TypeIdentifier>
-  </Class>
   <Class Name="NYurik.FastBinTimeseries.Initializable">
-    <Position X="16.75" Y="6.75" Width="2.25" />
+    <Position X="16.75" Y="8.5" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -115,130 +91,452 @@
       <FileName>Initializable.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.FastBinTimeseries.Serializers.BinBlockSerializer&lt;TObject, THeader, TItem&gt;">
-    <Position X="18.25" Y="9.25" Width="2.25" />
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.UtcDateTimeField">
+    <Position X="18.5" Y="16.75" Width="1.5" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>ZQCAAEEAAAAAIAABQgAQAAAAAAAAQQAJAAAAAAAAggA=</HashCode>
-      <FileName>Serializers\BinBlockSerializer.cs</FileName>
+      <HashCode>AAACAAAZAAAAAAEAAAAAAEAAAAgAAAAEAAAAAAAAAAE=</HashCode>
+      <FileName>Serializers\BlockSerializer\UtcDateTimeField.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="1.455" />
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.BaseField">
+    <Position X="21.75" Y="11" Width="2" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>oEEAAEIJAAAAgAEGAEAAgAAAAAgCAAAFAAAABAEAEAE=</HashCode>
+      <FileName>Serializers\BlockSerializer\BaseField.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.BinBlockSerializer&lt;TObject, THeader, TItem&gt;">
+    <Position X="18.5" Y="11.25" Width="2.25" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>ZQCAAEEAAIAAIAABQgAAAAAAAAAAAQABAAAAAAgAggA=</HashCode>
+      <FileName>Serializers\BlockSerializer\BinBlockSerializer.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.CodecBase">
+    <Position X="9.75" Y="10.25" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>ABEAAACAICAAAAAACIAAESAQAAAIAAAABQAAAAAEAAI=</HashCode>
+      <FileName>Serializers\BlockSerializer\CodecBase.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.CodecReader">
+    <Position X="8.5" Y="14" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AEEAQBAgAACAAAAAAAAIAAAAABAAAEAAAAgAAAAARAA=</HashCode>
+      <FileName>Serializers\BlockSerializer\CodecReader.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.CodecWriter">
+    <Position X="10.75" Y="14" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAEAAAIAAAAAAAAACAAAAEQACAAAAAAgAACAAAhAQCA=</HashCode>
+      <FileName>Serializers\BlockSerializer\CodecWriter.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.ComplexField">
+    <Position X="25.25" Y="16.75" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>ABEAAAAJAAAAAAEACACAAAAAAAgAAAAEAAAAAAAAgAE=</HashCode>
+      <FileName>Serializers\BlockSerializer\ComplexField.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.DynamicSerializer">
+    <Position X="13" Y="11.75" Width="1.75" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAFAAAAAAABAAAABAAAABAAAAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Serializers\BlockSerializer\DynamicSerializer.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.DynamicSerializer&lt;T&gt;">
+    <Position X="13" Y="14.25" Width="1.75" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAGAAAAAAAAAAAAQAAACACQIACBAAAAAAAAAAAACAAA=</HashCode>
+      <FileName>Serializers\BlockSerializer\DynamicSerializer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.FieldAttribute" Collapsed="true">
+    <Position X="27.75" Y="7" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Serializers\BlockSerializer\FieldAttribute.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.ScaledDeltaField">
+    <Position X="20.75" Y="16.75" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>CAUAIAAJAAAACAEAAAAAAABAAAgAIAAEAAAAAAQAAAE=</HashCode>
+      <FileName>Serializers\BlockSerializer\ScaledDeltaField.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.SimpleField">
+    <Position X="23" Y="16.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEAAAABAAAAAAEAAAAAAAAAAAgAAAAEAAAAAAAAAAE=</HashCode>
+      <FileName>Serializers\BlockSerializer\SimpleField.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.SubFieldInfo" Collapsed="true">
+    <Position X="29.5" Y="7" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAEAAAAIAAAAAAAAAABAAQAAAAAgAA=</HashCode>
+      <FileName>Serializers\BlockSerializer\SubFieldInfo.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.SerializerException" Collapsed="true">
+    <Position X="27.75" Y="10.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Serializers\SerializerException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.BinarySerializerAttribute" Collapsed="true">
+    <Position X="27.75" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAgQAAAAIAAAAAAAAgA=</HashCode>
+      <FileName>Serializers\BinarySerializerAttribute.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Serializers.DynamicCodeFactory" Collapsed="true">
+    <Position X="29.5" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AABAAAAAAAEAAACAICBEAAAAAAAACABAQAIAQAAAIAA=</HashCode>
+      <FileName>Serializers\DynamicCodeFactory.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.TimestampAttribute" Collapsed="true">
+    <Position X="41.25" Y="16" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>TimestampAttribute.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.BinaryFileException" Collapsed="true">
+    <Position X="39.5" Y="13" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>BinaryFileException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.BinCompressedSeriesFile" Collapsed="true">
+    <Position X="41.25" Y="13" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>BinCompressedSeriesFile.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.BinCompressedSeriesFile&lt;TInd, TVal&gt;">
+    <Position X="3.25" Y="6.75" Width="3" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <InheritanceLine Type="NYurik.FastBinTimeseries.BinaryFile&lt;T&gt;" FixedToPoint="true">
+      <Path>
+        <Point X="4.75" Y="5.647" />
+        <Point X="4.75" Y="6.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AACECEBAgAAQDAAkCsAJAEQBAAABCAAMEDACZCggACA=</HashCode>
+      <FileName>BinCompressedSeriesFile.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.BinSeriesFile" Collapsed="true">
+    <Position X="43" Y="13" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>BinSeriesFile.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.BinSeriesFile&lt;TInd, TVal&gt;">
+    <Position X="12" Y="2" Width="2.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AACASEBAAAARDAAkgkAIAEABAIAAAAAEEAACQAAACCA=</HashCode>
+      <FileName>BinSeriesFile.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="1.92" />
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.BinTimeseriesFile" Collapsed="true">
+    <Position X="44.75" Y="13" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>BinTimeseriesFile.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.BinUniformTimeseriesFile" Collapsed="true">
+    <Position X="46.5" Y="13" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>BinUniformTimeseriesFile.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.Buffer&lt;T&gt;" Collapsed="true">
+    <Position X="39.5" Y="14" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAIAAAAgAAAACAAAAAAAAAQCAAAAAACAAACBAAAAAAA=</HashCode>
+      <FileName>Buffer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.BufferProvider&lt;T&gt;" Collapsed="true">
+    <Position X="41.25" Y="14" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAIAAgAAAgAAAAAAAIAAAAAAAAAAgAAAAAAAAAAAA=</HashCode>
+      <FileName>BufferProvider.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.CombinedException" Collapsed="true">
+    <Position X="43" Y="14" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAgAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>CombinedException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.EnumerableFeedExtensions" Collapsed="true">
+    <Position X="44.75" Y="14" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAQAAAAAAAABAAAIAAAAIAAAAAAAAAA=</HashCode>
+      <FileName>EnumerableFeedExtensions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.FastBinFileUtils" Collapsed="true">
+    <Position X="46.5" Y="14" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAgAAAAAAAEAAAIAgAACAAAAAAKAAAAACIAAAAAAE=</HashCode>
+      <FileName>FastBinFileUtils.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.IncompatibleVersionException" Collapsed="true">
+    <Position X="39.5" Y="15" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IncompatibleVersionException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.NativeWinApis" Collapsed="true">
+    <Position X="41.25" Y="15" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AEAAgAAAAAAAQAAAAAABQCgGAAACAAAAAAAACAAAAAA=</HashCode>
+      <FileName>NativeWinApis.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.SafeMapViewHandle" Collapsed="true">
+    <Position X="46.5" Y="15" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
+      <FileName>NativeWinApis.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.SafeMapHandle" Collapsed="true">
+    <Position X="44.75" Y="15" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>NativeWinApis.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.ObsoleteExtensions" Collapsed="true">
+    <Position X="43" Y="15" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAABAAAEAAAAAAAQAAAgAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>ObsoleteExtensions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.FastBinTimeseries.StoredSeriesExtensions" Collapsed="true">
+    <Position X="39.5" Y="16" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AQAAAAAAAAAIAAAAAAAAAAAAAEAAAAAAAAAAAAAAAgA=</HashCode>
+      <FileName>StoredSeriesExtensions.cs</FileName>
+    </TypeIdentifier>
   </Class>
   <Interface Name="NYurik.FastBinTimeseries.IBinSerializer&lt;T&gt;">
-    <Position X="16" Y="4.25" Width="2" />
+    <Position X="20.75" Y="5" Width="2" />
     <TypeIdentifier>
-      <HashCode>RAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>RAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAA=</HashCode>
       <FileName>IBinSerializer.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="NYurik.FastBinTimeseries.IBinaryFile">
-    <Position X="3.5" Y="9.5" Width="1.5" />
+    <Position X="3.75" Y="12.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>KAAAAAAAAACAAAAIEABAAAAAAGAAAAAAAAAARADAAAA=</HashCode>
+      <HashCode>KAAAAAAAAACAAAAIEABAAAAAAGAAAAAAAAAABADAAAA=</HashCode>
       <FileName>IBinaryFile.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="NYurik.FastBinTimeseries.IBinaryFile&lt;T&gt;">
-    <Position X="1.75" Y="13.5" Width="1.5" />
+    <Position X="2" Y="16" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAABACAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>IBinaryFile.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="NYurik.FastBinTimeseries.IBinSerializer">
-    <Position X="17" Y="1.75" Width="2" />
+    <Position X="21.75" Y="2.5" Width="2" />
     <TypeIdentifier>
-      <HashCode>IQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJAAAABAAAggA=</HashCode>
+      <HashCode>IQAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAABAAAggA=</HashCode>
       <FileName>IBinSerializer.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="NYurik.FastBinTimeseries.IBinTimeseriesFile">
-    <Position X="3.5" Y="13.5" Width="1.5" />
+    <Position X="3.75" Y="16" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AEAAACAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAACgA=</HashCode>
       <FileName>IBinTimeseriesFile.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="NYurik.FastBinTimeseries.IBinUniformTimeseriesFile">
-    <Position X="5.5" Y="13.5" Width="1.5" />
-    <InheritanceLine Type="NYurik.FastBinTimeseries.IBinaryFile" FixedToPoint="true">
-      <Path>
-        <Point X="4.25" Y="12.409" />
-        <Point X="4.25" Y="13.125" />
-        <Point X="6" Y="13.125" />
-        <Point X="6" Y="13.5" />
-      </Path>
-    </InheritanceLine>
+    <Position X="5.75" Y="16.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAACAA=</HashCode>
       <FileName>IBinUniformTimeseriesFile.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.FastBinTimeseries.IHistFeedInt">
-    <Position X="1" Y="9.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAgA=</HashCode>
-      <FileName>IStoredSeries.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="NYurik.FastBinTimeseries.IHistFeedInt&lt;T&gt;">
-    <Position X="1" Y="11.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAA=</HashCode>
-      <FileName>IStoredSeries.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
   <Interface Name="NYurik.FastBinTimeseries.IStoredSeries">
-    <Position X="6.25" Y="7" Width="1.5" />
+    <Position X="6.5" Y="10" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AABAAAAAAAAgAAAAAAAAABAAAQAAAAAAAAAAAAAQAgA=</HashCode>
       <FileName>IStoredSeries.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.FastBinTimeseries.IStoredTimeSeries">
-    <Position X="8.25" Y="9.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAIAAAAAAAAA=</HashCode>
-      <FileName>IStoredSeries.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="NYurik.FastBinTimeseries.IStoredTimeSeries&lt;T&gt;">
-    <Position X="8.25" Y="11" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAA=</HashCode>
-      <FileName>IStoredSeries.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
   <Interface Name="NYurik.FastBinTimeseries.IStoredUniformTimeseries">
-    <Position X="6.25" Y="9.5" Width="1.5" />
+    <Position X="6.5" Y="12.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAEAAAAAAAAIAAAAAAAAAAABAQAAA=</HashCode>
       <FileName>IStoredSeries.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.FastBinTimeseries.IStoredUniformTimeseries&lt;T&gt;">
-    <Position X="8.25" Y="13.5" Width="1.5" />
-    <InheritanceLine Type="NYurik.FastBinTimeseries.IStoredUniformTimeseries" ManuallyRouted="true" FixedToPoint="true">
+  <Interface Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.IBinBlockSerializer">
+    <Position X="23" Y="5" Width="1.5" />
+    <InheritanceLine Type="NYurik.FastBinTimeseries.IBinSerializer" FixedToPoint="true">
       <Path>
-        <Point X="7" Y="11.094" />
-        <Point X="7" Y="12.763" />
-        <Point X="8.625" Y="12.763" />
-        <Point X="8.625" Y="13.5" />
+        <Point X="22.75" Y="4.467" />
+        <Point X="22.75" Y="4.7" />
+        <Point X="23.875" Y="4.7" />
+        <Point X="23.875" Y="5" />
       </Path>
     </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>IStoredSeries.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="NYurik.FastBinTimeseries.Serializers.IBinBlockSerializer">
-    <Position X="18.25" Y="4.25" Width="1.75" />
-    <TypeIdentifier>
       <HashCode>AAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Serializers\BinBlockSerializer.cs</FileName>
+      <FileName>Serializers\BlockSerializer\BinBlockSerializer.cs</FileName>
     </TypeIdentifier>
   </Interface>
+  <Interface Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.IStateStore" Collapsed="true">
+    <Position X="29.5" Y="8.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAABAAAAAAAAAAAAAACAAAAAAAAAAAA=</HashCode>
+      <FileName>Serializers\BlockSerializer\DynamicSerializer.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.FastBinTimeseries.Serializers.BlockSerializer.IBinBlock&lt;THeader, TItem&gt;" Collapsed="true">
+    <Position X="27.75" Y="8.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Serializers\BlockSerializer\IBinBlock.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.FastBinTimeseries.IEnumerableFeed" Collapsed="true">
+    <Position X="28.75" Y="15" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgA=</HashCode>
+      <FileName>IEnumerableFeed.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.FastBinTimeseries.IEnumerableFeed&lt;TInd, TVal&gt;" Collapsed="true">
+    <Position X="28.75" Y="16.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAEAgAAAEABAAAAAAAEAAAAAAAAAAA=</HashCode>
+      <FileName>IEnumerableFeed.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.FastBinTimeseries.IEnumerableFeed&lt;T&gt;" Collapsed="true">
+    <Position X="28.75" Y="17.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IEnumerableFeed.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.FastBinTimeseries.IGenericInvoker" Collapsed="true">
+    <Position X="28.75" Y="13.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IGenericInvoker.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.FastBinTimeseries.IGenericCallable&lt;TDst, TArg&gt;" Collapsed="true">
+    <Position X="39.5" Y="17.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=</HashCode>
+      <FileName>IGenericInvoker.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.FastBinTimeseries.IWrapperFactory" Collapsed="true">
+    <Position X="41.25" Y="17.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>IWrapperFactory.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Enum Name="NYurik.FastBinTimeseries.FileMapProtection" Collapsed="true">
+    <Position X="41.25" Y="18.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAgAAAAAAAAAAAAACAAAAAAAAAAAAAAAAgAAAEAAAA=</HashCode>
+      <FileName>NativeWinApis.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="NYurik.FastBinTimeseries.FileMapAccess" Collapsed="true">
+    <Position X="39.5" Y="18.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAgAiAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>NativeWinApis.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Delegate Name="NYurik.FastBinTimeseries.Serializers.UnsafeActionDelegate&lt;TStorage, TItem&gt;" Collapsed="true">
+    <Position X="27.75" Y="11.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAABwAAAIAAAAAAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Serializers\DefaultTypeSerializer.cs</FileName>
+    </TypeIdentifier>
+  </Delegate>
+  <Delegate Name="NYurik.FastBinTimeseries.Serializers.UnsafeMemCompareDelegate&lt;TItem&gt;" Collapsed="true">
+    <Position X="29.5" Y="11.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAQAAAAAAAAAAAAAAAAAgAAAAACAQAAAAAAAA=</HashCode>
+      <FileName>Serializers\DefaultTypeSerializer.cs</FileName>
+    </TypeIdentifier>
+  </Delegate>
   <Font Name="Tahoma" Size="8.25" />
 </ClassDiagram>

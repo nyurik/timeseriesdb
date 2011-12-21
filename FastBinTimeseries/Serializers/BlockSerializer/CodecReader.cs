@@ -1,4 +1,5 @@
 #region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,6 +19,7 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 using System;
@@ -30,6 +32,12 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         private byte[] _buffer;
         private int _bufferPos;
 
+        /// <summary> Create codec for reading only </summary>
+        public CodecReader(ArraySegment<byte> buffer)
+        {
+            AttachBuffer(buffer);
+        }
+
         public int BufferPos
         {
             get { return _bufferPos; }
@@ -39,12 +47,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     throw new ArgumentOutOfRangeException("value", value, "Must be >= 0 && <= " + _buffer.Length);
                 _bufferPos = value;
             }
-        }
-
-        /// <summary> Create codec for reading only </summary>
-        public CodecReader(ArraySegment<byte> buffer)
-        {
-            AttachBuffer(buffer);
         }
 
         public byte[] Buffer
@@ -306,75 +308,75 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             if (tmp32 < 128)
             {
                 _bufferPos++;
-                return (ulong)tmp32;
+                return (ulong) tmp32;
             }
 
             int res32 = tmp32 & 0x7f;
             if ((tmp32 = buff[p + 1]) < 128)
             {
                 p += 2;
-                res32 |= tmp32 << 7 * 1;
+                res32 |= tmp32 << 7*1;
             }
             else
             {
-                res32 |= (tmp32 & 0x7f) << 7 * 1;
+                res32 |= (tmp32 & 0x7f) << 7*1;
                 if ((tmp32 = buff[p + 2]) < 128)
                 {
                     p += 3;
-                    res32 |= tmp32 << 7 * 2;
+                    res32 |= tmp32 << 7*2;
                 }
                 else
                 {
-                    res32 |= (tmp32 & 0x7f) << 7 * 2;
+                    res32 |= (tmp32 & 0x7f) << 7*2;
                     if ((tmp32 = buff[p + 3]) < 128)
                     {
                         p += 4;
-                        res32 |= tmp32 << 7 * 3;
+                        res32 |= tmp32 << 7*3;
                     }
                     else
                     {
                         long tmp64;
-                        long res64 = res32 | (tmp32 & 0x7f) << 7 * 3;
+                        long res64 = res32 | (tmp32 & 0x7f) << 7*3;
                         if ((tmp64 = buff[p + 4]) < 128)
                         {
                             p += 5;
-                            res64 |= tmp64 << 7 * 4;
+                            res64 |= tmp64 << 7*4;
                         }
                         else
                         {
-                            res64 |= (tmp64 & 0x7f) << 7 * 4;
+                            res64 |= (tmp64 & 0x7f) << 7*4;
                             if ((tmp64 = buff[p + 5]) < 128)
                             {
                                 p += 6;
-                                res64 |= tmp64 << 7 * 5;
+                                res64 |= tmp64 << 7*5;
                             }
                             else
                             {
-                                res64 |= (tmp64 & 0x7f) << 7 * 5;
+                                res64 |= (tmp64 & 0x7f) << 7*5;
                                 if ((tmp64 = buff[p + 6]) < 128)
                                 {
                                     p += 7;
-                                    res64 |= tmp64 << 7 * 6;
+                                    res64 |= tmp64 << 7*6;
                                 }
                                 else
                                 {
-                                    res64 |= (tmp64 & 0x7f) << 7 * 6;
+                                    res64 |= (tmp64 & 0x7f) << 7*6;
                                     if ((tmp64 = buff[p + 7]) < 128)
                                     {
                                         p += 8;
-                                        res64 |= tmp64 << 7 * 7;
+                                        res64 |= tmp64 << 7*7;
                                     }
                                     else
                                     {
-                                        res64 |= (tmp64 & 0x7f) << 7 * 7;
+                                        res64 |= (tmp64 & 0x7f) << 7*7;
                                         if ((tmp64 = buff[p + 8]) < 128)
                                         {
                                             p += 9;
-                                            res64 |= tmp64 << 7 * 8;
+                                            res64 |= tmp64 << 7*8;
                                         }
                                         else
                                         {
-                                            res64 |= (tmp64 & 0x7f) << 7 * 8;
+                                            res64 |= (tmp64 & 0x7f) << 7*8;
                                             if ((tmp64 = buff[p + 9]) > 127)
                                             {
                                                 ThrowOverflow();
@@ -382,7 +384,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                                             }
 
                                             p += 10;
-                                            res64 |= tmp64 << 7 * 9;
+                                            res64 |= tmp64 << 7*9;
                                         }
                                     }
                                 }
@@ -390,13 +392,13 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                         }
 
                         _bufferPos = p;
-                        return (ulong)res64;
+                        return (ulong) res64;
                     }
                 }
             }
 
             _bufferPos = p;
-            return (uint)res32;
+            return (uint) res32;
         }
 
         [UsedImplicitly]
@@ -532,11 +534,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         public void Validate(int blockSize)
         {
-            var pos = FastBinFileUtils.RoundDownToMultiple(_bufferPos, blockSize);
+            int pos = FastBinFileUtils.RoundDownToMultiple(_bufferPos, blockSize);
             if (pos == _bufferPos)
                 throw new SerializerException("Cannot validate when BlockPos={0}, blockSize={1}", _bufferPos, blockSize);
-            var dataSize = _bufferPos - pos;
-            var hash = HashAlgorithm.ComputeHash(_buffer, pos, dataSize);
+            int dataSize = _bufferPos - pos;
+            byte[] hash = HashAlgorithm.ComputeHash(_buffer, pos, dataSize);
             int hashSize = hash.Length;
             if (hashSize >= blockSize - dataSize)
                 hashSize = blockSize - dataSize;

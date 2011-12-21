@@ -1,4 +1,5 @@
 #region COPYRIGHT
+
 /*
  *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
@@ -18,6 +19,7 @@
  *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #endregion
 
 using System;
@@ -118,16 +120,6 @@ namespace NYurik.FastBinTimeseries
         public virtual long Count
         {
             get { return GetCount(); }
-        }
-
-        protected long GetCount()
-        {
-            ThrowOnNotInitialized();
-            if (!BaseStream.CanSeek)
-                throw new NotSupportedException("Not supported for Stream.CanSeek == false");
-
-            bool isAligned;
-            return CalculateItemCountFromFilePosition(BaseStream.Length, out isAligned);
         }
 
         public virtual int ItemSize
@@ -516,6 +508,16 @@ namespace NYurik.FastBinTimeseries
         }
 
         #endregion
+
+        protected long GetCount()
+        {
+            ThrowOnNotInitialized();
+            if (!BaseStream.CanSeek)
+                throw new NotSupportedException("Not supported for Stream.CanSeek == false");
+
+            bool isAligned;
+            return CalculateItemCountFromFilePosition(BaseStream.Length, out isAligned);
+        }
 
         private static void ValidateHeaderSize(int value)
         {
