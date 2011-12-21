@@ -86,7 +86,7 @@ namespace NYurik.FastBinTimeseries.Serializers
         private static void ThrowIfNotUnmanagedType(Type type, Stack<Type> typesStack)
         {
             if ((!type.IsValueType && !type.IsPointer) || type.IsGenericType || type.IsGenericParameter || type.IsArray)
-                throw new ArgumentException(String.Format("Type {0} is not an unmanaged type", type.FullName));
+                throw new SerializerException("Type {0} is not an unmanaged type", type.FullName);
 
             if (!type.IsPrimitive && !type.IsEnum && !type.IsPointer)
                 for (Type p = type.DeclaringType; p != null; p = p.DeclaringType)

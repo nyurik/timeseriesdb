@@ -144,9 +144,6 @@ namespace NYurik.FastBinTimeseries.Test
                 () =>
                     {
                         operation();
-                        Assert.Fail(
-                            "Should have thrown an {0}, but completed successfully instead",
-                            typeof (TEx).Name);
                         return null;
                     });
         }
@@ -159,8 +156,9 @@ namespace NYurik.FastBinTimeseries.Test
                 object o = operation();
                 Assert.Fail("Should have thrown an {0}, but {1} was returned instead", typeof (TEx).Name, o);
             }
-            catch (TEx)
+            catch (TEx ex)
             {
+                Console.WriteLine("Successfully cought {0}: {1}", typeof (TEx).Name, ex.Message);
             }
         }
 
