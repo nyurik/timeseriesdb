@@ -23,27 +23,27 @@ namespace NYurik.FastBinTimeseries.Test
                          Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
         {
             string fileName = GetBinFileName();
-            using (
-                IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1> f
-                    = !AllowCreate
-                          ? (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false)
-                          : newFile(fileName))
+
+            IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> newData = Data(itemCount, 0, itemCount);
+            List<_DatetimeByte_SeqPk1> expected = newData.StreamSegmentValues().ToList();
+            Assert.AreEqual(itemCount, expected.Count);
+            _DatetimeByte_SeqPk1[] expectedRev = expected.ToArray();
+            Array.Reverse(expectedRev);
+            IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>
+                f = !AllowCreate
+                        ? (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false)
+                        : newFile(fileName);
+            try
             {
                 if (update != null)
                     update(f);
-
-                IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> newData =
-                    Data(itemCount, 0, itemCount);
-
-                List<_DatetimeByte_SeqPk1> expected = newData.StreamSegmentValues().ToList();
-                Assert.AreEqual(itemCount, expected.Count);
-                _DatetimeByte_SeqPk1[] expectedRev = expected.ToArray();
-                Array.Reverse(expectedRev);
 
                 if (AllowCreate)
                 {
                     init(f);
                     f.AppendData(newData);
+                    f.Dispose();
+                    f = (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false);
                 }
 
                 TestUtils.CollectionAssertEqual(
@@ -106,6 +106,10 @@ namespace NYurik.FastBinTimeseries.Test
                         }
                     }
                 }
+            }
+            finally
+            {
+                f.Dispose();
             }
         }
 

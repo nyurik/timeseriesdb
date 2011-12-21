@@ -79,6 +79,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             var fields = new SubFieldInfo[reader.ReadInt32()];
             for (int i = 0; i < fields.Length; i++)
                 fields[i] = new SubFieldInfo(StateStore, reader, typeMap);
+            _fields = fields;
         }
 
         protected override void MakeReadonly()
