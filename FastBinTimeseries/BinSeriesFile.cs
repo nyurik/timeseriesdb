@@ -57,7 +57,7 @@ namespace NYurik.FastBinTimeseries
     /// Object representing a binary-serialized long-based series file.
     /// </summary>
     public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IEnumerableFeed<TInd, TVal>
-        where TInd : struct, IComparable<TInd>
+        where TInd : IComparable<TInd>
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
 
@@ -66,9 +66,11 @@ namespace NYurik.FastBinTimeseries
         private static readonly Version Version11 = new Version(1, 1);
         // ReSharper restore StaticFieldInGenericType
 
-        private TInd? _firstIndex;
+        private TInd _firstIndex;
         private FieldInfo _indexFieldInfo;
-        private TInd? _lastIndex;
+        private TInd _lastIndex;
+        private bool _hasFirstIndex;
+        private bool _hasLastIndex;
         private Tuple<long, ConcurrentDictionary<long, TInd>> _searchCache;
         private bool _uniqueIndexes;
 
@@ -142,37 +144,59 @@ namespace NYurik.FastBinTimeseries
 
         #region IEnumerableFeed<TInd,TVal> Members
 
-        public TInd? FirstFileIndex
+        public TInd FirstIndex
         {
             get
             {
                 long count = GetCount();
                 ResetOnChangedAndGetCache(count, false);
 
-                if (_firstIndex == null && count > 0)
+                if (!_hasFirstIndex && count > 0)
                 {
                     ArraySegment<TVal> seg = PerformStreaming(0, false, maxItemCount: 1).FirstOrDefault();
                     if (seg.Count > 0)
+                    {
                         _firstIndex = IndexAccessor(seg.Array[0]);
+                        _hasFirstIndex = true;
+                    }
                 }
-                return _firstIndex;
+
+                if (_hasFirstIndex)
+                    return _firstIndex;
+                return default(TInd);
+            }
+            private set
+            {
+                _firstIndex = value;
+                _hasFirstIndex = true;
             }
         }
 
-        public TInd? LastFileIndex
+        public TInd LastIndex
         {
             get
             {
                 long count = GetCount();
                 ResetOnChangedAndGetCache(count, false);
 
-                if (_lastIndex == null && count > 0)
+                if (!_hasLastIndex && count > 0)
                 {
                     ArraySegment<TVal> seg = PerformStreaming(count - 1, false, maxItemCount: 1).FirstOrDefault();
                     if (seg.Count > 0)
+                    {
                         _lastIndex = IndexAccessor(seg.Array[0]);
+                        _hasLastIndex = true;
+                    }
                 }
-                return _lastIndex;
+
+                if (_hasLastIndex)
+                    return _lastIndex;
+                return default(TInd);
+            }
+            private set
+            {
+                _lastIndex = value;
+                _hasLastIndex = true;
             }
         }
 
@@ -240,12 +264,10 @@ namespace NYurik.FastBinTimeseries
             if (count <= 0)
                 return ~0;
 
-            TInd? tmp = FirstFileIndex;
-            if (tmp == null || index.CompareTo(tmp.Value) < 0)
+            if (index.CompareTo(FirstIndex) < 0)
                 return ~0;
 
-            tmp = LastFileIndex;
-            if (tmp == null || index.CompareTo(tmp.Value) > 0)
+            if (index.CompareTo(LastIndex) > 0)
                 return ~count;
 
             var buff = new TVal[2];
@@ -356,8 +378,8 @@ namespace NYurik.FastBinTimeseries
 
             // Invalidate index
             if (newCount == 0)
-                _firstIndex = null;
-            _lastIndex = null;
+                _hasFirstIndex = false;
+            _hasLastIndex = false;
         }
 
         private ConcurrentDictionary<long, TInd> ResetOnChangedAndGetCache(long count, bool createCache)
@@ -374,8 +396,8 @@ namespace NYurik.FastBinTimeseries
                     if (countChanged)
                     {
                         // always reset just in case
-                        _firstIndex = null;
-                        _lastIndex = null;
+                        _hasFirstIndex = false;
+                        _hasLastIndex = false;
                     }
 
                     if (countChanged || (createCache && sc.Item2 == null))
@@ -400,9 +422,9 @@ namespace NYurik.FastBinTimeseries
         {
             bool isFirstSeg = true;
 
-            TInd lastTs = LastFileIndex ?? default(TInd);
-            int segInd = 0;
             bool isEmptyFile = IsEmpty;
+            TInd lastTs = isEmptyFile ? default(TInd) : LastIndex;
+            int segInd = 0;
 
             foreach (var buffer in bufferStream)
             {
@@ -451,8 +473,8 @@ namespace NYurik.FastBinTimeseries
                 yield return buffer;
 
                 if (isEmptyFile)
-                    _firstIndex = firstBufferTs;
-                _lastIndex = lastTs;
+                    FirstIndex = firstBufferTs;
+                LastIndex = lastTs;
                 isEmptyFile = false;
                 isFirstSeg = false;
                 segInd++;
@@ -469,7 +491,19 @@ namespace NYurik.FastBinTimeseries
 
             long start = FirstIndexToPos(fromInclusive);
             long end = FirstIndexToPos(toExclusive);
-            return Tuple.Create(start, (end - start).ToIntCountChecked());
+            return Tuple.Create(start, ToIntCountChecked(end - start));
+        }
+
+        private int ToIntCountChecked(long value)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException("value", value, "<0");
+            if (value > Int32.MaxValue)
+                throw new ArgumentException(
+                    String.Format(
+                        "Attempted to process {0} items at once, which is over the maximum of {1}.",
+                        value, Int32.MaxValue));
+            return (int)value;
         }
 
         private long FirstIndexToPos(TInd index)

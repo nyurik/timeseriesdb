@@ -39,7 +39,7 @@ namespace NYurik.FastBinTimeseries
     }
 
     public interface IEnumerableFeed<TInd, TVal> : IEnumerableFeed
-        where TInd : struct, IComparable<TInd>
+        where TInd : IComparable<TInd>
     {
         /// <summary>
         /// Returns function that can extract TInd index from a given value T
@@ -47,14 +47,19 @@ namespace NYurik.FastBinTimeseries
         Func<TVal, TInd> IndexAccessor { get; }
 
         /// <summary>
-        /// If available, returns the first index of the feed
+        /// Returns true if this file is empty
         /// </summary>
-        TInd? FirstFileIndex { get; }
+        bool IsEmpty { get; }
 
         /// <summary>
-        /// If available, returns the last index of the feed
+        /// If available, returns the first index of the feed, or default(TInd) if empty
         /// </summary>
-        TInd? LastFileIndex { get; }
+        TInd FirstIndex { get; }
+
+        /// <summary>
+        /// If available, returns the last index of the feed, or default(TInd) if empty
+        /// </summary>
+        TInd LastIndex { get; }
 
         /// <summary>
         /// False if more than one identical index is allowed in the feed, True otherwise

@@ -80,16 +80,19 @@ namespace NYurik.FastBinTimeseries.Test
 
                 if (itemCount <= 0)
                 {
-                    Assert.IsNull(f.FirstFileIndex, "null FirstInd {0}", name);
-                    Assert.IsNull(f.LastFileIndex, "null LastInd {0}", name);
+                    Assert.IsTrue(f.IsEmpty, "IsEmpty {0}", name);
+                    Assert.AreEqual(default(UtcDateTime), f.FirstIndex, "default FirstInd {0}", name);
+                    Assert.AreEqual(default(UtcDateTime), f.LastIndex, "default LastInd {0}", name);
                     TestUtils.CollectionAssertEqual(_empty, f.Stream(UtcDateTime.MinValue), "empty forward {0}", name);
                     TestUtils.CollectionAssertEqual(
                         _empty, f.Stream(UtcDateTime.MinValue, inReverse: true), "empty backward {0}", name);
                     return;
                 }
 
-                Assert.AreEqual(expected[0].a, f.FirstFileIndex, name + " first");
-                Assert.AreEqual(expected[itemCount - 1].a, f.LastFileIndex, "last {0}", name);
+                Assert.IsFalse(f.IsEmpty, "!IsEmpty {0}", name);
+
+                Assert.AreEqual(expected[0].a, f.FirstIndex, name + " first");
+                Assert.AreEqual(expected[itemCount - 1].a, f.LastIndex, "last {0}", name);
 
                 TestUtils.CollectionAssertEqual(expected, f.Stream(UtcDateTime.MinValue), "full forward {0}", name);
                 TestUtils.CollectionAssertEqual(

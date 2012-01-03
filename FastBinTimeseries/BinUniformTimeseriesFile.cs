@@ -93,13 +93,13 @@ namespace NYurik.FastBinTimeseries
             set
             {
                 ThrowOnInitialized();
-                _firstTimestamp = this.ValidateIndex(value);
+                _firstTimestamp = ValidateIndex(value);
             }
         }
 
         public UtcDateTime FirstUnavailableTimestamp
         {
-            get { return FirstTimestamp + ItemTimeSpan.Multiply(Count); }
+            get { return FirstTimestamp + Multiply(ItemTimeSpan,Count); }
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace NYurik.FastBinTimeseries
             if (toExclusive <= FirstTimestamp)
                 fromInclusive = toExclusive = FirstTimestamp;
 
-            long len = this.IndexToLong(toExclusive) - this.IndexToLong(fromInclusive);
+            long len = IndexToLong(toExclusive) - IndexToLong(fromInclusive);
             if (len > int.MaxValue)
                 return 0;
             return (int) len;
@@ -155,8 +155,8 @@ namespace NYurik.FastBinTimeseries
         [Obsolete("Use streaming methods instead")]
         Array IStoredUniformTimeseries.GenericReadData(UtcDateTime fromInclusive, int count)
         {
-            long firstItemIdx = this.IndexToLong(fromInclusive);
-            int bufCount = Math.Min((Count - firstItemIdx).ToIntCountChecked(), count);
+            long firstItemIdx = IndexToLong(fromInclusive);
+            int bufCount = Math.Min(ToIntCountChecked(Count - firstItemIdx), count);
             var buffer = new ArraySegment<T>(new T[bufCount], 0, bufCount);
 
             PerformFileAccess(firstItemIdx, buffer, false);
@@ -172,7 +172,7 @@ namespace NYurik.FastBinTimeseries
 
         public void TruncateFile(UtcDateTime newFirstUnavailableTimestamp)
         {
-            PerformTruncateFile(this.IndexToLong(newFirstUnavailableTimestamp));
+            PerformTruncateFile(IndexToLong(newFirstUnavailableTimestamp));
         }
 
         #endregion
@@ -230,7 +230,7 @@ namespace NYurik.FastBinTimeseries
                     "Must be <= FirstUnavailableTimestamp (" +
                     FirstUnavailableTimestamp + ")");
 
-            long itemLong = this.IndexToLong(firstItemIndex);
+            long itemLong = IndexToLong(firstItemIndex);
 
             PerformFileAccess(itemLong, buffer, true);
         }
@@ -269,13 +269,45 @@ namespace NYurik.FastBinTimeseries
             if (fromInclusive.CompareTo(toExclusive) > 0)
                 throw new ArgumentOutOfRangeException("fromInclusive", "'from' must be <= 'to'");
 
-            long firstIndexIncl = this.IndexToLong(fromInclusive);
-            return Tuple.Create(firstIndexIncl, (this.IndexToLong(toExclusive) - firstIndexIncl).ToIntCountChecked());
+            long firstIndexIncl = IndexToLong(fromInclusive);
+            return Tuple.Create(firstIndexIncl, ToIntCountChecked(IndexToLong(toExclusive) - firstIndexIncl));
         }
 
         public override string ToString()
         {
             return string.Format("{0}, firstTS={1}, slice={2}", base.ToString(), FirstTimestamp, ItemTimeSpan);
+        }
+
+        private UtcDateTime ValidateIndex(UtcDateTime timestamp)
+        {
+            if (timestamp.Ticks % ItemTimeSpan.Ticks != 0)
+                throw new ArgumentException(
+                    String.Format(
+                        "The timestamp {0} must be aligned by the time slice {1}", timestamp,
+                        ItemTimeSpan));
+            return timestamp;
+        }
+
+        private long IndexToLong(UtcDateTime timestamp)
+        {
+            return (ValidateIndex(timestamp).Ticks - FirstTimestamp.Ticks) / ItemTimeSpan.Ticks;
+        }
+
+        private int ToIntCountChecked(long value)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException("value", value, "<0");
+            if (value > Int32.MaxValue)
+                throw new ArgumentException(
+                    String.Format(
+                        "Attempted to process {0} items at once, which is over the maximum of {1}.",
+                        value, Int32.MaxValue));
+            return (int)value;
+        }
+
+        private TimeSpan Multiply(TimeSpan timeSpan, long count)
+        {
+            return TimeSpan.FromTicks(timeSpan.Ticks * count);
         }
     }
 }

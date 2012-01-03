@@ -80,12 +80,12 @@ namespace NYurik.FastBinTimeseries
 
         public UtcDateTime? FirstFileTS
         {
-            get { return FirstFileIndex; }
+            get { return IsEmpty ? (UtcDateTime?) null : FirstIndex; }
         }
 
         public UtcDateTime? LastFileTS
         {
-            get { return LastFileIndex; }
+            get { return IsEmpty ? (UtcDateTime?)null : LastIndex; }
         }
 
         public bool UniqueTimestamps

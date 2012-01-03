@@ -125,11 +125,7 @@
     </Compile>
     <Compile Include="BinUniformTimeseriesFile.cs" />
     <Compile Include="CombinedException.cs" />
-    <Compile Include="CommonCode\DateTimeExtensions.cs" />
     <Compile Include="CommonCode\FormattedException.cs" />
-    <Compile Include="CommonCode\ITimeSeries.cs" />
-    <Compile Include="CommonCode\MergedTimeSeries.cs" />
-    <Compile Include="CommonCode\TimeSeries.cs" />
     <Compile Include="BinaryFileException.cs" />
     <Compile Include="IncompatibleVersionException.cs" />
     <Compile Include="Initializable.cs" />
@@ -161,10 +157,8 @@
     <Compile Include="Serializers\DynamicCodeFactory.cs" />
     <Compile Include="IBinSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CommonCode\DynamicSyncDictionary.cs" />
     <Compile Include="CommonCode\TypeUtils.cs" />
     <Compile Include="CommonCode\UtcDateTime.cs" />
-    <Compile Include="StoredSeriesExtensions.cs" />
     <Compile Include="TimestampAttribute.cs" />
   </ItemGroup>
   <ItemGroup>

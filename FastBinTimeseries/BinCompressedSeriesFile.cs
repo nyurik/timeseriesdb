@@ -56,20 +56,22 @@ namespace NYurik.FastBinTimeseries
     /// Object representing a binary-serialized long-based series file.
     /// </summary>
     public class BinCompressedSeriesFile<TInd, TVal> : BinaryFile<byte>, IEnumerableFeed<TInd, TVal>
-        where TInd : struct, IComparable<TInd>
+        where TInd : IComparable<TInd>
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
 
         // ReSharper disable StaticFieldInGenericType
         private static readonly Version Version10 = new Version(1, 0);
-        private int _blockSize;
         // ReSharper restore StaticFieldInGenericType
 
-        private BufferProvider<byte> _bufferByteProvider = new BufferProvider<byte>();
+        private readonly BufferProvider<byte> _bufferByteProvider = new BufferProvider<byte>();
+        private int _blockSize;
         private BufferProvider<TVal> _bufferProvider;
-        private TInd? _firstIndex;
+        private TInd _firstIndex;
+        private bool _hasFirstIndex;
+        private bool _hasLastIndex;
         private FieldInfo _indexFieldInfo;
-        private TInd? _lastIndex;
+        private TInd _lastIndex;
         private int _maxItemByteSize;
         private int _minItemByteSize;
 
@@ -184,39 +186,54 @@ namespace NYurik.FastBinTimeseries
 
         #region IEnumerableFeed<TInd,TVal> Members
 
-        public TInd? FirstFileIndex
+        public TInd FirstIndex
         {
             get
             {
                 long cachedFileCount = GetCount();
                 ResetOnChangedAndGetCache(cachedFileCount, false);
 
-                if (_firstIndex == null && cachedFileCount > 0)
+                if (!_hasFirstIndex && cachedFileCount > 0)
                 {
                     TInd tmp;
                     if (TryGetIndex(0, cachedFileCount, out tmp))
+                    {
                         _firstIndex = tmp;
+                        _hasFirstIndex = true;
+                    }
                 }
 
-                return _firstIndex;
+                if (_hasFirstIndex)
+                    return _firstIndex;
+                return default(TInd);
+            }
+            private set
+            {
+                _firstIndex = value;
+                _hasFirstIndex = true;
             }
         }
 
-        public TInd? LastFileIndex
+        public TInd LastIndex
         {
             get
             {
                 long cachedFileCount = GetCount();
                 ResetOnChangedAndGetCache(cachedFileCount, false);
 
-                if (_lastIndex == null && cachedFileCount > 0)
+                if (!_hasLastIndex && cachedFileCount > 0)
                 {
                     TInd tmp;
                     if (TryGetIndex(long.MaxValue, cachedFileCount, out tmp, inReverse: true))
+                    {
                         _lastIndex = tmp;
+                        _hasLastIndex = true;
+                    }
                 }
 
-                return _lastIndex;
+                if (_hasLastIndex)
+                    return _lastIndex;
+                return default(TInd);
             }
         }
 
@@ -277,10 +294,8 @@ namespace NYurik.FastBinTimeseries
                     {
                         if (!allowFileTruncation)
                         {
-                            TInd? lastInd = LastFileIndex;
-                            if (lastInd == null)
-                                throw new InvalidOperationException("Logic error: last is not available");
-                            if (firstBufferInd.CompareTo(lastInd.Value) <= 0)
+                            TInd lastInd = LastIndex;
+                            if (firstBufferInd.CompareTo(lastInd) <= 0)
                                 throw new BinaryFileException(
                                     "Last index in file ({0}) is greater or equal to the first new item's index ({1})",
                                     lastInd, firstBufferInd);
@@ -316,8 +331,8 @@ namespace NYurik.FastBinTimeseries
                     }
 
                     if (isEmptyFile)
-                        _firstIndex = firstBufferInd;
-                    _lastIndex = null;
+                        FirstIndex = firstBufferInd;
+                    _hasLastIndex = false;
                 }
                 finally
                 {
@@ -355,9 +370,6 @@ namespace NYurik.FastBinTimeseries
                     yield break;
                 firstBlockInd = fileCountInBlocks - 1;
             }
-
-            if (_bufferByteProvider == null)
-                _bufferByteProvider = new BufferProvider<byte>();
 
             int firstBlockSize = GetBlockSize(firstBlockInd, cachedFileCount);
             int smallSize = FastBinFileUtils.RoundUpToMultiple(MinPageSize, BlockSize);
@@ -468,9 +480,6 @@ namespace NYurik.FastBinTimeseries
                 blockIndex = fileCountInBlocks - 1;
             }
 
-            if (_bufferByteProvider == null)
-                _bufferByteProvider = new BufferProvider<byte>();
-
             // calc byte buffer size for one item or one block if going backwards
             int byteBufSize = inReverse
                                   ? GetBlockSize(blockIndex, cachedFileCount)
@@ -576,8 +585,8 @@ namespace NYurik.FastBinTimeseries
                     if (countChanged)
                     {
                         // always reset just in case
-                        _firstIndex = null;
-                        _lastIndex = null;
+                        _hasFirstIndex = false;
+                        _hasLastIndex = false;
                     }
 
                     if (countChanged || (createCache && sc.Item2 == null))
