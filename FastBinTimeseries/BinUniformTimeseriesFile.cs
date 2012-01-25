@@ -99,7 +99,7 @@ namespace NYurik.FastBinTimeseries
 
         public UtcDateTime FirstUnavailableTimestamp
         {
-            get { return FirstTimestamp + Multiply(ItemTimeSpan,Count); }
+            get { return FirstTimestamp + Multiply(ItemTimeSpan, Count); }
         }
 
         /// <summary>
@@ -280,7 +280,7 @@ namespace NYurik.FastBinTimeseries
 
         private UtcDateTime ValidateIndex(UtcDateTime timestamp)
         {
-            if (timestamp.Ticks % ItemTimeSpan.Ticks != 0)
+            if (timestamp.Ticks%ItemTimeSpan.Ticks != 0)
                 throw new ArgumentException(
                     String.Format(
                         "The timestamp {0} must be aligned by the time slice {1}", timestamp,
@@ -290,7 +290,7 @@ namespace NYurik.FastBinTimeseries
 
         private long IndexToLong(UtcDateTime timestamp)
         {
-            return (ValidateIndex(timestamp).Ticks - FirstTimestamp.Ticks) / ItemTimeSpan.Ticks;
+            return (ValidateIndex(timestamp).Ticks - FirstTimestamp.Ticks)/ItemTimeSpan.Ticks;
         }
 
         private int ToIntCountChecked(long value)
@@ -302,12 +302,12 @@ namespace NYurik.FastBinTimeseries
                     String.Format(
                         "Attempted to process {0} items at once, which is over the maximum of {1}.",
                         value, Int32.MaxValue));
-            return (int)value;
+            return (int) value;
         }
 
         private TimeSpan Multiply(TimeSpan timeSpan, long count)
         {
-            return TimeSpan.FromTicks(timeSpan.Ticks * count);
+            return TimeSpan.FromTicks(timeSpan.Ticks*count);
         }
     }
 }

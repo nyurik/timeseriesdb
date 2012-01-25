@@ -67,10 +67,10 @@ namespace NYurik.FastBinTimeseries
         // ReSharper restore StaticFieldInGenericType
 
         private TInd _firstIndex;
-        private FieldInfo _indexFieldInfo;
-        private TInd _lastIndex;
         private bool _hasFirstIndex;
         private bool _hasLastIndex;
+        private FieldInfo _indexFieldInfo;
+        private TInd _lastIndex;
         private Tuple<long, ConcurrentDictionary<long, TInd>> _searchCache;
         private bool _uniqueIndexes;
 
@@ -503,7 +503,7 @@ namespace NYurik.FastBinTimeseries
                     String.Format(
                         "Attempted to process {0} items at once, which is over the maximum of {1}.",
                         value, Int32.MaxValue));
-            return (int)value;
+            return (int) value;
         }
 
         private long FirstIndexToPos(TInd index)
