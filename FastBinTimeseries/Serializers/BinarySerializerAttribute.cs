@@ -23,7 +23,7 @@
 #endregion
 
 using System;
-using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries.Serializers
 {

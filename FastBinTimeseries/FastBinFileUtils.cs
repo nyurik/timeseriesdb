@@ -234,8 +234,8 @@ namespace NYurik.FastBinTimeseries
                 if (int.TryParse(typeName.Substring(1), NumberStyles.None, null, out fixedBufferSize))
                     return null;
             }
-
             fixedBufferSize = -1;
+
             Type type;
             if (typeMap != null && typeMap.TryGetValue(typeName, out type))
                 typeRemapped = true;
@@ -250,12 +250,21 @@ namespace NYurik.FastBinTimeseries
                         {
                             int pos = typeName.IndexOf(tm.Key, startIndex, StringComparison.Ordinal);
                             if (pos < 0)
+                            {
+                                // For simple "TypeName, AssemblyName" without generic subtypes, attempt additional substitution magic
+                                var comma1 = tm.Key.IndexOf(',');
+                                if (comma1 < 0 || tm.Key.IndexOf(',', comma1 + 1) >= 0)
+                                    break;
+
+
                                 break;
+                            }
+
                             if (pos == 0 || typeName[pos - 1] == ' ' || typeName[pos - 1] == '['
                                 || typeName[pos - 1] == '+')
                             {
                                 startIndex = pos + tm.Key.Length;
-                                typeName = typeName.Substring(0, pos) + tm.Value.AssemblyQualifiedName
+                                typeName = typeName.Substring(0, pos) + tm.Value.GetUnversionedNameAssembly()
                                            + typeName.Substring(startIndex);
                             }
                             else

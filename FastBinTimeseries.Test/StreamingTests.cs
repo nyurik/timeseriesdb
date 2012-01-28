@@ -53,7 +53,7 @@ namespace NYurik.FastBinTimeseries.Test
 
             byte[] bytes = File.ReadAllBytes(fileName);
 
-            using (var b = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false))
+            using (var b = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping()))
             {
                 var ms = new MemoryStream(bytes);
                 var cs = new ConfigurableStream(ms);

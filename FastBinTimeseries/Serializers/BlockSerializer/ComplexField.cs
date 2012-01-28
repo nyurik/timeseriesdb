@@ -31,7 +31,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 using JetBrains.Annotations;
-using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {

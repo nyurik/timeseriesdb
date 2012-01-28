@@ -75,7 +75,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
         public static TAttr ExtractSingleAttribute<TAttr>(this ICustomAttributeProvider customAttrProvider)
             where TAttr : Attribute
         {
-            object[] attributes = customAttrProvider.GetCustomAttributes<TAttr>(true);
+            TAttr[] attributes = customAttrProvider.GetCustomAttributes<TAttr>(true);
             if (attributes.Length > 0)
             {
                 if (attributes.Length > 1)
@@ -83,7 +83,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
                         String.Format(
                             "Found {0} (>1) attributes {1} detected for {2}", attributes.Length,
                             typeof (TAttr).Name, customAttrProvider));
-                return (TAttr) attributes[0];
+                return attributes[0];
             }
             return null;
         }

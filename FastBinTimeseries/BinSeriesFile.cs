@@ -30,7 +30,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using JetBrains.Annotations;
-using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries

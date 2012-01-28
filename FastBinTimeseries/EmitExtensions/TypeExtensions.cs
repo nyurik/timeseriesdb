@@ -28,7 +28,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace NYurik.EmitExtensions
+namespace NYurik.FastBinTimeseries.EmitExtensions
 {
     public static class TypeExtensions
     {

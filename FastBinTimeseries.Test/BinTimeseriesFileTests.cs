@@ -39,7 +39,8 @@ namespace NYurik.FastBinTimeseries.Test
             using (BinTimeseriesFile<_DatetimeByte_SeqPk1> f =
                 AllowCreate
                     ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = uniqueTimestamps}
-                    : (BinTimeseriesFile<_DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false))
+                    : (BinTimeseriesFile<_DatetimeByte_SeqPk1>)
+                      BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping()))
             {
                 f.BinarySearchCacheSize = enableCache ? 0 : -1;
 
@@ -95,7 +96,8 @@ namespace NYurik.FastBinTimeseries.Test
             using (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1> f =
                 AllowCreate
                     ? new BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = false}
-                    : (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false))
+                    : (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>)
+                      BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping()))
             {
                 if (AllowCreate)
                 {

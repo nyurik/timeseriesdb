@@ -26,6 +26,7 @@ using System;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
 namespace NYurik.FastBinTimeseries.CommonCode
 {
@@ -40,7 +41,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
     /// DateTime may not be used in serialization due to different packing on
     /// 32bit and 64bit architectures.
     /// </remarks>
-    [Serializable, StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [Serializable, StructLayout(LayoutKind.Sequential, Pack = 1), Field(typeof (UtcDateTimeField)), Index]
     public struct UtcDateTime : IComparable, IFormattable, IConvertible, IComparable<UtcDateTime>,
                                 IEquatable<UtcDateTime>
     {

@@ -27,8 +27,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.CommonCode;
+using NYurik.FastBinTimeseries.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 

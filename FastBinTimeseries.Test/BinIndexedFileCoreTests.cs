@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
+using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries.Test
 {
@@ -184,7 +185,9 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(typeof (byte), temp.ItemType);
 
 
-                using (var f = (BinIndexedFile<byte>) BinaryFile.Open(fileName, AllowCreate))
+                using (
+                    var f =
+                        (BinIndexedFile<byte>) BinaryFile.Open(fileName, AllowCreate, LegacySupport.GenerateMapping()))
                 {
                     AfterInitValidation(f, true, fileName);
                     f.Close();
@@ -197,7 +200,7 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
 
-            using (var f = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false))
+            using (var f = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping()))
             {
                 AfterInitValidation(f, false, fileName);
                 ((IDisposable) f).Dispose();
@@ -230,13 +233,12 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
 
-            using (
-                BinaryFile f = BinaryFile.Open(
-                    fileName, false,
-                    new Dictionary<string, Type>
-                        {
-                            {typeof (_DatetimeByte_SeqPk1).AssemblyQualifiedName, typeof (_LongByte_SeqPk1)}
-                        }))
+            IDictionary<string, Type> map = LegacySupport.GenerateMapping();
+            // ReSharper disable AssignNullToNotNullAttribute
+            map.Add(typeof (_DatetimeByte_SeqPk1).GetUnversionedNameAssembly(), typeof (_LongByte_SeqPk1));
+            // ReSharper restore AssignNullToNotNullAttribute
+
+            using (BinaryFile f = BinaryFile.Open(fileName, false, map))
             {
                 var p = (BinIndexedFile<_LongByte_SeqPk1>) f;
 

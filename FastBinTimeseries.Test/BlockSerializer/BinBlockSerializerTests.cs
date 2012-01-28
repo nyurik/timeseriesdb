@@ -81,7 +81,9 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 }
             }
 
-            using (var bf = (BinIndexedFile<TradesBlock>) BinaryFile.Open(fileName, false))
+            using (
+                var bf = (BinIndexedFile<TradesBlock>) BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping())
+                )
             {
                 VerifyData(bf, data);
             }

@@ -113,8 +113,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 }
             }
 
-            if (valueType == typeof (UtcDateTime))
-                return new UtcDateTimeField(this, name);
+            var srlzr = valueType.ExtractSingleAttribute<FieldAttribute>();
+            if (srlzr != null)
+                return (BaseField) Activator.CreateInstance(srlzr.Serializer, this, name);
 
             return new ComplexField(this, valueType, name);
         }

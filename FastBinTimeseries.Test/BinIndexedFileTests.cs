@@ -88,7 +88,7 @@ namespace NYurik.FastBinTimeseries.Test
                     hdrSize = 0;
                 }
 
-                using (BinaryFile file = BinaryFile.Open(fileName, false))
+                using (BinaryFile file = BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping()))
                 {
                     Assert.IsInstanceOf<BinIndexedFile<T>>(file);
                     Assert.AreEqual(typeof (T), file.ItemType);
@@ -158,7 +158,7 @@ namespace NYurik.FastBinTimeseries.Test
                     }
                 }
 
-                using (BinaryFile file = BinaryFile.Open(fileName, AllowCreate))
+                using (BinaryFile file = BinaryFile.Open(fileName, AllowCreate, LegacySupport.GenerateMapping()))
                 {
                     Assert.IsInstanceOf<BinIndexedFile<T>>(file);
                     var f = (BinIndexedFile<T>) file;
@@ -245,7 +245,8 @@ namespace NYurik.FastBinTimeseries.Test
             using (
                 BinIndexedFile<T> f = AllowCreate
                                           ? new BinIndexedFile<T>(fileName)
-                                          : (BinIndexedFile<T>) BinaryFile.Open(fileName, false))
+                                          : (BinIndexedFile<T>)
+                                            BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping()))
             {
                 if (AllowCreate)
                 {

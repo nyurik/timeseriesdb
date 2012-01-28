@@ -27,7 +27,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace NYurik.EmitExtensions
+namespace NYurik.FastBinTimeseries.EmitExtensions
 {
     public static class TypeBuilderExtensions
     {

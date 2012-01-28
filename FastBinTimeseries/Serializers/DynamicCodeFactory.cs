@@ -30,8 +30,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using NYurik.EmitExtensions;
 using NYurik.FastBinTimeseries.CommonCode;
+using NYurik.FastBinTimeseries.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries.Serializers
 {
@@ -326,15 +326,15 @@ namespace NYurik.FastBinTimeseries.Serializers
                         bool foundMultiple = false;
                         foreach (FieldInfo fi in fieldInfo)
                         {
-                            bool hasAttr = fi.ExtractSingleAttribute<TimestampAttribute>() != null;
-                            if (hasAttr || fi.FieldType == typeof (UtcDateTime))
+                            bool hasAttr = fi.ExtractSingleAttribute<IndexAttribute>() != null;
+                            if (hasAttr || fi.FieldType.ExtractSingleAttribute<IndexAttribute>() != null)
                             {
                                 if (hasAttr)
                                 {
                                     if (foundTsAttribute)
                                         throw new SerializerException(
                                             "More than one field has an attribute [{0}] attached in type {1}",
-                                            typeof (TimestampAttribute).Name, t.FullName);
+                                            typeof (IndexAttribute).Name, t.FullName);
                                     foundTsAttribute = true;
                                     result = fi;
                                 }

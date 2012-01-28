@@ -120,10 +120,6 @@
     <Compile Include="CommonCode\ListExtensions.cs" />
     <Compile Include="Serializers\BinarySerializerAttribute.cs" />
     <Compile Include="BinIndexedFile.cs" />
-    <Compile Include="BinTimeseriesFile.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="BinUniformTimeseriesFile.cs" />
     <Compile Include="CombinedException.cs" />
     <Compile Include="CommonCode\FormattedException.cs" />
     <Compile Include="BinaryFileException.cs" />
@@ -142,12 +138,9 @@
     <Compile Include="Serializers\BlockSerializer\SubFieldInfo.cs" />
     <Compile Include="Serializers\BlockSerializer\SimpleField.cs" />
     <Compile Include="Serializers\BlockSerializer\CodecWriter.cs" />
-    <Compile Include="Serializers\BlockSerializer\UtcDateTimeField.cs" />
     <Compile Include="Serializers\SerializerException.cs" />
     <Compile Include="FastBinFileUtils.cs" />
     <Compile Include="IBinaryFile.cs" />
-    <Compile Include="IBinTimeseriesFile.cs" />
-    <Compile Include="IBinUniformTimeseriesFile.cs" />
     <Compile Include="IStoredSeries.cs" />
     <Compile Include="NativeWinApis.cs" />
     <Compile Include="Serializers\DefaultTypeSerializer.cs" />
@@ -158,8 +151,7 @@
     <Compile Include="IBinSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CommonCode\TypeUtils.cs" />
-    <Compile Include="CommonCode\UtcDateTime.cs" />
-    <Compile Include="TimestampAttribute.cs" />
+    <Compile Include="IndexAttribute.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

@@ -26,7 +26,8 @@ using System;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
-    [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Class | AttributeTargets.Struct, Inherited = false,
+        AllowMultiple = false)]
     public sealed class FieldAttribute : Attribute
     {
         public FieldAttribute()

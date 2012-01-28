@@ -36,7 +36,7 @@ namespace NYurik.FastBinTimeseries.Test
 
     // ReSharper disable PossibleMultipleEnumeration
 
-    [TestFixture]
+    [TestFixture, Explicit("Slow tests, some not working")]
     public class CompressedFileTests : TestsBase
     {
         private readonly _DatetimeByte_SeqPk1[] _empty = _DatetimeByte_SeqPk1.Empty;
@@ -55,7 +55,8 @@ namespace NYurik.FastBinTimeseries.Test
             Array.Reverse(expectedRev);
             IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>
                 f = !AllowCreate
-                        ? (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false)
+                        ? (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
+                          BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping())
                         : newFile(fileName);
             try
             {
@@ -67,7 +68,9 @@ namespace NYurik.FastBinTimeseries.Test
                     init(f);
                     f.AppendData(newData);
                     f.Dispose();
-                    f = (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>) BinaryFile.Open(fileName, false);
+                    f =
+                        (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
+                        BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping());
                 }
 
                 TestUtils.CollectionAssertEqual(

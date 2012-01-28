@@ -87,6 +87,10 @@
     <Compile Include="TestUtils.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\FastBinTimeseries.Legacy\FastBinTimeseries.Legacy.csproj">
+      <Project>{66263510-4FF2-42CB-BC7E-6FA2722C3889}</Project>
+      <Name>FastBinTimeseries.Legacy</Name>
+    </ProjectReference>
     <ProjectReference Include="..\FastBinTimeseries\FastBinTimeseries.csproj">
       <Project>{D07A780C-142B-4E52-9BCC-52B03B60553D}</Project>
       <Name>FastBinTimeseries</Name>

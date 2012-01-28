@@ -28,7 +28,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 
-namespace NYurik.EmitExtensions
+namespace NYurik.FastBinTimeseries.EmitExtensions
 {
     /// <summary>
     /// A wrapper around the <see cref="ILGenerator"/> class.

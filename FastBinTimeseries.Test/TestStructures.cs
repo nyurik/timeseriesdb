@@ -456,8 +456,8 @@ namespace NYurik.FastBinTimeseries.Test
     {
         private const int ArrayLenA = 3;
         private const int ArrayLenB = 4;
-        public unsafe fixed byte a[ArrayLenA];
-        private unsafe fixed byte b[ArrayLenB];
+        public unsafe fixed byte a [ArrayLenA];
+        private unsafe fixed byte b [ArrayLenB];
 
         #region Implementation
 

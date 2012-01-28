@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.EmitExtensions;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {

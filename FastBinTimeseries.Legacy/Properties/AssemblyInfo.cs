@@ -7,11 +7,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 
-[assembly: AssemblyTitle("FastBinTimeseries")]
+[assembly: AssemblyTitle("FastBinTimeseries.Legacy")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("FastBinTimeseries")]
+[assembly: AssemblyProduct("FastBinTimeseries.Legacy")]
 [assembly: AssemblyCopyright("Copyright © Yuri Astrakhan 2009-2012")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

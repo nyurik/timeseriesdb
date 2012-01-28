@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using JetBrains.Annotations;
-using NYurik.EmitExtensions;
+using NYurik.FastBinTimeseries.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries.Serializers
