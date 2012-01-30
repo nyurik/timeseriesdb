@@ -1,7 +1,7 @@
 #region COPYRIGHT
 
 /*
- *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
+ *     Copyright 2009-2012 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
  *     This file is part of FastBinTimeseries library
  * 
@@ -66,16 +66,5 @@ namespace NYurik.FastBinTimeseries
 
         /// <summary> Closes currently open file. This is a safe operation even on a disposed object. </summary>
         void Close();
-    }
-
-    public interface IBinaryFile<T> : IBinaryFile
-    {
-        /// <summary> Access to the instance of the current serializer </summary>
-        IBinSerializer<T> Serializer { get; }
-
-        /// <summary>
-        /// Read data starting at <paramref name="firstItemIdx"/> to fill up the <paramref name="buffer"/>.
-        /// </summary>
-        void ReadData(long firstItemIdx, ArraySegment<T> buffer);
     }
 }

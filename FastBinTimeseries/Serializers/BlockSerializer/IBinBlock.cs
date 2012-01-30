@@ -1,7 +1,7 @@
 ﻿#region COPYRIGHT
 
 /*
- *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
+ *     Copyright 2009-2012 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
  *     This file is part of FastBinTimeseries library
  * 

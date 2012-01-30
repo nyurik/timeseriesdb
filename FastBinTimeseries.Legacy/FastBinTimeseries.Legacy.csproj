@@ -44,6 +44,7 @@
     <Compile Include="BinTimeseriesFile.cs" />
     <Compile Include="BinUniformTimeseriesFile.cs" />
     <Compile Include="CommonCode\UtcDateTime.cs" />
+    <Compile Include="IBinaryFile.cs" />
     <Compile Include="IBinTimeseriesFile.cs" />
     <Compile Include="IBinUniformTimeseriesFile.cs" />
     <Compile Include="IEnumerableFeed2.cs" />

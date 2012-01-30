@@ -1,7 +1,7 @@
 #region COPYRIGHT
 
 /*
- *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
+ *     Copyright 2009-2012 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
  *     This file is part of FastBinTimeseries library
  * 
@@ -36,7 +36,7 @@ using NYurik.FastBinTimeseries.Serializers;
 namespace NYurik.FastBinTimeseries
 {
     /// <summary>
-    /// Helper non-generic class aids in creating a new instance of <see cref="BinTimeseriesFile{T}"/>.
+    /// Helper non-generic class aids in creating a new instance of <see cref="BinSeriesFile{TInd,TVal}"/>.
     /// </summary>
     public static class BinSeriesFile
     {
@@ -54,7 +54,7 @@ namespace NYurik.FastBinTimeseries
     }
 
     /// <summary>
-    /// Object representing a binary-serialized long-based series file.
+    /// Object representing a binary-serialized index-based series file.
     /// </summary>
     public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IEnumerableFeed<TInd, TVal>
         where TInd : IComparable<TInd>

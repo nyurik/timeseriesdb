@@ -1,7 +1,7 @@
 #region COPYRIGHT
 
 /*
- *     Copyright 2009-2011 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
+ *     Copyright 2009-2012 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
  *     This file is part of FastBinTimeseries library
  * 
@@ -278,7 +278,7 @@ namespace NYurik.FastBinTimeseries
             long count = GetCount();
             bool isEmptyFile = count == 0;
 
-            using (IEnumerator<TVal> newValues = VerifyValues(bufferStream).GetEnumerator())
+           \ using (IEnumerator<TVal> newValues = VerifyValues(bufferStream).GetEnumerator())
             {
                 if (!newValues.MoveNext())
                     return;
