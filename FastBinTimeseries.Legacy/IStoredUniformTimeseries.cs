@@ -27,7 +27,7 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
-    public interface IStoredUniformTimeseries : IStoredSeries
+    public interface IStoredUniformTimeseries
     {
         /// <summary>
         /// The timestamp of the first item in the file.

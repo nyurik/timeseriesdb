@@ -26,8 +26,23 @@ using System;
 
 namespace NYurik.FastBinTimeseries
 {
-    public interface IBinaryFile : IStoredSeries
+    public interface IBinaryFile : IGenericInvoker, IDisposable
     {
+        /// <summary> Type of the items stored in this file </summary>
+        Type ItemType { get; }
+
+        /// <summary> User string stored in the header </summary>
+        string Tag { get; }
+
+        /// <summary> True when the file has no data </summary>
+        bool IsEmpty { get; }
+
+        /// <summary> True when the object has been disposed. No further operations are allowed. </summary>
+        bool IsDisposed { get; }
+
+        /// <summary> Total number of items in the file </summary>
+        long GetItemCount();
+
         /// <summary> Access to the non-generic instance of the current serializer </summary>
         IBinSerializer NonGenericSerializer { get; }
 

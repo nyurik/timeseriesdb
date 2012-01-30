@@ -140,7 +140,6 @@
     <Compile Include="Serializers\SerializerException.cs" />
     <Compile Include="FastBinFileUtils.cs" />
     <Compile Include="IBinaryFile.cs" />
-    <Compile Include="IStoredSeries.cs" />
     <Compile Include="NativeWinApis.cs" />
     <Compile Include="Serializers\DefaultTypeSerializer.cs" />
     <Compile Include="EmitExtensions\ILGeneratorExtensions.cs" />

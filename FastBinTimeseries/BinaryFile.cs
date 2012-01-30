@@ -75,7 +75,7 @@ namespace NYurik.FastBinTimeseries
             get { return Serializer; }
         }
 
-        long IStoredSeries.GetItemCount()
+        long IBinaryFile.GetItemCount()
         {
             return Count;
         }
@@ -87,7 +87,7 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        /// <summary> Used by <see cref="BinaryFile.Open(Stream,System.Collections.Generic.IDictionary{string,System.Type})"/> when opening an existing file </summary>
+        /// <summary> Used by <see cref="BinaryFile.Open(System.IO.Stream,System.Func{string,System.Type})"/> when opening an existing file </summary>
         protected override sealed void SetSerializer(IBinSerializer nonGenericSerializer)
         {
             _serializer = (IBinSerializer<T>) nonGenericSerializer;

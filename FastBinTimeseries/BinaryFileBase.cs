@@ -30,7 +30,7 @@ using NYurik.FastBinTimeseries.Serializers;
 
 namespace NYurik.FastBinTimeseries
 {
-    public abstract class BinaryFile : IDisposable, IGenericInvoker
+    public abstract class BinaryFile : IGenericInvoker, IDisposable
     {
         private const int FileSignature = 0xBF << 24 | (byte) 'a' << 16 | (byte) 'r' << 8 | (byte) 'Y';
 
@@ -337,7 +337,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Serialize header info into a memory stream and return as a byte array.
         /// This method must match the reading sequence in the
-        /// <see cref="Open(System.IO.Stream,System.Func{NYurik.FastBinTimeseries.CommonCode.TypeSpec,System.Type})"/>.
+        /// <see cref="Open(System.IO.Stream,System.Func{string,System.Type})"/>.
         /// </summary>
         private ArraySegment<byte> CreateHeader()
         {
