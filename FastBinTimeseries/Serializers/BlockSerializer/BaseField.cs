@@ -177,11 +177,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     throw new ArgumentOutOfRangeException("value", value.Type, "Unknown type");
             }
 
-            Expression posExp;
-            if (codec.Type == typeof (CodecWriter))
-                posExp = Expression.PropertyOrField(codec, "Count");
-            else
-                posExp = Expression.PropertyOrField(codec, "BufferPos");
+            Expression posExp = Expression.PropertyOrField(codec, codec.Type == typeof (CodecWriter) ? "Count" : "BufferPos");
 
             var prm = value as ParameterExpression;
             return Expression.Call(

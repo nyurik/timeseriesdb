@@ -240,12 +240,6 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        [Obsolete("Use streaming methods instead")]
-        public void ReadData(long firstItemIdx, ArraySegment<TVal> buffer)
-        {
-            ObsoleteExtensions.ReadData(this, firstItemIdx, buffer);
-        }
-
         public long BinarySearch(TInd index)
         {
             if (!UniqueIndexes)

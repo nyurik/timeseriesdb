@@ -49,11 +49,6 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
-        public byte[] Buffer
-        {
-            get { return _buffer; }
-        }
-
         [UsedImplicitly]
         internal int ReadHeader()
         {
@@ -295,14 +290,14 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         [UsedImplicitly]
         internal byte ReadByte()
         {
-            return Buffer[_bufferPos++];
+            return _buffer[_bufferPos++];
         }
 
         [UsedImplicitly]
         internal ulong ReadUnsignedValue()
         {
             int p = _bufferPos;
-            byte[] buff = Buffer;
+            byte[] buff = _buffer;
 
             int tmp32 = buff[p];
             if (tmp32 < 128)
@@ -405,7 +400,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         internal long ReadSignedValue()
         {
             int p = _bufferPos;
-            byte[] buff = Buffer;
+            byte[] buff = _buffer;
 
             long tmp64 = buff[p];
             if (tmp64 < 128)

@@ -29,6 +29,53 @@ namespace NYurik.FastBinTimeseries
 {
     public static class ObsoleteExtensions
     {
+        private class Generic : IGenericCallable<Array, Tuple<long, int>>
+        {
+            [Obsolete]
+            public Array Run<T>(IGenericInvoker source, Tuple<long, int> arg)
+            {
+                var firstItemIdx = arg.Item1;
+                var count = arg.Item2;
+                
+                var file = ((BinaryFile<T>) source);
+
+                long fileCount = file.Count;
+                if (firstItemIdx < 0 || firstItemIdx > fileCount)
+                    throw new ArgumentOutOfRangeException(
+                        "firstItemIdx"+"", firstItemIdx, string.Format("Accepted range [0:{0}]", fileCount));
+                if (count < 0)
+                    throw new ArgumentOutOfRangeException("count"+"", count, "Must be non-negative");
+
+                var result = new T[(int) Math.Min(fileCount - firstItemIdx, count)];
+
+                file.PerformFileAccess(firstItemIdx, new ArraySegment<T>(result), false);
+
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Read up to <paramref name="count"/> items beging at <paramref name="firstItemIdx"/>, and return an <see cref="Array"/> object. 
+        /// </summary>
+        /// <param name="file"/>
+        /// <param name="firstItemIdx">Index of the item to start from.</param>
+        /// <param name="count">The maximum number of items to read.</param>
+        [Obsolete("Use streaming methods instead")]
+        public static Array GenericReadData(this IBinaryFile file, long firstItemIdx, int count)
+        {
+            return file.RunGenericMethod(new Generic(), Tuple.Create(firstItemIdx, count));
+        }
+
+        /// <summary>
+        /// Read data starting at <paramref name="firstItemIdx"/> to fill up the <paramref name="buffer"/>.
+        /// </summary>
+        [Obsolete("Use streaming methods instead")]
+        public static void ReadData<TInd,TVal>(BinSeriesFile<TInd, TVal> file, long firstItemIdx, ArraySegment<TVal> buffer) 
+            where TInd : IComparable<TInd>
+        {
+            ReadData<TVal>(file, firstItemIdx, buffer);
+        }
+
         /// <summary>
         /// Read enough items to fill the <paramref name="buffer"/>, starting at <paramref name="firstItemIndex"/>.
         /// </summary>

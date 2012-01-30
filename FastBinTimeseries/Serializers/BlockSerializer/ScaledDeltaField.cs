@@ -36,6 +36,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         private bool _isInteger;
         private long _multiplier;
 
+        [UsedImplicitly]
         protected ScaledDeltaField()
         {
         }

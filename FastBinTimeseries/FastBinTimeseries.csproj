@@ -112,12 +112,10 @@
     <Compile Include="BufferProvider.cs" />
     <Compile Include="CommonCode\TypeSpec.cs" />
     <Compile Include="IEnumerableFeed.cs" />
-    <Compile Include="ObsoleteExtensions.cs" />
     <Compile Include="BinSeriesFile.cs" />
     <Compile Include="CommonCode\JetBrains.cs" />
     <Compile Include="EnumerableFeedExtensions.cs" />
     <Compile Include="IGenericInvoker.cs" />
-    <Compile Include="IWrapperFactory.cs" />
     <Compile Include="CommonCode\ListExtensions.cs" />
     <Compile Include="Serializers\BinarySerializerAttribute.cs" />
     <Compile Include="BinIndexedFile.cs" />

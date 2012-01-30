@@ -26,10 +26,6 @@ using System;
 using System.Security.Cryptography;
 using JetBrains.Annotations;
 
-#if DEBUG_SERIALIZER
-
-#endif
-
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public class CodecBase : IDisposable

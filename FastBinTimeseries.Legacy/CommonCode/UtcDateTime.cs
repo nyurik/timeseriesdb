@@ -48,11 +48,10 @@ namespace NYurik.FastBinTimeseries.CommonCode
         public const long MinTicks = 0; // UtcDateTime.MinValue.Ticks;
         public const long MaxTicks = 3155378975999999999; // UtcDateTime.MaxValue.Ticks;
 
-        internal const string FormatDateOnly = "yyyy-MM-dd";
-        internal const string FormatDateTimeMin = "yyyy-MM-dd HH:mm";
-        internal const string FormatDateTimeSec = "yyyy-MM-dd HH:mm:ss";
-        internal const string FormatDateTimeMs = "yyyy-MM-dd HH:mm:ss.fff";
-        internal const string FormatDateTimeComplete = "yyyy-MM-dd HH:mm:ss.fffffff";
+        private const string FormatDateOnly = "yyyy-MM-dd";
+        private const string FormatDateTimeMin = "yyyy-MM-dd HH:mm";
+        private const string FormatDateTimeSec = "yyyy-MM-dd HH:mm:ss";
+        private const string FormatDateTimeMs = "yyyy-MM-dd HH:mm:ss.fff";
 
         /// <summary>
         /// Same as <see cref="DateTime.MaxValue"/> except as UTC kind

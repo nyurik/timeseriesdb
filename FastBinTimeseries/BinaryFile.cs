@@ -85,23 +85,6 @@ namespace NYurik.FastBinTimeseries
             get { return typeof (T); }
         }
 
-        [Obsolete("Use streaming methods instead")]
-        Array IStoredSeries.GenericReadData(long firstItemIdx, int count)
-        {
-            long fileCount = GetCount();
-            if (firstItemIdx < 0 || firstItemIdx > fileCount)
-                throw new ArgumentOutOfRangeException(
-                    "firstItemIdx", firstItemIdx, string.Format("Accepted range [0:{0}]", fileCount));
-            if (count < 0)
-                throw new ArgumentOutOfRangeException("count", count, "Must be non-negative");
-
-            var result = new T[(int) Math.Min(fileCount - firstItemIdx, count)];
-
-            PerformFileAccess(firstItemIdx, new ArraySegment<T>(result), false);
-
-            return result;
-        }
-
         #endregion
 
         /// <summary> Used by <see cref="BinaryFile.Open(Stream,System.Collections.Generic.IDictionary{string,System.Type})"/> when opening an existing file </summary>
@@ -111,7 +94,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         [Obsolete("Use streaming methods instead")]
-        protected int PerformFileAccess(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
+        protected internal int PerformFileAccess(long firstItemIdx, ArraySegment<T> buffer, bool isWriting)
         {
             ThrowOnNotInitialized();
 

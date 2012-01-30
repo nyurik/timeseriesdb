@@ -41,3 +41,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("1.0.0.0")]
 [assembly: CLSCompliant(true)]
 [assembly: InternalsVisibleTo("NYurik.FastBinTimeseries.Test")]
+[assembly: InternalsVisibleTo("NYurik.FastBinTimeseries.Legacy")]

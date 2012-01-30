@@ -29,11 +29,6 @@ namespace NYurik.FastBinTimeseries.CommonCode
 {
     public static class TypeUtils
     {
-        public static string GetUnversionedNameAssembly(this Type type)
-        {
-            return type.FullName + ", " + type.Assembly.GetName().Name;
-        }
-
         /// <summary>
         /// Load type using <see cref="Type.GetType(string)"/>, and if fails, 
         /// attempt to load same type from an assembly by assembly name, 

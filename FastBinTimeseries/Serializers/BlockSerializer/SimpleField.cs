@@ -31,6 +31,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 {
     public class SimpleField : BaseField
     {
+        [UsedImplicitly]
         protected SimpleField()
         {
         }

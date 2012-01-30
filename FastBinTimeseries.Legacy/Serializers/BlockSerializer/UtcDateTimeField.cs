@@ -35,6 +35,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
     {
         private ScaledDeltaField _deltaField;
 
+        [UsedImplicitly]
         protected UtcDateTimeField()
         {
         }

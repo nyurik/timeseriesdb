@@ -30,10 +30,5 @@ namespace NYurik.FastBinTimeseries
     {
         /// <summary> Access to the instance of the current serializer </summary>
         IBinSerializer<T> Serializer { get; }
-
-        /// <summary>
-        /// Read data starting at <paramref name="firstItemIdx"/> to fill up the <paramref name="buffer"/>.
-        /// </summary>
-        void ReadData(long firstItemIdx, ArraySegment<T> buffer);
     }
 }

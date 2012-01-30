@@ -26,9 +26,7 @@ using System;
 
 namespace NYurik.FastBinTimeseries
 {
-    //[Obsolete("Use IEnumerableFeed<TInd, TVal> instead")]
-
-    public interface IStoredSeries : IDisposable
+    public interface IStoredSeries : IGenericInvoker, IDisposable
     {
         /// <summary> Type of the items stored in this file </summary>
         Type ItemType { get; }
@@ -44,12 +42,5 @@ namespace NYurik.FastBinTimeseries
 
         /// <summary> Total number of items in the file </summary>
         long GetItemCount();
-
-        /// <summary>
-        /// Read up to <paramref name="count"/> items beging at <paramref name="firstItemIdx"/>, and return an <see cref="Array"/> object. 
-        /// </summary>
-        /// <param name="firstItemIdx">Index of the item to start from.</param>
-        /// <param name="count">The maximum number of items to read.</param>
-        Array GenericReadData(long firstItemIdx, int count);
     }
 }

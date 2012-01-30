@@ -50,6 +50,7 @@
     <Compile Include="IEnumerableFeed2.cs" />
     <Compile Include="IStoredUniformTimeseries.cs" />
     <Compile Include="LegacySupport.cs" />
+    <Compile Include="ObsoleteExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Serializers\BlockSerializer\UtcDateTimeField.cs" />
   </ItemGroup>

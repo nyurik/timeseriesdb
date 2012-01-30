@@ -39,6 +39,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
     {
         private IList<SubFieldInfo> _fields;
 
+        [UsedImplicitly]
         protected ComplexField()
         {
         }
