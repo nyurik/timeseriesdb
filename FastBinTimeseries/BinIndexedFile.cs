@@ -84,7 +84,7 @@ namespace NYurik.FastBinTimeseries
                     PerformWriteStreaming(streamEnmr, firstItemIdx);
         }
 
-        protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override Version Init(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version ver = reader.ReadVersion();
             if (ver != Version10)

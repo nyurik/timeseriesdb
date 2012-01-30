@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq.Expressions;
@@ -99,12 +98,12 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         [Pure]
         public static BaseField FieldFromReader(IStateStore stateStore, BinaryReader reader,
-                                                IDictionary<string, Type> typeMap)
+                                                Func<string, Type> typeResolver)
         {
-            var fld = reader.ReadTypeAndInstantiate<BaseField>(typeMap, true);
+            var fld = reader.ReadTypeAndInstantiate<BaseField>(typeResolver, true);
 
             fld.StateStore = stateStore;
-            fld.InitExistingField(reader, typeMap);
+            fld.InitExistingField(reader, typeResolver);
             fld.EnsureReadonly();
 
             return fld;
@@ -120,14 +119,13 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             writer.Write(StateName);
         }
 
-        protected virtual void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected virtual void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version = reader.ReadVersion();
 
             string typeName;
-            bool remapped;
             int size;
-            ValueType = reader.ReadType(typeMap, out typeName, out remapped, out size);
+            ValueType = reader.ReadType(typeResolver, out typeName, out size);
 
             StateName = reader.ReadString();
         }

@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
@@ -122,7 +121,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             IsInitialized = true;
         }
 
-        public void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        public void InitExisting(BinaryReader reader, Func<string, Type> typeResolver)
         {
             ThrowOnInitialized();
 
@@ -130,11 +129,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             if (_version != Version10)
                 throw new IncompatibleVersionException(GetType(), _version);
 
-            _headerSerializer = reader.ReadTypeAndInstantiate<IBinSerializer<THeader>>(typeMap, false);
-            _headerSerializer.InitExisting(reader, typeMap);
+            _headerSerializer = reader.ReadTypeAndInstantiate<IBinSerializer<THeader>>(typeResolver, false);
+            _headerSerializer.InitExisting(reader, typeResolver);
 
-            _dataSerializer = reader.ReadTypeAndInstantiate<IBinSerializer<TItem>>(typeMap, false);
-            _dataSerializer.InitExisting(reader, typeMap);
+            _dataSerializer = reader.ReadTypeAndInstantiate<IBinSerializer<TItem>>(typeResolver, false);
+            _dataSerializer.InitExisting(reader, typeResolver);
 
             ItemCount = reader.ReadInt32();
 

@@ -77,7 +77,8 @@ namespace NYurik.FastBinTimeseries
                                                        long maxItemCount = long.MaxValue);
 
         /// <summary>
-        /// Add new items at the end of the existing file
+        /// Add new items at the end of the existing file. If file truncation is allowed, the first item's index
+        /// will be used to truncate the file
         /// </summary>
         void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false);
     }

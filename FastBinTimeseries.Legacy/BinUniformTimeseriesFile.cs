@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using NYurik.FastBinTimeseries.CommonCode;
 
@@ -235,7 +234,7 @@ namespace NYurik.FastBinTimeseries
             PerformFileAccess(itemLong, buffer, true);
         }
 
-        protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override Version Init(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version ver = reader.ReadVersion();
             if (ver != Version11 && ver != Version10)

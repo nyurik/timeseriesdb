@@ -139,7 +139,7 @@ namespace NYurik.FastBinTimeseries
             IsInitialized = true;
         }
 
-        public void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap)
+        public void InitExisting(BinaryReader reader, Func<string, Type> typeResolver)
         {
             ThrowOnInitialized();
 
@@ -162,9 +162,8 @@ namespace NYurik.FastBinTimeseries
                     int level = reader.ReadInt32();
 
                     string typeName;
-                    bool typeRemapped;
                     int fixedBufferSize;
-                    Type type = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
+                    Type type = reader.ReadType(typeResolver, out typeName, out fixedBufferSize);
 
                     fileSig[i] =
                         type != null
@@ -172,7 +171,7 @@ namespace NYurik.FastBinTimeseries
                             : new TypeExtensions.TypeInfo(level, fixedBufferSize);
                 }
 
-                if (typeMap == null)
+                if (typeResolver == null)
                 {
                     // For now only verify without the typemap, as it might become much more complex
                     List<TypeExtensions.TypeInfo> sig = typeof (T).GenerateTypeSignature();

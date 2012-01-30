@@ -56,7 +56,7 @@ namespace NYurik.FastBinTimeseries.Test
             IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>
                 f = !AllowCreate
                         ? (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
-                          BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping())
+                          BinaryFile.Open(fileName, false, LegacySupport.TypeResolver)
                         : newFile(fileName);
             try
             {
@@ -70,7 +70,7 @@ namespace NYurik.FastBinTimeseries.Test
                     f.Dispose();
                     f =
                         (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
-                        BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping());
+                        BinaryFile.Open(fileName, false, LegacySupport.TypeResolver);
                 }
 
                 TestUtils.CollectionAssertEqual(

@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using NYurik.FastBinTimeseries.EmitExtensions;
@@ -48,12 +47,11 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             Field = field;
         }
 
-        public SubFieldInfo(IStateStore stateStore, BinaryReader reader, IDictionary<string, Type> typeMap)
+        public SubFieldInfo(IStateStore stateStore, BinaryReader reader, Func<string, Type> typeResolver)
         {
             string typeName;
-            bool typeRemapped;
             int fixedBufferSize;
-            Type type = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
+            Type type = reader.ReadType(typeResolver, out typeName, out fixedBufferSize);
 
             string name = reader.ReadString();
             MemberInfo mmbr = type.GetProperty(name, TypeExtensions.AllInstanceMembers) ??
@@ -62,7 +60,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 throw new SerializerException(
                     "Unable to locate the field or property {0} on type {1}", name, type.AssemblyQualifiedName);
 
-            Type fldType = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
+            Type fldType = reader.ReadType(typeResolver, out typeName, out fixedBufferSize);
 
             Type actualFldPropType = GetFieldOrPropertyType(mmbr);
             if (actualFldPropType != fldType)
@@ -73,7 +71,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
             MemberInfo = mmbr;
 
-            Field = BaseField.FieldFromReader(stateStore, reader, typeMap);
+            Field = BaseField.FieldFromReader(stateStore, reader, typeResolver);
         }
 
         public MemberInfo MemberInfo { get; private set; }

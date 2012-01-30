@@ -95,7 +95,7 @@ namespace NYurik.FastBinTimeseries
             IndexFieldInfo = indexFieldInfo ?? DynamicCodeFactory.Instance.Value.GetIndexField<TVal>();
         }
 
-        protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override Version Init(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version ver = reader.ReadVersion();
             if (ver != Version11 && ver != Version10)

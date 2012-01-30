@@ -94,5 +94,29 @@ namespace NYurik.FastBinTimeseries.CommonCode
             return Array.ConvertAll(
                 type.GetCustomAttributes(typeof (TAttribute), inherit), i => (TAttribute) i);
         }
+
+        public static Type TypeResolver(string typeName, params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
+        {
+            return TypeSpec.Parse(typeName)
+                .Resolve(
+                    (ts, an) =>
+                        {
+                            foreach (var tr in typeResolvers)
+                            {
+                                Type t = tr(ts, an);
+                                if (t != null)
+                                    return t;
+                            }
+                            return null;
+                        });
+        }
+
+        public static Type DefaultTypeResolver(TypeSpec spec, AssemblyName assemblyName)
+        {
+            string typeName = spec.Name;
+            if (spec.AssemblyName != null)
+                typeName += ", " + spec.AssemblyName;
+            return GetTypeFromAnyAssemblyVersion(typeName);
+        }
     }
 }

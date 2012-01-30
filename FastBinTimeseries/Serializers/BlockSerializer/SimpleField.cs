@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
@@ -89,9 +88,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return CodecBase.MaxBytesFor8;
         }
 
-        protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
-            base.InitExistingField(reader, typeMap);
+            base.InitExistingField(reader, typeResolver);
             if (Version != Version10)
                 throw new IncompatibleVersionException(GetType(), Version);
         }

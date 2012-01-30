@@ -94,15 +94,15 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 field.InitNew(writer);
         }
 
-        protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
-            base.InitExistingField(reader, typeMap);
+            base.InitExistingField(reader, typeResolver);
             if (Version != Version10)
                 throw new IncompatibleVersionException(GetType(), Version);
 
             var fields = new SubFieldInfo[reader.ReadInt32()];
             for (int i = 0; i < fields.Length; i++)
-                fields[i] = new SubFieldInfo(StateStore, reader, typeMap);
+                fields[i] = new SubFieldInfo(StateStore, reader, typeResolver);
             _fields = fields;
         }
 

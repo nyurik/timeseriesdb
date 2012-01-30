@@ -142,7 +142,7 @@ namespace NYurik.FastBinTimeseries
             BlockSize = 16*1024;
         }
 
-        protected override Version Init(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override Version Init(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version ver = reader.ReadVersion();
             if (ver != Version10)
@@ -159,7 +159,7 @@ namespace NYurik.FastBinTimeseries
 
             IndexFieldInfo = fieldInfo;
 
-            _serializer = DynamicSerializer<TVal>.CreateFromReader(reader, typeMap);
+            _serializer = DynamicSerializer<TVal>.CreateFromReader(reader, typeResolver);
             _minItemByteSize = FieldSerializer.RootField.GetMinByteSize();
             _maxItemByteSize = FieldSerializer.RootField.GetMaxByteSize();
 

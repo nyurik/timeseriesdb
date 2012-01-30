@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
@@ -187,7 +186,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                 using (
                     var f =
-                        (BinIndexedFile<byte>) BinaryFile.Open(fileName, AllowCreate, LegacySupport.GenerateMapping()))
+                        (BinIndexedFile<byte>) BinaryFile.Open(fileName, AllowCreate, LegacySupport.TypeResolver))
                 {
                     AfterInitValidation(f, true, fileName);
                     f.Close();
@@ -200,7 +199,7 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
 
-            using (var f = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false, LegacySupport.GenerateMapping()))
+            using (var f = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false, LegacySupport.TypeResolver))
             {
                 AfterInitValidation(f, false, fileName);
                 ((IDisposable) f).Dispose();
@@ -233,12 +232,17 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
 
-            IDictionary<string, Type> map = LegacySupport.GenerateMapping();
-            // ReSharper disable AssignNullToNotNullAttribute
-            map.Add(typeof (_DatetimeByte_SeqPk1).GetUnversionedNameAssembly(), typeof (_LongByte_SeqPk1));
-            // ReSharper restore AssignNullToNotNullAttribute
+            Type oldT = typeof (_DatetimeByte_SeqPk1);
+            string oldAn = oldT.Assembly.GetName().Name;
 
-            using (BinaryFile f = BinaryFile.Open(fileName, false, map))
+            using (BinaryFile f = BinaryFile.Open(
+                fileName, false,
+                tn =>
+                TypeUtils.TypeResolver(
+                    tn,
+                    (ts, an) =>
+                    an != null && an.Name == oldAn && ts.Name == oldT.FullName ? typeof (_LongByte_SeqPk1) : null,
+                    LegacySupport.TypeResolver, TypeUtils.DefaultTypeResolver)))
             {
                 var p = (BinIndexedFile<_LongByte_SeqPk1>) f;
 

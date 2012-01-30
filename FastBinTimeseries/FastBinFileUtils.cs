@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -204,76 +203,48 @@ namespace NYurik.FastBinTimeseries
         }
 
         public static T ReadTypeAndInstantiate<T>(
-            this BinaryReader reader, IDictionary<string, Type> typeMap, bool nonPublic)
+            this BinaryReader reader, Func<string, Type> typeResolver, bool nonPublic)
             where T : class
         {
             string typeName;
-            bool typeRemapped;
             int fixedBufferSize;
-            Type type = reader.ReadType(typeMap, out typeName, out typeRemapped, out fixedBufferSize);
+            Type type = reader.ReadType(typeResolver, out typeName, out fixedBufferSize);
+            if (type == null)
+                throw new BinaryFileException("Unable to instantiate type {0}", typeName);
 
             var instance = Activator.CreateInstance(type, nonPublic) as T;
             if (instance == null)
+            {
+                string aqn = type.AssemblyQualifiedName;
                 throw new BinaryFileException(
-                    "Type {0}{1} cannot be cast into {2}", type.AssemblyQualifiedName,
-                    !typeRemapped ? "" : " (re-mapped from " + typeName + ")",
+                    "Type {0}{1} cannot be cast into {2}", aqn,
+                    aqn == typeName ? "" : " (re-mapped from " + typeName + ")",
                     typeof (T).AssemblyQualifiedName);
+            }
             return instance;
         }
 
-        public static Type ReadType(this BinaryReader reader, IDictionary<string, Type> typeMap, out string typeName,
-                                    out bool typeRemapped, out int fixedBufferSize)
+        public static Type ReadType(this BinaryReader reader, Func<string, Type> typeResolver, out string typeName,
+                                    out int fixedBufferSize)
         {
             if (reader == null) throw new ArgumentNullException("reader");
             typeName = reader.ReadString();
 
-            typeRemapped = false;
             if (typeName.StartsWith("!"))
             {
                 // Special case - possibly storing the size of the fixed buffer as an integer
                 if (int.TryParse(typeName.Substring(1), NumberStyles.None, null, out fixedBufferSize))
                     return null;
             }
+
             fixedBufferSize = -1;
+            Type type = null;
 
-            Type type;
-            if (typeMap != null && typeMap.TryGetValue(typeName, out type))
-                typeRemapped = true;
-            else
-            {
-                if (typeMap != null)
-                {
-                    foreach (var tm in typeMap)
-                    {
-                        int startIndex = 0;
-                        while (true)
-                        {
-                            int pos = typeName.IndexOf(tm.Key, startIndex, StringComparison.Ordinal);
-                            if (pos < 0)
-                            {
-                                // For simple "TypeName, AssemblyName" without generic subtypes, attempt additional substitution magic
-                                var comma1 = tm.Key.IndexOf(',');
-                                if (comma1 < 0 || tm.Key.IndexOf(',', comma1 + 1) >= 0)
-                                    break;
+            if (typeResolver != null)
+                type = typeResolver(typeName);
 
-
-                                break;
-                            }
-
-                            if (pos == 0 || typeName[pos - 1] == ' ' || typeName[pos - 1] == '['
-                                || typeName[pos - 1] == '+')
-                            {
-                                startIndex = pos + tm.Key.Length;
-                                typeName = typeName.Substring(0, pos) + tm.Value.GetUnversionedNameAssembly()
-                                           + typeName.Substring(startIndex);
-                            }
-                            else
-                                startIndex = pos + 1;
-                        }
-                    }
-                }
+            if (type == null)
                 type = TypeUtils.GetTypeFromAnyAssemblyVersion(typeName);
-            }
 
             if (type == null)
             {

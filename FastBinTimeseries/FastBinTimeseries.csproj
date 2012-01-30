@@ -110,6 +110,7 @@
     <None Include="_ClassDiagram.cd" />
     <Compile Include="BinCompressedSeriesFile.cs" />
     <Compile Include="BufferProvider.cs" />
+    <Compile Include="CommonCode\TypeSpec.cs" />
     <Compile Include="IEnumerableFeed.cs" />
     <Compile Include="ObsoleteExtensions.cs" />
     <Compile Include="BinSeriesFile.cs" />

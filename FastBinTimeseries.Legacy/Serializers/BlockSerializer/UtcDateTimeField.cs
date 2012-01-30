@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -85,13 +84,13 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             _deltaField.InitNew(writer);
         }
 
-        protected override void InitExistingField(BinaryReader reader, IDictionary<string, Type> typeMap)
+        protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
-            base.InitExistingField(reader, typeMap);
+            base.InitExistingField(reader, typeResolver);
             if (Version != Version10)
                 throw new IncompatibleVersionException(GetType(), Version);
 
-            BaseField fld = FieldFromReader(StateStore, reader, typeMap);
+            BaseField fld = FieldFromReader(StateStore, reader, typeResolver);
             _deltaField = fld as ScaledDeltaField;
             if (_deltaField == null)
                 throw new SerializerException(

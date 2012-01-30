@@ -1,28 +1,41 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
     public static class LegacySupport
     {
-        public static IDictionary<string, Type> GenerateMapping()
+        private static readonly Assembly MainAssembly = typeof (BinaryFile).Assembly;
+
+        private static readonly AssemblyName MainAssemblyName = MainAssembly.GetName();
+
+        private static readonly Dictionary<string, Type> LegacyTypes;
+
+        static LegacySupport()
         {
-            Type[] types = typeof (LegacySupport).Assembly.GetTypes();
-            var dict = new Dictionary<string, Type>(types.Length);
+            // public, non-abstract, non-static class
+            LegacyTypes =
+                (from type in typeof (LegacySupport).Assembly.GetTypes()
+                 where type.IsPublic && !type.IsAbstract
+                 select type).ToDictionary(i => i.FullName);
+        }
 
-            foreach (Type type in types)
-            {
-                // non-public or static class
-                if (!type.IsPublic || (type.IsAbstract && type.IsSealed))
-                    continue;
+        public static Type TypeResolver(string typeName)
+        {
+            return TypeUtils.TypeResolver(typeName, TypeResolver, TypeUtils.DefaultTypeResolver);
+        }
 
-                dict.Add(
-                    type.GetUnversionedNameAssembly().Replace(
-                        "NYurik.FastBinTimeseries.Legacy", "NYurik.FastBinTimeseries"), type);
-            }
+        public static Type TypeResolver(TypeSpec spec, AssemblyName assemblyName)
+        {
+            Type type;
+            if (assemblyName != null && assemblyName.Name == MainAssemblyName.Name &&
+                LegacyTypes.TryGetValue(spec.Name, out type))
+                return type;
 
-            return dict;
+            return null;
         }
     }
 }

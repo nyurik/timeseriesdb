@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NYurik.FastBinTimeseries.CommonCode;
@@ -286,10 +285,10 @@ namespace NYurik.FastBinTimeseries
         /// This method must match the <see cref="CreateHeader"/> method.
         /// </summary>
         /// <param name="stream">Stream from which to read the binary data</param>
-        /// <param name="typeMap">
+        /// <param name="typeResolver">
         /// An optional map that would override the type strings in the file with the given types.
         /// </param>
-        public static BinaryFile Open(Stream stream, IDictionary<string, Type> typeMap)
+        public static BinaryFile Open(Stream stream, Func<string, Type> typeResolver)
         {
             if (stream == null)
                 throw new ArgumentNullException("stream");
@@ -318,9 +317,9 @@ namespace NYurik.FastBinTimeseries
 
             BinaryFile inst;
             if (baseVersion == BaseVersion10 || baseVersion == BaseVersion11)
-                inst = ReadHeaderV10(baseVersion, stream, memReader, hdrSize, typeMap);
+                inst = ReadHeaderV10(baseVersion, stream, memReader, hdrSize, typeResolver);
             else if (baseVersion == BaseVersion12)
-                inst = ReadHeaderV12(baseVersion, stream, memReader, hdrSize, typeMap);
+                inst = ReadHeaderV12(baseVersion, stream, memReader, hdrSize, typeResolver);
             else
                 throw new IncompatibleVersionException(typeof (BinaryFile), baseVersion);
 
@@ -338,7 +337,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Serialize header info into a memory stream and return as a byte array.
         /// This method must match the reading sequence in the
-        /// <see cref="Open(System.IO.Stream,System.Collections.Generic.IDictionary{string,System.Type})"/>.
+        /// <see cref="Open(System.IO.Stream,System.Func{NYurik.FastBinTimeseries.CommonCode.TypeSpec,System.Type})"/>.
         /// </summary>
         private ArraySegment<byte> CreateHeader()
         {
@@ -388,13 +387,13 @@ namespace NYurik.FastBinTimeseries
         }
 
         private static BinaryFile ReadHeaderV10(Version baseVersion, Stream stream, BinaryReader reader,
-                                                int hdrSize, IDictionary<string, Type> typeMap)
+                                                int hdrSize, Func<string, Type> typeResolver)
         {
-            var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeMap, true);
+            var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeResolver, true);
 
             // Read values in the same order as CreateHeader()
             // Serializer
-            var serializer = reader.ReadTypeAndInstantiate<IBinSerializer>(typeMap, false);
+            var serializer = reader.ReadTypeAndInstantiate<IBinSerializer>(typeResolver, false);
 
             int itemSize = reader.ReadInt32();
 
@@ -410,8 +409,8 @@ namespace NYurik.FastBinTimeseries
             // Here we do it before finishing serializer instantiation due to design before v1.2
             inst.SetSerializer(serializer);
 
-            inst._version = inst.Init(reader, typeMap);
-            serializer.InitExisting(reader, typeMap);
+            inst._version = inst.Init(reader, typeResolver);
+            serializer.InitExisting(reader, typeResolver);
 
             // Make sure the item size has not changed
             if (itemSize != serializer.TypeSize)
@@ -451,14 +450,14 @@ namespace NYurik.FastBinTimeseries
         }
 
         private static BinaryFile ReadHeaderV12(Version baseVersion, Stream stream, BinaryReader reader,
-                                                int hdrSize, IDictionary<string, Type> typeMap)
+                                                int hdrSize, Func<string, Type> typeResolver)
         {
             // Tag
             string tag = reader.ReadString();
 
             // Serializer
-            var serializer = reader.ReadTypeAndInstantiate<IBinSerializer>(typeMap, false);
-            serializer.InitExisting(reader, typeMap);
+            var serializer = reader.ReadTypeAndInstantiate<IBinSerializer>(typeResolver, false);
+            serializer.InitExisting(reader, typeResolver);
 
             // Make sure the item size has not changed
             int itemSize = reader.ReadInt32();
@@ -466,13 +465,13 @@ namespace NYurik.FastBinTimeseries
                 throw FastBinFileUtils.GetItemSizeChangedException(serializer, tag, itemSize);
 
             // BinaryFile
-            var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeMap, true);
+            var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeResolver, true);
             inst.HeaderSize = hdrSize;
             inst.BaseVersion = baseVersion;
             inst._stream = stream;
             inst.Tag = tag;
             inst.SetSerializer(serializer);
-            inst._version = inst.Init(reader, typeMap);
+            inst._version = inst.Init(reader, typeResolver);
 
             return inst;
         }
@@ -538,10 +537,10 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <param name="fileName">A relative or absolute path for the existing file to open.</param>
         /// <param name="canWrite">Should allow write operations</param>
-        /// <param name="typeMap">An optional map that would override the type strings in the file with the given types.</param>
+        /// <param name="typeResolver">Optional Type resolver to override the default</param>
         /// <param name="bufferSize">Buffer size as used in <see cref="FileStream"/> constructor</param>
         /// <param name="fileOptions">Options as used in <see cref="FileStream"/> constructor</param>
-        public static BinaryFile Open(string fileName, bool canWrite, IDictionary<string, Type> typeMap = null,
+        public static BinaryFile Open(string fileName, bool canWrite, Func<string, Type> typeResolver = null,
                                       int bufferSize = 0x1000, FileOptions fileOptions = FileOptions.None)
         {
             FileStream stream = null;
@@ -553,7 +552,7 @@ namespace NYurik.FastBinTimeseries
                     canWrite ? FileShare.Read : FileShare.ReadWrite,
                     bufferSize, fileOptions);
 
-                BinaryFile file = Open(stream, typeMap);
+                BinaryFile file = Open(stream, typeResolver);
                 file._fileName = fileName;
 
                 return file;
@@ -733,7 +732,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary> Override to read custom header info. Must match the <see cref="WriteCustomHeader"/>. </summary>
-        protected abstract Version Init(BinaryReader reader, IDictionary<string, Type> typeMap);
+        protected abstract Version Init(BinaryReader reader, Func<string, Type> typeResolver);
 
         /// <summary> Override to write custom header info. Must match the <see cref="Init"/>. </summary>
         /// <returns> Return the version number of the header. </returns>

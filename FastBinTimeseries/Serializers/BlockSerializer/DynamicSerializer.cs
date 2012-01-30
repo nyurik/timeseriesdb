@@ -438,10 +438,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return srl;
         }
 
-        public static DynamicSerializer<T> CreateFromReader(BinaryReader reader, IDictionary<string, Type> typeMap)
+        public static DynamicSerializer<T> CreateFromReader(BinaryReader reader, Func<string, Type> typeResolver)
         {
             var srl = new DynamicSerializer<T>();
-            srl.RootField = BaseField.FieldFromReader(srl, reader, typeMap);
+            srl.RootField = BaseField.FieldFromReader(srl, reader, typeResolver);
             srl.MakeReadonly();
             return srl;
         }

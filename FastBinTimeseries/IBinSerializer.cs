@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace NYurik.FastBinTimeseries
@@ -59,7 +58,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// When creating serializer from a stream, load internal values. Must match all actions by <see cref="InitNew"/>
         /// </summary>
-        void InitExisting(BinaryReader reader, IDictionary<string, Type> typeMap);
+        void InitExisting(BinaryReader reader, Func<string, Type> typeResolver);
     }
 
     public interface IBinSerializer<T> : IBinSerializer
