@@ -25,7 +25,7 @@ namespace JetBrains.Annotations
     /// Indicates that marked element should be localized or not.
     /// </summary>
     [AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = true)]
-    public sealed class LocalizationRequiredAttribute : Attribute
+    internal sealed class LocalizationRequiredAttribute : Attribute
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalizationRequiredAttribute"/> class.
@@ -72,7 +72,7 @@ namespace JetBrains.Annotations
     /// The format string should be in <see cref="string.Format(IFormatProvider,string,object[])"/> -like form
     /// </summary>
     [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public sealed class StringFormatMethodAttribute : Attribute
+    internal sealed class StringFormatMethodAttribute : Attribute
     {
         /// <summary>
         /// Initializes new instance of StringFormatMethodAttribute
@@ -95,7 +95,7 @@ namespace JetBrains.Annotations
     /// For example, <see cref="ArgumentNullException"/> has such parameter.
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false, Inherited = true)]
-    public sealed class InvokerParameterNameAttribute : Attribute
+    internal sealed class InvokerParameterNameAttribute : Attribute
     {
     }
 
@@ -105,7 +105,7 @@ namespace JetBrains.Annotations
     /// </summary>
     /// <seealso cref="AssertionConditionAttribute"/>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public sealed class AssertionMethodAttribute : Attribute
+    internal sealed class AssertionMethodAttribute : Attribute
     {
     }
 
@@ -116,7 +116,7 @@ namespace JetBrains.Annotations
     /// </summary>
     /// <seealso cref="AssertionConditionType"/>
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false, Inherited = true)]
-    public sealed class AssertionConditionAttribute : Attribute
+    internal sealed class AssertionConditionAttribute : Attribute
     {
         /// <summary>
         /// Initializes new instance of AssertionConditionAttribute
@@ -137,7 +137,7 @@ namespace JetBrains.Annotations
     /// Specifies assertion type. If the assertion method argument satisifes the condition, then the execution continues. 
     /// Otherwise, execution is assumed to be halted
     /// </summary>
-    public enum AssertionConditionType
+    internal enum AssertionConditionType
     {
         /// <summary>
         /// Indicates that the marked parameter should be evaluated to true
@@ -165,7 +165,7 @@ namespace JetBrains.Annotations
     /// For example, it could unconditionally throw exception
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public sealed class TerminatesProgramAttribute : Attribute
+    internal sealed class TerminatesProgramAttribute : Attribute
     {
     }
 
@@ -175,7 +175,7 @@ namespace JetBrains.Annotations
     [AttributeUsage(
         AttributeTargets.Method | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.Delegate |
         AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
-    public sealed class CanBeNullAttribute : Attribute
+    internal sealed class CanBeNullAttribute : Attribute
     {
     }
 
@@ -185,7 +185,7 @@ namespace JetBrains.Annotations
     [AttributeUsage(
         AttributeTargets.Method | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.Delegate |
         AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
-    public sealed class NotNullAttribute : Attribute
+    internal sealed class NotNullAttribute : Attribute
     {
     }
 
@@ -195,7 +195,7 @@ namespace JetBrains.Annotations
     /// </summary>
     [AttributeUsage(AttributeTargets.Interface | AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false
         , Inherited = true)]
-    public sealed class CannotApplyEqualityOperatorAttribute : Attribute
+    internal sealed class CannotApplyEqualityOperatorAttribute : Attribute
     {
     }
 
@@ -216,7 +216,7 @@ namespace JetBrains.Annotations
     /// </example>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
     [BaseTypeRequired(typeof (Attribute))]
-    public sealed class BaseTypeRequiredAttribute : Attribute
+    internal sealed class BaseTypeRequiredAttribute : Attribute
     {
         /// <summary>
         /// Initializes new instance of BaseTypeRequiredAttribute
@@ -238,7 +238,7 @@ namespace JetBrains.Annotations
     /// so this symbol will not be marked as unused (as well as by other usage inspections)
     /// </summary>
     [AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = true)]
-    public sealed class UsedImplicitlyAttribute : Attribute
+    internal sealed class UsedImplicitlyAttribute : Attribute
     {
         [UsedImplicitly]
         public UsedImplicitlyAttribute()
@@ -279,7 +279,7 @@ namespace JetBrains.Annotations
     /// Should be used on attributes and causes ReSharper to not mark symbols marked with such attributes as unused (as well as by other usage inspections)
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
-    public sealed class MeansImplicitUseAttribute : Attribute
+    internal sealed class MeansImplicitUseAttribute : Attribute
     {
         [UsedImplicitly]
         public MeansImplicitUseAttribute()
@@ -317,7 +317,7 @@ namespace JetBrains.Annotations
     }
 
     [Flags]
-    public enum ImplicitUseKindFlags
+    internal enum ImplicitUseKindFlags
     {
         Default = Access | Assign | InstantiatedWithFixedConstructorSignature,
 
@@ -347,7 +347,7 @@ namespace JetBrains.Annotations
     /// Specify what is considered used implicitly when marked with <see cref="MeansImplicitUseAttribute"/> or <see cref="UsedImplicitlyAttribute"/>
     /// </summary>
     [Flags]
-    public enum ImplicitUseTargetFlags
+    internal enum ImplicitUseTargetFlags
     {
         Default = Itself,
 
@@ -368,7 +368,7 @@ namespace JetBrains.Annotations
     /// This attribute is intended to mark publicly available API which should not be removed and so is treated as used.
     /// </summary>
     [MeansImplicitUse]
-    public sealed class PublicAPIAttribute : Attribute
+    internal sealed class PublicAPIAttribute : Attribute
     {
         public PublicAPIAttribute()
         {
@@ -389,12 +389,12 @@ namespace JetBrains.Annotations
     /// If the parameter is enumerable, indicates that it is enumerated while the method is executed.
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter, Inherited = true)]
-    public sealed class InstantHandleAttribute : Attribute
+    internal sealed class InstantHandleAttribute : Attribute
     {
     }
 
     [AttributeUsage(AttributeTargets.Parameter)]
-    public class PathReferenceAttribute : Attribute
+    internal class PathReferenceAttribute : Attribute
     {
         public PathReferenceAttribute()
         {
