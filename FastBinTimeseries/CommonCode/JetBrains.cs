@@ -18,6 +18,7 @@ using System;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable CheckNamespace
+// ReSharper disable UnusedMember.Global
 
 namespace JetBrains.Annotations
 {
@@ -362,25 +363,6 @@ namespace JetBrains.Annotations
         /// Entity marked with attribute and all its members considered used
         /// </summary>
         WithMembers = Itself | Members
-    }
-
-    /// <summary>
-    /// This attribute is intended to mark publicly available API which should not be removed and so is treated as used.
-    /// </summary>
-    [MeansImplicitUse]
-    internal sealed class PublicAPIAttribute : Attribute
-    {
-        public PublicAPIAttribute()
-        {
-        }
-
-        // ReSharper disable UnusedParameter.Local
-#pragma warning disable UnusedMember.Global
-        public PublicAPIAttribute(string comment)
-        {
-        }
-#pragma warning restore UnusedMember.Global
-        // ReSharper restore UnusedParameter.Local
     }
 
     /// <summary>

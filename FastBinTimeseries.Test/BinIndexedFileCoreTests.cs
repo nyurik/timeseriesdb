@@ -238,11 +238,12 @@ namespace NYurik.FastBinTimeseries.Test
             using (BinaryFile f = BinaryFile.Open(
                 fileName, false,
                 tn =>
-                TypeUtils.TypeResolver(
+                TypeUtils.ParseAndResolve(
                     tn,
+                    ts2=>TypeSpec.DefaultFullTypeResolver(ts2,
                     (ts, an) =>
                     an != null && an.Name == oldAn && ts.Name == oldT.FullName ? typeof (_LongByte_SeqPk1) : null,
-                    LegacySupport.TypeResolver, TypeUtils.DefaultTypeResolver)))
+                    LegacySupport.TypeResolver, TypeUtils.ResolverFromAnyAssemblyVersion))))
             {
                 var p = (BinIndexedFile<_LongByte_SeqPk1>) f;
 

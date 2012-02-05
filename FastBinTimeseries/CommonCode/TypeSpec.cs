@@ -50,6 +50,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
         public IList<ArraySpec> ArraySpecs { get; private set; }
         public int PointerLevel { get; private set; }
         public bool IsByRef { get; private set; }
+        public Type ResolvedType { get; private set; }
 
         private bool IsArray
         {
@@ -114,62 +115,40 @@ namespace NYurik.FastBinTimeseries.CommonCode
             if (typeName == null)
                 throw new ArgumentNullException("typeName");
 
-            TypeSpec res = Parse(typeName, ref pos, false, false);
+            TypeSpec res = ParseAndMakeReadonly(typeName, ref pos, false, false);
             if (pos < typeName.Length)
                 throw new ArgumentException("Count not parse the whole type name", "typeName");
-
-            res.MakeReadonly();
 
             return res;
         }
 
-        private void MakeReadonly()
+        public Type Resolve([NotNull] params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
         {
-            if (GenericParams != null)
-            {
-                foreach (TypeSpec gp in GenericParams)
-                    gp.MakeReadonly();
-                GenericParams = new ReadOnlyCollection<TypeSpec>(GenericParams);
-            }
-            if (Nested != null)
-                Nested = new ReadOnlyCollection<string>(Nested);
-            if (ArraySpecs != null)
-                ArraySpecs = new ReadOnlyCollection<ArraySpec>(ArraySpecs);
+            return Resolve(ts => DefaultFullTypeResolver(ts, typeResolvers));
         }
 
-        public Type Resolve([NotNull] Func<TypeSpec, AssemblyName, Type> typeResolver)
+        public Type Resolve([NotNull] params Func<TypeSpec, Type>[] fullTypeResolvers)
         {
-            if (typeResolver == null)
-                throw new ArgumentNullException("typeResolver");
+            if (fullTypeResolvers == null || fullTypeResolvers.Length == 0)
+                throw new ArgumentNullException("fullTypeResolvers");
 
-            AssemblyName assemblyName = AssemblyName == null ? null : new AssemblyName(AssemblyName);
-            Type type = typeResolver(this, assemblyName);
-            if (type == null)
-                return null;
-
-            if (Nested != null)
-            {
-                foreach (string n in Nested)
-                {
-                    Type tmp = type.GetNestedType(n, BindingFlags.Public | BindingFlags.NonPublic);
-                    if (tmp == null)
-                        throw new TypeLoadException("Could not find nested type '" + n + "'");
-                    type = tmp;
-                }
-            }
+            if (ResolvedType != null)
+                return ResolvedType;
 
             if (GenericParams != null)
-            {
-                var args = new Type[GenericParams.Count];
-                for (int i = 0; i < args.Length; ++i)
-                {
-                    Type tmp = GenericParams[i].Resolve(typeResolver);
-                    if (tmp == null)
+                foreach (var gp in GenericParams)
+                    if (gp.Resolve(fullTypeResolvers) == null)
                         return null;
-                    args[i] = tmp;
-                }
-                type = type.MakeGenericType(args);
+
+            Type type = null;
+            foreach (var ftr in fullTypeResolvers)
+            {
+                type = ftr(this);
+                if (type != null)
+                    break;
             }
+            if (type == null)
+                return null;
 
             if (ArraySpecs != null)
             {
@@ -183,6 +162,49 @@ namespace NYurik.FastBinTimeseries.CommonCode
             if (IsByRef)
                 type = type.MakeByRefType();
 
+            ResolvedType = type;
+
+            return type;
+        }
+
+        /// <summary>
+        /// Resolves TypeSpec into a specific type (including subtypes and generic parameters)
+        /// </summary>
+        /// <param name="spec">Type info with all generics already resolved</param>
+        /// <param name="typeResolvers">Resolver to convert a specific type without generic parameters and without subtypes</param>
+        public static Type DefaultFullTypeResolver(TypeSpec spec, params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
+        {
+            AssemblyName assemblyName = spec.AssemblyName == null ? null : new AssemblyName(spec.AssemblyName);
+            Type type = null;
+
+            foreach (var tr in typeResolvers)
+            {
+                type = tr(spec, assemblyName);
+                if (type != null)
+                    break;
+            }
+
+            if (type == null)
+                return null;
+
+            if (spec.Nested != null)
+            {
+                foreach (string n in spec.Nested)
+                {
+                    Type tmp = type.GetNestedType(n, BindingFlags.Public | BindingFlags.NonPublic);
+                    if (tmp == null)
+                        throw new TypeLoadException("Could not find nested type '" + n + "'");
+                    type = tmp;
+                }
+            }
+
+            if (spec.GenericParams != null)
+            {
+                var args = new Type[spec.GenericParams.Count];
+                for (int i = 0; i < args.Length; ++i)
+                    args[i] = spec.GenericParams[i].ResolvedType;
+                type = type.MakeGenericType(args);
+            }
             return type;
         }
 
@@ -215,6 +237,17 @@ namespace NYurik.FastBinTimeseries.CommonCode
             pos = p;
         }
 
+        private static TypeSpec ParseAndMakeReadonly(string typeName, ref int p, bool isRecurse, bool allowAqn)
+        {
+            var tmp = Parse(typeName, ref p, isRecurse, allowAqn);
+            if (tmp.GenericParams != null)
+                tmp.GenericParams = new ReadOnlyCollection<TypeSpec>(tmp.GenericParams);
+            if (tmp.Nested != null)
+                tmp.Nested = new ReadOnlyCollection<string>(tmp.Nested);
+            if (tmp.ArraySpecs != null)
+                tmp.ArraySpecs = new ReadOnlyCollection<ArraySpec>(tmp.ArraySpecs);
+            return tmp;
+        }
         private static TypeSpec Parse(string typeName, ref int p, bool isRecurse, bool allowAqn)
         {
             int pos = p;
@@ -315,7 +348,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
                                     bool aqn = typeName[pos] == '[';
                                     if (aqn)
                                         ++pos; //skip '[' to the start of the type
-                                    args.Add(Parse(typeName, ref pos, true, aqn));
+                                    args.Add(ParseAndMakeReadonly(typeName, ref pos, true, aqn));
                                     if (pos >= typeName.Length)
                                         throw new ArgumentException("Invalid generic arguments spec", "typeName");
 

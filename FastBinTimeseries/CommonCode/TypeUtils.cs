@@ -23,7 +23,9 @@
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Reflection;
+using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries.CommonCode
 {
@@ -90,28 +92,54 @@ namespace NYurik.FastBinTimeseries.CommonCode
                 type.GetCustomAttributes(typeof (TAttribute), inherit), i => (TAttribute) i);
         }
 
-        public static Type TypeResolver(string typeName, params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
-        {
-            return TypeSpec.Parse(typeName)
-                .Resolve(
-                    (ts, an) =>
-                        {
-                            foreach (var tr in typeResolvers)
-                            {
-                                Type t = tr(ts, an);
-                                if (t != null)
-                                    return t;
-                            }
-                            return null;
-                        });
-        }
-
-        public static Type DefaultTypeResolver(TypeSpec spec, AssemblyName assemblyName)
+        public static Type ResolverFromAnyAssemblyVersion(TypeSpec spec, AssemblyName an)
         {
             string typeName = spec.Name;
             if (spec.AssemblyName != null)
                 typeName += ", " + spec.AssemblyName;
             return GetTypeFromAnyAssemblyVersion(typeName);
         }
+
+        public static Type ParseAndResolve(string typeName, params Func<TypeSpec, Type>[] fullTypeResolvers)
+        {
+            return TypeSpec.Parse(typeName).Resolve(fullTypeResolvers);
+        }
+
+        public static Func<string, Type> CreateCachingResolver(params Func<TypeSpec, Type>[] fullTypeResolvers)
+        {
+            if (fullTypeResolvers == null || fullTypeResolvers.Length == 0)
+                throw new ArgumentNullException("fullTypeResolvers");
+            return new CachingTypeResolver(tn => ParseAndResolve(tn, fullTypeResolvers)).Resolve;
+        }
+
+        public static Func<string, Type> CreateCachingResolver(params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
+        {
+            if (typeResolvers == null || typeResolvers.Length == 0)
+                throw new ArgumentNullException("typeResolvers");
+            return new CachingTypeResolver(
+                tn => ParseAndResolve(
+                    tn, ts => TypeSpec.DefaultFullTypeResolver(ts, typeResolvers))).Resolve;
+        }
+
+        #region Nested type: CachingTypeResolver
+
+        private class CachingTypeResolver
+        {
+            private readonly ConcurrentDictionary<string, Type> _cache = new ConcurrentDictionary<string, Type>();
+            private readonly Func<string, Type> _valueFactory;
+
+            public CachingTypeResolver([NotNull] Func<string, Type> valueFactory)
+            {
+                if (valueFactory == null) throw new ArgumentNullException("valueFactory");
+                _valueFactory = valueFactory;
+            }
+
+            public Type Resolve(string typeName)
+            {
+                return _cache.GetOrAdd(typeName, _valueFactory);
+            }
+        }
+
+        #endregion
     }
 }

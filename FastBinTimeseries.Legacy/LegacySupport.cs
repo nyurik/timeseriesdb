@@ -38,6 +38,11 @@ namespace NYurik.FastBinTimeseries
 
         private static readonly Dictionary<string, Type> LegacyTypes;
 
+        private static readonly Lazy<Func<string, Type>> DefaultLegacyResolver =
+            new Lazy<Func<string, Type>>(
+                () =>
+                TypeUtils.CreateCachingResolver(TypeResolver, TypeUtils.ResolverFromAnyAssemblyVersion));
+
         static LegacySupport()
         {
             // public, non-abstract, non-static class
@@ -49,7 +54,7 @@ namespace NYurik.FastBinTimeseries
 
         public static Type TypeResolver(string typeName)
         {
-            return TypeUtils.TypeResolver(typeName, TypeResolver, TypeUtils.DefaultTypeResolver);
+            return DefaultLegacyResolver.Value(typeName);
         }
 
         public static Type TypeResolver(TypeSpec spec, AssemblyName assemblyName)
