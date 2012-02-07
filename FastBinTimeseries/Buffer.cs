@@ -31,6 +31,7 @@ namespace NYurik.FastBinTimeseries
     {
         private T[] _buffer;
         private int _count;
+        private bool _inReverse;
 
         public Buffer(int bufferSize)
         {
@@ -71,23 +72,46 @@ namespace NYurik.FastBinTimeseries
             get { return _buffer; }
         }
 
+        public bool InReverse
+        {
+            get { return _inReverse; }
+            set
+            {
+                if (Count != 0)
+                    throw new InvalidOperationException("Buffer must be empty before changing direction");
+                _inReverse = value;
+            }
+        }
+
         public void Add(T value)
         {
-            if (_count == Array.Length)
-                RealocatePreserving(Array.Length*2);
-            Array[_count++] = value;
+            int len = Array.Length;
+            if (_count == len)
+                RealocatePreserving(len*2);
+
+            int pos = _count++;
+            if (_inReverse)
+                Array[len - pos - 1] = value;
+            else
+                Array[pos] = value;
         }
 
         private void RealocatePreserving(int newSize)
         {
             var tmp = new T[newSize];
-            System.Array.Copy(Array, tmp, Count);
+            if (_inReverse)
+                System.Array.Copy(Array, 0, tmp, newSize - Count, Count);
+            else
+                System.Array.Copy(Array, tmp, Count);
             _buffer = tmp;
         }
 
         public ArraySegment<T> AsArraySegment()
         {
-            return new ArraySegment<T>(Array, 0, Count);
+            return
+                _inReverse
+                    ? new ArraySegment<T>(Array, Array.Length - Count, Count)
+                    : new ArraySegment<T>(Array, 0, Count);
         }
     }
 }

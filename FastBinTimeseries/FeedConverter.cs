@@ -66,6 +66,8 @@ namespace NYurik.FastBinTimeseries
                         GetEnumerator())
             {
                 Buffer<TNew> buff = null;
+                int maxCount = 0;
+
                 foreach (
                     TOld old in
                         _feed.StreamSegments(fromInd, inReverse, maxItemCount: maxItemCount)
@@ -79,11 +81,15 @@ namespace NYurik.FastBinTimeseries
                         if (!buffers.MoveNext())
                             yield break;
                         buff = buffers.Current;
+                        maxCount = buff.Count > 0 ? buff.Count : buff.Capacity;
+                        buff.Count = 0;
+                        buff.InReverse = inReverse;
                     }
 
                     buff.Add(conv(old));
+                    maxCount--;
 
-                    if (buff.Count == buff.Capacity)
+                    if (maxCount <= 0)
                     {
                         yield return buff.AsArraySegment();
                         buff = null;
