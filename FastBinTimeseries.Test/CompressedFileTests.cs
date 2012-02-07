@@ -42,9 +42,9 @@ namespace NYurik.FastBinTimeseries.Test
         private readonly _DatetimeByte_SeqPk1[] _empty = _DatetimeByte_SeqPk1.Empty;
 
         private void Run(string name, int itemCount,
-                         Func<string, IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
-                         Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
-                         Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
+                         Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
+                         Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
+                         Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
         {
             string fileName = GetBinFileName();
 
@@ -53,9 +53,9 @@ namespace NYurik.FastBinTimeseries.Test
             Assert.AreEqual(itemCount, expected.Count);
             _DatetimeByte_SeqPk1[] expectedRev = expected.ToArray();
             Array.Reverse(expectedRev);
-            IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>
+            IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>
                 f = !AllowCreate
-                        ? (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
+                        ? (IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
                           BinaryFile.Open(fileName, false, LegacySupport.TypeResolver)
                         : newFile(fileName);
             try
@@ -69,7 +69,7 @@ namespace NYurik.FastBinTimeseries.Test
                     f.AppendData(newData);
                     f.Dispose();
                     f =
-                        (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
+                        (IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
                         BinaryFile.Open(fileName, false, LegacySupport.TypeResolver);
                 }
 
@@ -145,15 +145,15 @@ namespace NYurik.FastBinTimeseries.Test
 
         private void AppendTest(string name, int segSize, int itemCount,
                                 Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data,
-                                Func<string, IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
-                                Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
-                                Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
+                                Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
+                                Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
+                                Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
         {
             if (RunMode != Mode.OneTime)
                 Assert.Inconclusive("RunMode={0} is not supported", RunMode);
 
             string fileName = GetBinFileName();
-            using (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1> f = newFile(fileName))
+            using (IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1> f = newFile(fileName))
             {
                 if (update != null)
                     update(f);
@@ -248,15 +248,15 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         private void AppendDuplTest(string name, int segSize,
-                                    Func<string, IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
-                                    Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
-                                    Action<IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
+                                    Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
+                                    Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
+                                    Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
         {
             if (RunMode != Mode.OneTime)
                 Assert.Inconclusive("RunMode={0} is not supported", RunMode);
 
             string fileName = GetBinFileName();
-            using (IEnumerableFeed<UtcDateTime, _DatetimeByte_SeqPk1> f = newFile(fileName))
+            using (IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1> f = newFile(fileName))
             {
                 if (update != null)
                     update(f);

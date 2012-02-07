@@ -105,12 +105,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\GlobalAssemblyInfo.cs">
+      <Link>Properties\GlobalAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
     <None Include="_ClassDiagram.cd" />
     <Compile Include="BinCompressedSeriesFile.cs" />
     <Compile Include="BufferProvider.cs" />
     <Compile Include="CommonCode\TypeSpec.cs" />
+    <Compile Include="FeedConverter.cs" />
     <Compile Include="IEnumerableFeed.cs" />
     <Compile Include="BinSeriesFile.cs" />
     <Compile Include="CommonCode\JetBrains.cs" />

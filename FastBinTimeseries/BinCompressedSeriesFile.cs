@@ -35,7 +35,7 @@ using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 namespace NYurik.FastBinTimeseries
 {
     /// <summary>
-    /// Helper non-generic class aids in creating a new instance of <see cref="BinTimeseriesFile{T}"/>.
+    /// Helper non-generic class aids in creating a new instance of <see cref="BinCompressedSeriesFile{TInd,TVal}"/>.
     /// </summary>
     public static class BinCompressedSeriesFile
     {
@@ -55,7 +55,7 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Object representing a binary-serialized long-based series file.
     /// </summary>
-    public class BinCompressedSeriesFile<TInd, TVal> : BinaryFile<byte>, IEnumerableFeed<TInd, TVal>
+    public class BinCompressedSeriesFile<TInd, TVal> : BinaryFile<byte>, IWritableFeed<TInd, TVal>
         where TInd : IComparable<TInd>
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
@@ -184,7 +184,7 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        #region IEnumerableFeed<TInd,TVal> Members
+        #region IWritableFeed<TInd,TVal> Members
 
         public TInd FirstIndex
         {
@@ -614,7 +614,7 @@ namespace NYurik.FastBinTimeseries
                     if (codec.Count == 0)
                         throw new SerializerException("Internal serializer error: buffer is empty");
 
-                    yield return codec.UsedBuffer;
+                    yield return codec.AsArraySegment();
 
                     if (!hasMore)
                         break;

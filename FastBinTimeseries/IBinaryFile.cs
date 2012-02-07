@@ -40,9 +40,6 @@ namespace NYurik.FastBinTimeseries
         /// <summary> True when the object has been disposed. No further operations are allowed. </summary>
         bool IsDisposed { get; }
 
-        /// <summary> Total number of items in the file </summary>
-        long GetItemCount();
-
         /// <summary> Access to the non-generic instance of the current serializer </summary>
         IBinSerializer NonGenericSerializer { get; }
 
@@ -78,6 +75,9 @@ namespace NYurik.FastBinTimeseries
         /// but before the InitializeNewFile() is called.
         /// </summary>
         bool IsInitialized { get; }
+
+        /// <summary> Total number of items in the file </summary>
+        long GetItemCount();
 
         /// <summary> Closes currently open file. This is a safe operation even on a disposed object. </summary>
         void Close();

@@ -85,11 +85,9 @@ namespace NYurik.FastBinTimeseries
             _buffer = tmp;
         }
 
-        public void ShiftLeft(int offset, int count)
+        public ArraySegment<T> AsArraySegment()
         {
-            if (offset != 0)
-                System.Array.Copy(_buffer, offset, _buffer, 0, count);
-            Count = count;
+            return new ArraySegment<T>(Array, 0, Count);
         }
     }
 }

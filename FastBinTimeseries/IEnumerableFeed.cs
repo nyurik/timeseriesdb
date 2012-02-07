@@ -46,6 +46,21 @@ namespace NYurik.FastBinTimeseries
         Func<TVal, TInd> IndexAccessor { get; }
 
         /// <summary>
+        /// Enumerate all items one block at a time using an internal buffer.
+        /// </summary>
+        /// <param name="fromInd">The index of the first element to read. Inclusive if going forward, exclusive when going backwards</param>
+        /// <param name="inReverse">Set to true if you want to enumerate backwards, from last to first</param>
+        /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
+        /// <param name="maxItemCount">Maximum number of items to return</param>
+        IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false,
+                                                       IEnumerable<Buffer<TVal>> bufferProvider = null,
+                                                       long maxItemCount = long.MaxValue);
+    }
+
+    public interface IWritableFeed<TInd, TVal> : IEnumerableFeed<TInd, TVal>
+        where TInd : IComparable<TInd>
+    {
+        /// <summary>
         /// Returns true if this file is empty
         /// </summary>
         bool IsEmpty { get; }
@@ -64,17 +79,6 @@ namespace NYurik.FastBinTimeseries
         /// False if more than one identical index is allowed in the feed, True otherwise
         /// </summary>
         bool UniqueIndexes { get; }
-
-        /// <summary>
-        /// Enumerate all items one block at a time using an internal buffer.
-        /// </summary>
-        /// <param name="fromInd">The index of the first element to read. Inclusive if going forward, exclusive when going backwards</param>
-        /// <param name="inReverse">Set to true if you want to enumerate backwards, from last to first</param>
-        /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
-        /// <param name="maxItemCount">Maximum number of items to return</param>
-        IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false,
-                                                       IEnumerable<Buffer<TVal>> bufferProvider = null,
-                                                       long maxItemCount = long.MaxValue);
 
         /// <summary>
         /// Add new items at the end of the existing file. If file truncation is allowed, the first item's index

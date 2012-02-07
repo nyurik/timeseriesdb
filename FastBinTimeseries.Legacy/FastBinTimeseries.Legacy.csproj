@@ -41,6 +41,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\GlobalAssemblyInfo.cs">
+      <Link>Properties\GlobalAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="BinTimeseriesFile.cs" />
     <Compile Include="BinUniformTimeseriesFile.cs" />
     <Compile Include="CommonCode\UtcDateTime.cs" />

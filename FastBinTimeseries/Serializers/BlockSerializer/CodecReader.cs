@@ -52,7 +52,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         [UsedImplicitly]
         internal int ReadHeader()
         {
-            return ValidateCount(ReadUnsignedValue());
+            return ValidateCount((long) ReadUnsignedValue());
         }
 
         public void AttachBuffer(ArraySegment<byte> value)

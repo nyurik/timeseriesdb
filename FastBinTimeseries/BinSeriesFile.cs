@@ -56,7 +56,7 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Object representing a binary-serialized index-based series file.
     /// </summary>
-    public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IEnumerableFeed<TInd, TVal>
+    public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IWritableFeed<TInd, TVal>
         where TInd : IComparable<TInd>
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
@@ -142,7 +142,7 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        #region IEnumerableFeed<TInd,TVal> Members
+        #region IWritableFeed<TInd,TVal> Members
 
         public TInd FirstIndex
         {

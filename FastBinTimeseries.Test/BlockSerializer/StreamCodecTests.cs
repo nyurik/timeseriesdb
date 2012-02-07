@@ -251,7 +251,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                         Assert.Fail("Failed signed long {0:X}", value);
                 }
 
-                using (var codecRdr = new CodecReader(codec.UsedBuffer))
+                using (var codecRdr = new CodecReader(codec.AsArraySegment()))
                 {
                     long v = codecRdr.ReadSignedValue();
 
@@ -288,7 +288,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         public void UnsignedValues()
         {
             using (var codec = new CodecWriter(BufferSize))
-            using (var codecRdr = new CodecReader(codec.UsedBuffer))
+            using (var codecRdr = new CodecReader(codec.AsArraySegment()))
             {
                 foreach (var valList in BatchGroup(TestValuesGenerator(), codec.BufferSize/10))
                 {
@@ -296,7 +296,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     foreach (ulong val in valList)
                         codec.WriteUnsignedValue(val);
 
-                    codecRdr.AttachBuffer(codec.UsedBuffer);
+                    codecRdr.AttachBuffer(codec.AsArraySegment());
                     foreach (ulong val in valList)
                         if (val != codecRdr.ReadUnsignedValue())
                             Assert.Fail("Failed ulong {0:X}", val);

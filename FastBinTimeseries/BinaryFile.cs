@@ -85,6 +85,11 @@ namespace NYurik.FastBinTimeseries
             get { return typeof (T); }
         }
 
+        public override TDst RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg)
+        {
+            return callable.Run<T>(this, arg);
+        }
+
         #endregion
 
         /// <summary> Used by <see cref="BinaryFile.Open(System.IO.Stream,System.Func{string,System.Type})"/> when opening an existing file </summary>
@@ -294,11 +299,6 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        public override TDst RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg)
-        {
-            return callable.Run<T>(this, arg);
-        }
-
         /// <summary>
         /// Enumerate items by block either in order or in reverse order, begining at the <paramref name="firstItemIdx"/>.
         /// </summary>
@@ -395,7 +395,7 @@ namespace NYurik.FastBinTimeseries
                     useMemMappedAccess = UseMemoryMappedAccess(readSize, false);
 
                 int read = PerformUnsafeBlockAccess(
-                    readBlockFrom, false, new ArraySegment<T>(buffer.Array, 0, buffer.Count), fileSize,
+                    readBlockFrom, false, buffer.AsArraySegment(), fileSize,
                     useMemMappedAccess.Value);
 
                 if (enumerateInReverse)
@@ -405,7 +405,7 @@ namespace NYurik.FastBinTimeseries
                             "Unexpected number of items read during reverse traversal. {0} was expected, {1} returned",
                             readSize, read);
 
-                    yield return new ArraySegment<T>(buffer.Array, 0, buffer.Count);
+                    yield return buffer.AsArraySegment();
                     idx = idx - readSize;
                 }
                 else

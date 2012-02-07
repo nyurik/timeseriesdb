@@ -43,13 +43,10 @@ namespace NYurik.FastBinTimeseries.Serializers
         private readonly ConcurrentDictionary<Type, BinSerializerInfo> _serializers =
             new ConcurrentDictionary<Type, BinSerializerInfo>();
 
-        private readonly ConcurrentDictionary<FieldInfo, Delegate> _tsAccessorCache =
+        private readonly ConcurrentDictionary<FieldInfo, Delegate> _indAccessorCache =
             new ConcurrentDictionary<FieldInfo, Delegate>();
 
-//        private readonly ConcurrentDictionary<Type, Delegate> _tsComparatorCache =
-//            new ConcurrentDictionary<Type, Delegate>();
-//
-        private readonly ConcurrentDictionary<Type, FieldInfo> _tsFieldsCache =
+        private readonly ConcurrentDictionary<Type, FieldInfo> _indFieldsCache =
             new ConcurrentDictionary<Type, FieldInfo>();
 
         private DynamicCodeFactory()
@@ -313,7 +310,7 @@ namespace NYurik.FastBinTimeseries.Serializers
         public FieldInfo FindIndexField(Type type)
         {
             if (type == null) throw new ArgumentNullException("type");
-            FieldInfo res = _tsFieldsCache.GetOrAdd(
+            FieldInfo res = _indFieldsCache.GetOrAdd(
                 type,
                 t =>
                     {
@@ -322,7 +319,7 @@ namespace NYurik.FastBinTimeseries.Serializers
                             throw new SerializerException("No fields found in type {0}", t.FullName);
 
                         FieldInfo result = null;
-                        bool foundTsAttribute = false;
+                        bool foundIndAttribute = false;
                         bool foundMultiple = false;
                         foreach (FieldInfo fi in fieldInfo)
                         {
@@ -331,14 +328,14 @@ namespace NYurik.FastBinTimeseries.Serializers
                             {
                                 if (hasAttr)
                                 {
-                                    if (foundTsAttribute)
+                                    if (foundIndAttribute)
                                         throw new SerializerException(
                                             "More than one field has an attribute [{0}] attached in type {1}",
                                             typeof (IndexAttribute).Name, t.FullName);
-                                    foundTsAttribute = true;
+                                    foundIndAttribute = true;
                                     result = fi;
                                 }
-                                else if (!foundTsAttribute)
+                                else if (!foundIndAttribute)
                                 {
                                     if (result != null)
                                         foundMultiple = true;
@@ -361,16 +358,16 @@ namespace NYurik.FastBinTimeseries.Serializers
         /// <summary>
         /// Create a delegate that extracts a long index value from the struct of type T.
         /// </summary>
-        /// <param name="tsField">Optionally provide the index field, otherwise will attempt to find default.</param>
-        public Func<T, TInd> GetIndexAccessor<T, TInd>(FieldInfo tsField = null)
+        /// <param name="indexField">Optionally provide the index field, otherwise will attempt to find default.</param>
+        public Func<TVal, TInd> GetIndexAccessor<TVal, TInd>(FieldInfo indexField = null)
         {
             return
-                (Func<T, TInd>)
-                _tsAccessorCache.GetOrAdd(
-                    tsField ?? GetIndexField<T>(),
+                (Func<TVal, TInd>)
+                _indAccessorCache.GetOrAdd(
+                    indexField ?? GetIndexField<TVal>(),
                     fi =>
                         {
-                            Type itemType = typeof (T);
+                            Type itemType = typeof (TVal);
                             if (fi.DeclaringType != itemType)
                                 throw new InvalidOperationException(
                                     String.Format(
@@ -380,7 +377,7 @@ namespace NYurik.FastBinTimeseries.Serializers
                             ParameterExpression vParam = Expression.Parameter(itemType, "v");
                             Expression expr = Expression.Field(vParam, fi);
 
-                            return Expression.Lambda<Func<T, TInd>>(expr, vParam).Compile();
+                            return Expression.Lambda<Func<TVal, TInd>>(expr, vParam).Compile();
                         }
                     );
         }

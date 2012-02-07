@@ -46,9 +46,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             get { return _hashAlgorithm ?? (_hashAlgorithm = new MD5CryptoServiceProvider()); }
         }
 
-        protected int ValidateCount(ulong count)
+        protected int ValidateCount(long count)
         {
-            if (count == 0 || count > int.MaxValue)
+            if (count <= 0 || count > int.MaxValue)
                 throw new SerializerException("Invalid count - must be >0 && <= int.MaxValue");
 
             return (int) count;

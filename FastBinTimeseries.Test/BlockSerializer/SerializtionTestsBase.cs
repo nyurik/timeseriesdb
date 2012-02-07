@@ -105,7 +105,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
                         codec.Count = 0;
                         buff.Count = 0;
-                        using (var cdcRdr = new CodecReader(new ArraySegment<byte>(codec.Buffer, 0, codec.Count)))
+                        using (var cdcRdr = new CodecReader(codec.AsArraySegment()))
                             ds.DeSerialize(cdcRdr, buff, int.MaxValue);
                     }
                     catch (Exception x)
@@ -124,7 +124,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                         throw new SerializerException(x, msg);
                     }
 
-                    var result = new ArraySegment<T>(buff.Array, 0, buff.Count);
+                    var result = buff.AsArraySegment();
                     for (int i = result.Offset; i < result.Count; i++)
                         yield return result.Array[i];
                 }

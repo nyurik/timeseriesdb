@@ -56,9 +56,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             }
         }
 
-        public ArraySegment<byte> UsedBuffer
+        public ArraySegment<byte> AsArraySegment()
         {
-            get { return new ArraySegment<byte>(Buffer, 0, Count); }
+            return new ArraySegment<byte>(Buffer, 0, Count);
         }
 
         #region Header & Hash calculation
@@ -68,7 +68,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         {
             // Write needed bytes at the end, calculate how many bytes it took
             // shift array right and copy to the value to the beginning.
-            ValidateCount((ulong) count);
+            ValidateCount(count);
 
             int tmp = _count;
             WriteUnsignedValue((uint) count); // Can be read by 64bit unsigned reader
