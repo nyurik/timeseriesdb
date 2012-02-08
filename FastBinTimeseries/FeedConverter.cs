@@ -38,6 +38,11 @@ namespace NYurik.FastBinTimeseries
             return callable.Run<TNew>(this, arg);
         }
 
+        public TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
+        {
+            return callable.Run<TIndex, TNew>(this, arg);
+        }
+
         public Type ItemType
         {
             get { return typeof (TNew); }

@@ -184,6 +184,15 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
+        #region IGenericInvoker2 Members
+
+        public TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
+        {
+            return callable.Run<TInd, TVal>(this, arg);
+        }
+
+        #endregion
+
         #region IWritableFeed<TInd,TVal> Members
 
         public TInd FirstIndex

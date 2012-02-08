@@ -27,6 +27,7 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
+    [Obsolete("Uniform data files are no longer supported")]
     public interface IBinUniformTimeseriesFile : IBinaryFile, IStoredUniformTimeseries
     {
         /// <summary>

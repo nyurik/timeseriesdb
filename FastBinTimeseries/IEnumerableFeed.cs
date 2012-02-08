@@ -28,7 +28,7 @@ using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries
 {
-    public interface IEnumerableFeed : IGenericInvoker, IDisposable
+    public interface IEnumerableFeed : IGenericInvoker2, IDisposable
     {
         /// <summary> Type of the items stored in this file </summary>
         Type ItemType { get; }

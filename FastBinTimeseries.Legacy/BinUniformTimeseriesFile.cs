@@ -31,6 +31,7 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Helper non-generic class aids in creating a new instance of <see cref="BinUniformTimeseriesFile{T}"/>.
     /// </summary>
+    [Obsolete("Uniform data files are no longer supported")]
     public static class BinUniformTimeseriesFile
     {
         /// <summary>
@@ -50,6 +51,7 @@ namespace NYurik.FastBinTimeseries
     /// Object representing a binary-serialized timeseries file with each item with uniform distribution of items
     /// one <see cref="ItemTimeSpan"/> from each other.
     /// </summary>
+    [Obsolete("Uniform data files are no longer supported")]
     public class BinUniformTimeseriesFile<T> : BinaryFile<T>, IBinaryFile<T>, IBinUniformTimeseriesFile
     {
         #region Constructors
