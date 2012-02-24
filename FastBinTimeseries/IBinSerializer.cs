@@ -27,13 +27,12 @@ using System.IO;
 
 namespace NYurik.FastBinTimeseries
 {
+    /// <summary>
+    /// Methods to support binary data serialization into either a FileStream or into memory.
+    /// Must not be implemented directly. Implement <see cref="IBinSerializer{T}"/> instead.
+    /// </summary>
     public interface IBinSerializer
     {
-        /// <summary>
-        /// True if this serializer has been initialized, false otherwise.
-        /// </summary>
-        bool IsInitialized { get; }
-
         /// <summary> Serializer version </summary>
         Version Version { get; }
 
@@ -61,6 +60,9 @@ namespace NYurik.FastBinTimeseries
         void InitExisting(BinaryReader reader, Func<string, Type> typeResolver);
     }
 
+    /// <summary>
+    /// Methods to support binary data serialization into either a FileStream or into memory.
+    /// </summary>
     public interface IBinSerializer<T> : IBinSerializer
     {
         /// <summary>

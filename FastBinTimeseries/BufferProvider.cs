@@ -75,6 +75,9 @@ namespace NYurik.FastBinTimeseries
 
         public IEnumerable<Buffer<T>> YieldFixedSize(int size)
         {
+            if (size <= 0)
+                throw new ArgumentOutOfRangeException("size", size, "<=0");
+
             Buffer<T> buffer = GetBufferRef();
 
             if (buffer == null || buffer.Capacity < size)

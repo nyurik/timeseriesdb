@@ -33,8 +33,8 @@ namespace NYurik.FastBinTimeseries.Test
 {
     public class TestsBase
     {
-        private const Mode InitRunMode = Mode.Verify;
-        private const string StoreDir = "Stored3";
+        private const Mode InitRunMode = Mode.OneTime;
+        private const string StoreDir = "Stored1";
         private const string TestFileSuffix = ".testbsd";
 
         private readonly Dictionary<string, int> _files = new Dictionary<string, int>();

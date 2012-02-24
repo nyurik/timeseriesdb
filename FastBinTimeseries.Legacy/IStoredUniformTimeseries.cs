@@ -27,6 +27,7 @@ using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
+    [Obsolete]
     public interface IStoredUniformTimeseries
     {
         /// <summary>
@@ -36,7 +37,7 @@ namespace NYurik.FastBinTimeseries
 
         /// <summary>
         /// Represents the timestamp of the first value beyond the end of the existing data.
-        /// (<see cref="IStoredSeries.GetItemCount"/> as a timestamp)
+        /// (<see cref="IBinaryFile.GetItemCount"/> as a timestamp)
         /// </summary>
         UtcDateTime FirstUnavailableTimestamp { get; }
 
@@ -46,7 +47,7 @@ namespace NYurik.FastBinTimeseries
         TimeSpan ItemTimeSpan { get; }
 
         /// <summary>
-        /// Generic version of <see cref="BinUniformTimeseriesFile{T}.ReadData(UtcDateTime,UtcDateTime)"/>.
+        /// Generic version of <see cref="BinUniformTimeseriesFile{T}.ReadData(long,System.ArraySegment{T})"/>.
         /// Read data starting at <paramref name="fromInclusive"/>, up to, but not including <paramref name="toExclusive"/>,
         /// and return an <see cref="Array"/> object. 
         /// </summary>

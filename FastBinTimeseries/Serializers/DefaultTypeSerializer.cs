@@ -42,6 +42,9 @@ namespace NYurik.FastBinTimeseries.Serializers
 
 namespace NYurik.FastBinTimeseries
 {
+    /// <summary>
+    /// Default Serializer operates with the memory representation of the explicit structs
+    /// </summary>
     public class DefaultTypeSerializer<T> : Initializable, IBinSerializer<T>
     {
         // ReSharper disable StaticFieldInGenericType

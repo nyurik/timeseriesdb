@@ -26,10 +26,16 @@ using System;
 
 namespace NYurik.FastBinTimeseries
 {
+    /// <summary>
+    /// Derived classes can be in initialized and non-initialized state.
+    /// </summary>
     public abstract class Initializable
     {
         private bool _isInitialized;
 
+        /// <summary>
+        /// True if this instance has been initialized
+        /// </summary>
         public bool IsInitialized
         {
             get { return _isInitialized; }
