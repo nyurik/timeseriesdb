@@ -8,7 +8,7 @@ using System.Reflection;
 [assembly: AssemblyVersion(AssemblyVersion.Ver)]
 [assembly: AssemblyFileVersion(AssemblyVersion.Ver)]
 
-#if !DEBUG
+#if SIGN
 
 #pragma warning disable 1699
 [assembly: AssemblyKeyFile(@"..\..\..\key.snk")]
