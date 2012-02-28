@@ -57,14 +57,22 @@ namespace NYurik.FastBinTimeseries
                                                        long maxItemCount = long.MaxValue);
     }
 
-    public interface IWritableFeed<TInd, TVal> : IEnumerableFeed<TInd, TVal>
-        where TInd : IComparable<TInd>
+    public interface IWritableFeed : IEnumerableFeed
     {
         /// <summary>
         /// Returns true if this file is empty
         /// </summary>
         bool IsEmpty { get; }
 
+        /// <summary>
+        /// False if more than one identical index is allowed in the feed, True otherwise
+        /// </summary>
+        bool UniqueIndexes { get; }
+    }
+
+    public interface IWritableFeed<TInd, TVal> : IWritableFeed, IEnumerableFeed<TInd, TVal>
+        where TInd : IComparable<TInd>
+    {
         /// <summary>
         /// If available, returns the first index of the feed, or default(TInd) if empty
         /// </summary>
@@ -74,11 +82,6 @@ namespace NYurik.FastBinTimeseries
         /// If available, returns the last index of the feed, or default(TInd) if empty
         /// </summary>
         TInd LastIndex { get; }
-
-        /// <summary>
-        /// False if more than one identical index is allowed in the feed, True otherwise
-        /// </summary>
-        bool UniqueIndexes { get; }
 
         /// <summary>
         /// Add new items at the end of the existing file. If file truncation is allowed, the first item's index
