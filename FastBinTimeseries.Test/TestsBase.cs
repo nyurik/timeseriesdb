@@ -27,6 +27,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text;
+using JetBrains.Annotations;
 using NUnit.Framework;
 
 namespace NYurik.FastBinTimeseries.Test
@@ -119,6 +121,40 @@ namespace NYurik.FastBinTimeseries.Test
             }
             return string.Format("{0}{1}{2}{3}", dir, filename, count, TestFileSuffix);
         }
+
+        /// <summary>
+        /// This method is useful during debugging to view file's content as a string in the immediate window or expression eval
+        /// </summary>
+        [UsedImplicitly]
+        public static string Dump(IEnumerableFeed f)
+        {
+            return f.RunGenericMethod(new DumpHelper(), null);
+        }
+
+        #region Debug dump suppport
+
+        private class DumpHelper : IGenericCallable2<string, object>
+        {
+            #region IGenericCallable2<string,object> Members
+
+            public string Run<TInd, TVal>(IGenericInvoker source, object arg)
+                where TInd : IComparable<TInd>
+            {
+                var f = (IEnumerableFeed<TInd, TVal>) source;
+
+                var sb = new StringBuilder();
+                foreach (TVal v in f.Stream(default(TInd)))
+                {
+                    sb.Append(v);
+                    sb.Append("\n");
+                }
+                return sb.Length == 0 ? "(empty)" : sb.ToString();
+            }
+
+            #endregion
+        }
+
+        #endregion
 
         #region Nested type: Mode
 

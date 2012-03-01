@@ -217,7 +217,7 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _LongByte_SeqPk1 : IEquatable<_LongByte_SeqPk1>
     {
-        public long a;
+        [Index] public long a;
         public byte b;
 
         #region Implementation

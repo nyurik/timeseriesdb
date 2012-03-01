@@ -167,7 +167,12 @@ namespace NYurik.FastBinTimeseries.Test
                 int lastStep = 0;
                 foreach (int step in new[] {itemCount/10, itemCount/5, itemCount/3, itemCount})
                 {
+                    var lastBefore = f.LastIndex;
                     f.AppendData(data(segSize, lastStep, step));
+                    var lastAfter = f.LastIndex;
+
+                    if (step > 0)
+                        Assert.AreNotEqual(lastBefore, lastAfter);
 
                     TestUtils.CollectionAssertEqual(
                         data(itemCount, 0, step),
@@ -272,15 +277,6 @@ namespace NYurik.FastBinTimeseries.Test
                     dat, f.Stream(UtcDateTime.MinValue),
                     "adding dupl start={0}, until={1}, duplEvery={2}, fixedSegments={3} {4}", 0, 2, 1, segSize,
                     name);
-
-                dat = Segments(DuplicatesEvery(0, 2, 1, _DatetimeByte_SeqPk1.New), SameValue(segSize));
-
-                f.AppendData(dat);
-
-                TestUtils.CollectionAssertEqual(
-                    dat, f.Stream(UtcDateTime.MinValue),
-                    "adding dupl start={0}, until={1}, duplEvery={2}, fixedSegments={3} {4}", 0, 2, 1, segSize,
-                    name);
             }
         }
 
@@ -335,16 +331,10 @@ namespace NYurik.FastBinTimeseries.Test
             [Values(true, false)] bool enableCache,
             [Values(true, false)] bool uniqueIndexes)
         {
-            Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data = uniqueIndexes
-                                                                                            ? Data
-                                                                                            : (
-                                                                                              Func
-                                                                                                  <int, int, int,
-                                                                                                  IEnumerable
-                                                                                                  <
-                                                                                                  ArraySegment
-                                                                                                  <_DatetimeByte_SeqPk1>
-                                                                                                  >>) DataDupl;
+            Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data =
+                uniqueIndexes
+                    ? Data
+                    : (Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>>) DataDupl;
 
             AppendTest(
                 string.Format(

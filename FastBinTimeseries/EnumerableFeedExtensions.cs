@@ -32,18 +32,20 @@ namespace NYurik.FastBinTimeseries
     {
         public static IEnumerable<TVal> Stream<TInd, TVal>(
             this IEnumerableFeed<TInd, TVal> feed,
-            TInd from, TInd? until = null, bool inReverse = false, IEnumerable<Buffer<TVal>> bufferProvider = null,
+            TInd from, TInd until = default(TInd), bool inReverse = false,
+            IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = long.MaxValue)
-            where TInd : struct, IComparable<TInd>
+            where TInd : IComparable<TInd>
         {
             return Stream(() => feed, from, until, inReverse, bufferProvider, maxItemCount: maxItemCount);
         }
 
         public static IEnumerable<TVal> Stream<TInd, TVal>(
             Func<IEnumerableFeed<TInd, TVal>> feedFactory,
-            TInd from, TInd? until = null, bool inReverse = false, IEnumerable<Buffer<TVal>> bufferProvider = null,
+            TInd from, TInd until = default(TInd), bool inReverse = false,
+            IEnumerable<Buffer<TVal>> bufferProvider = null,
             Action<IEnumerableFeed<TInd, TVal>> onDispose = null, long maxItemCount = long.MaxValue)
-            where TInd : struct, IComparable<TInd>
+            where TInd : IComparable<TInd>
         {
             if (feedFactory == null)
                 throw new ArgumentNullException("feedFactory");
@@ -83,22 +85,22 @@ namespace NYurik.FastBinTimeseries
 //        }
 //
         public static IEnumerable<ArraySegment<TVal>> StreamSegments<TInd, TVal>(
-            this IEnumerableFeed<TInd, TVal> feed, TInd fromInd, TInd? until = null, bool inReverse = false,
+            this IEnumerableFeed<TInd, TVal> feed, TInd fromInd, TInd until = default(TInd), bool inReverse = false,
             IEnumerable<Buffer<TVal>> bufferProvider = null, long maxItemCount = long.MaxValue)
-            where TInd : struct, IComparable<TInd>
+            where TInd : IComparable<TInd>
         {
             if (feed == null)
                 throw new ArgumentNullException("feed");
 
-            return until == null
+            return until.CompareTo(default(TInd)) == 0
                        ? feed.StreamSegments(fromInd, inReverse, bufferProvider, maxItemCount)
-                       : StreamSegmentsUntil(feed, fromInd, until.Value, inReverse, bufferProvider, maxItemCount);
+                       : StreamSegmentsUntil(feed, fromInd, until, inReverse, bufferProvider, maxItemCount);
         }
 
         private static IEnumerable<ArraySegment<TVal>> StreamSegmentsUntil<TInd, TVal>(
             IEnumerableFeed<TInd, TVal> feed, TInd fromInd, TInd untilInd, bool inReverse,
             IEnumerable<Buffer<TVal>> bufferProvider, long maxItemCount)
-            where TInd : struct, IComparable<TInd>
+            where TInd : IComparable<TInd>
         {
             Func<TVal, TInd> tsa = feed.IndexAccessor;
 
@@ -139,8 +141,9 @@ namespace NYurik.FastBinTimeseries
         }
 
 
-        public static IEnumerable<T> StreamSegmentValues<T>(this IEnumerable<ArraySegment<T>> stream,
-                                                            bool inReverse = false)
+        public static IEnumerable<T> StreamSegmentValues<T>(
+            this IEnumerable<ArraySegment<T>> stream,
+            bool inReverse = false)
         {
             if (stream == null)
                 throw new ArgumentNullException("stream");

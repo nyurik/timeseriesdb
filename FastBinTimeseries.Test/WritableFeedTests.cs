@@ -25,8 +25,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using JetBrains.Annotations;
 using NUnit.Framework;
 
 namespace NYurik.FastBinTimeseries.Test
@@ -36,18 +34,6 @@ namespace NYurik.FastBinTimeseries.Test
     [TestFixture]
     public class WritableFeedTests : TestsBase
     {
-        [UsedImplicitly]
-        public static string Show(IWritableFeed<long, _LongByte_SeqPk1> f)
-        {
-            var sb = new StringBuilder();
-            foreach (_LongByte_SeqPk1 v in f.Stream(0))
-            {
-                sb.Append(v);
-                sb.Append("\n");
-            }
-            return sb.Length == 0 ? "(empty)" : sb.ToString();
-        }
-
         private void Append(Func<string, IWritableFeed<long, _LongByte_SeqPk1>> newFile)
         {
             string fileName = GetBinFileName();
@@ -133,9 +119,7 @@ namespace NYurik.FastBinTimeseries.Test
             Append(
                 fn =>
                     {
-                        var r = new BinCompressedSeriesFile<long, _LongByte_SeqPk1>(
-                            fn, typeof (_LongByte_SeqPk1).GetField("a"));
-                        r.UniqueIndexes = isUnique;
+                        var r = new BinCompressedSeriesFile<long, _LongByte_SeqPk1>(fn) {UniqueIndexes = isUnique};
                         r.InitializeNewFile();
                         return r;
                     });
@@ -147,8 +131,7 @@ namespace NYurik.FastBinTimeseries.Test
             Append(
                 fn =>
                     {
-                        var r = new BinSeriesFile<long, _LongByte_SeqPk1>(fn, typeof (_LongByte_SeqPk1).GetField("a"));
-                        r.UniqueIndexes = isUnique;
+                        var r = new BinSeriesFile<long, _LongByte_SeqPk1>(fn) {UniqueIndexes = isUnique};
                         r.InitializeNewFile();
                         return r;
                     });

@@ -22,6 +22,8 @@
 
 #endregion
 
+using System;
+
 namespace NYurik.FastBinTimeseries
 {
     /// <summary>
@@ -59,6 +61,7 @@ namespace NYurik.FastBinTimeseries
     /// </summary>
     public interface IGenericCallable2<out TDst, in TArg>
     {
-        TDst Run<T1, T2>(IGenericInvoker source, TArg arg);
+        TDst Run<TInd, TVal>(IGenericInvoker source, TArg arg)
+            where TInd : IComparable<TInd>;
     }
 }
