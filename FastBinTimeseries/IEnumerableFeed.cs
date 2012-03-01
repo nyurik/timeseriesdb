@@ -84,9 +84,14 @@ namespace NYurik.FastBinTimeseries
         TInd LastIndex { get; }
 
         /// <summary>
-        /// Add new items at the end of the existing file. If file truncation is allowed, the first item's index
-        /// will be used to truncate the file
+        /// Add new items at the end of the existing file.
+        /// Special case: If file allows non-unique indexes, and the new data starts with the same index as the last in file,
+        /// duplicate indexes will be preserved if <paramref name="allowFileTruncation"/> is false,
+        /// whereas when true, the file's last item(s) with that index will be deleted.
         /// </summary>
+        /// <param name="bufferStream">Stream of new data to be added.</param>
+        /// <param name="allowFileTruncation">If true, the file will be truncated up to, but not including the first new item's index.
+        /// If false, no data will be removed from the file.</param>
         void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false);
     }
 }

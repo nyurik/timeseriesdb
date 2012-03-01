@@ -272,8 +272,8 @@ namespace NYurik.FastBinTimeseries.EmitExtensions
             {
                 return
                     Type != null
-                        ? String.Format("Level: {0}, Type: {1}", Level, Type)
-                        : String.Format("Level: {0}, FixedBufferSize: {1}", Level, FixedBufferSize);
+                        ? string.Format("Level: {0}, Type: {1}", Level, Type)
+                        : string.Format("Level: {0}, FixedBufferSize: {1}", Level, FixedBufferSize);
             }
         }
 

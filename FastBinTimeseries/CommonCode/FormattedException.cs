@@ -23,6 +23,7 @@
 #endregion
 
 using System;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
@@ -54,15 +55,11 @@ namespace NYurik.FastBinTimeseries.CommonCode
                 // In case any of the arguments are non-basic types, convert to string
                 // Otherwise their state might change by the time FormatString() is called.
                 Assembly coreAssmbly = typeof (object).Assembly;
-                foreach (object arg in args)
+                if (args.Any(arg => arg != null && arg.GetType().Assembly != coreAssmbly))
                 {
-                    if (arg != null && arg.GetType().Assembly != coreAssmbly)
-                    {
-                        _formatStr = FormatString();
-                        _useFormat = false;
-                        _arguments = null;
-                        break;
-                    }
+                    _formatStr = FormatString();
+                    _useFormat = false;
+                    _arguments = null;
                 }
             }
         }

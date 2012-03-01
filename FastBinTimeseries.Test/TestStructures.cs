@@ -62,7 +62,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public override string ToString()
         {
-            return String.Format("{0}, {1}, {2}", a, b, c);
+            return string.Format("{0}, {1}, {2}", a, b, c);
         }
 
         public static _3Byte_noAttr New(long i)
@@ -111,7 +111,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public override string ToString()
         {
-            return String.Format("{0:u}, {1}", a, b);
+            return string.Format("{0:u}, {1}", a, b);
         }
 
         public static _DatetimeByte_SeqPk1 New(long i)
@@ -158,7 +158,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public override string ToString()
         {
-            return String.Format("{0:u}, {1}", a, b);
+            return string.Format("{0:u}, {1}", a, b);
         }
 
         public static _DatetimeBool_SeqPk1 New(long i)
@@ -427,7 +427,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public override string ToString()
         {
-            return String.Format("{0}, {1}, {2}", a, b, c);
+            return string.Format("{0}, {1}, {2}", a, b, c);
         }
 
         public static _3Byte_2Shrt_ExplPk1 New(long i)

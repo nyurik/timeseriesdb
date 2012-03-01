@@ -283,7 +283,7 @@ namespace NYurik.FastBinTimeseries
         {
             if (timestamp.Ticks%ItemTimeSpan.Ticks != 0)
                 throw new ArgumentException(
-                    String.Format(
+                    string.Format(
                         "The timestamp {0} must be aligned by the time slice {1}", timestamp,
                         ItemTimeSpan));
             return timestamp;
@@ -300,7 +300,7 @@ namespace NYurik.FastBinTimeseries
                 throw new ArgumentOutOfRangeException("value", value, "<0");
             if (value > Int32.MaxValue)
                 throw new ArgumentException(
-                    String.Format(
+                    string.Format(
                         "Attempted to process {0} items at once, which is over the maximum of {1}.",
                         value, Int32.MaxValue));
             return (int) value;

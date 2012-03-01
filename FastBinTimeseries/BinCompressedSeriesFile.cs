@@ -42,8 +42,9 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Uses reflection to create an instance of <see cref="BinCompressedSeriesFile{TInd,TVal}"/>.
         /// </summary>
-        public static IBinaryFile GenericNew(Type indType, Type itemType, string fileName,
-                                             FieldInfo indexFieldInfo = null)
+        public static IBinaryFile GenericNew(
+            Type indType, Type itemType, string fileName,
+            FieldInfo indexFieldInfo = null)
         {
             return (IBinaryFile)
                    Activator.CreateInstance(
@@ -184,16 +185,12 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        #region IGenericInvoker2 Members
+        #region IWritableFeed<TInd,TVal> Members
 
         public TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
             return callable.Run<TInd, TVal>(this, arg);
         }
-
-        #endregion
-
-        #region IWritableFeed<TInd,TVal> Members
 
         public TInd FirstIndex
         {
@@ -261,17 +258,14 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
-        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false,
-                                                              IEnumerable<Buffer<TVal>> bufferProvider = null,
-                                                              long maxItemCount = long.MaxValue)
+        public IEnumerable<ArraySegment<TVal>> StreamSegments(
+            TInd fromInd, bool inReverse = false,
+            IEnumerable<Buffer<TVal>> bufferProvider = null,
+            long maxItemCount = long.MaxValue)
         {
             long cachedFileCount = GetCount();
 
-            long block = Search(fromInd, cachedFileCount);
-            if (block < 0)
-                block = ~block - 1;
-            else if (!UniqueIndexes)
-                block--;
+            long block = GetBlockByIndex(fromInd, cachedFileCount);
 
             return StreamSegments(fromInd, block, cachedFileCount, inReverse, bufferProvider, maxItemCount);
         }
@@ -297,40 +291,50 @@ namespace NYurik.FastBinTimeseries
                 IEnumerator<TVal> iterToDispose = null;
                 try
                 {
-                    long firstBufferBlock;
-                    IEnumerator<TVal> mergedIter;
+                    IEnumerator<TVal> mergedIter = newValues;
+                    long firstBufferBlock = 0;
+
                     if (!isEmptyFile)
                     {
                         if (!allowFileTruncation)
                         {
                             TInd lastInd = LastIndex;
-                            if (firstBufferInd.CompareTo(lastInd) <= 0)
+                            int cmp = firstBufferInd.CompareTo(lastInd);
+                            if (cmp < 0)
                                 throw new BinaryFileException(
-                                    "Last index in file ({0}) is greater or equal to the first new item's index ({1})",
+                                    "Last index in file ({0}) is greater than the first new item's index ({1})",
                                     lastInd, firstBufferInd);
+                            else if (cmp == 0 && UniqueIndexes)
+                                throw new BinaryFileException(
+                                    "Last index in file ({0}) equals to the first new item's index (enfocing uniqueness)",
+                                    lastInd);
 
                             // Round down so that if we have incomplete block, it will be appended.
                             firstBufferBlock = FastBinFileUtils.RoundDownToMultiple(count, BlockSize)/BlockSize;
                         }
                         else
                         {
-                            firstBufferBlock = Search(firstBufferInd, count);
+                            firstBufferBlock = GetBlockByIndex(firstBufferInd, count);
                         }
 
-                        // start at the begining of the found block
-                        iterToDispose = JoinStreams(
-                            firstBufferInd, newValues,
-                            StreamSegments(default(TInd), firstBufferBlock, count).StreamSegmentValues()
-                            ).GetEnumerator();
+                        if (firstBufferBlock >= 0)
+                        {
+                            // start at the begining of the found block
+                            iterToDispose = JoinStreams(
+                                firstBufferInd, newValues, !UniqueIndexes && !allowFileTruncation,
+                                StreamSegments(default(TInd), firstBufferBlock, count).StreamSegmentValues()
+                                ).GetEnumerator();
 
-                        mergedIter = iterToDispose;
-                        if (!mergedIter.MoveNext())
-                            throw new InvalidOperationException("Logic error: mergedIter must have at least one value");
-                    }
-                    else
-                    {
-                        mergedIter = newValues;
-                        firstBufferBlock = 0;
+                            mergedIter = iterToDispose;
+                            if (!mergedIter.MoveNext())
+                                throw new InvalidOperationException(
+                                    "Logic error: mergedIter must have at least one value");
+                        }
+                        else
+                        {
+                            // Re-writing the whole file using new values
+                            firstBufferBlock = 0;
+                        }
                     }
 
                     using (IEnumerator<ArraySegment<byte>> mergedEnmr = SerializeStream(mergedIter).GetEnumerator())
@@ -354,10 +358,11 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        private IEnumerable<ArraySegment<TVal>> StreamSegments(TInd firstInd, long firstBlockInd, long cachedFileCount,
-                                                               bool inReverse = false,
-                                                               IEnumerable<Buffer<TVal>> bufferProvider = null,
-                                                               long maxItemCount = long.MaxValue)
+        private IEnumerable<ArraySegment<TVal>> StreamSegments(
+            TInd firstInd, long firstBlockInd, long cachedFileCount,
+            bool inReverse = false,
+            IEnumerable<Buffer<TVal>> bufferProvider = null,
+            long maxItemCount = long.MaxValue)
         {
             if (maxItemCount < 0)
                 throw new ArgumentOutOfRangeException("maxItemCount", maxItemCount, "<0");
@@ -525,6 +530,20 @@ namespace NYurik.FastBinTimeseries
             throw new InvalidOperationException("Logic error: buffer provider did not yield one buffer");
         }
 
+        /// <summary>
+        /// Using binary search, find the block that would contain needed index.
+        /// Returns -1 if index is before the first item.
+        /// </summary>
+        private long GetBlockByIndex(TInd index, long cachedFileCount)
+        {
+            long block = Search(index, cachedFileCount);
+            if (block < 0)
+                block = ~block - 1;
+            else if (!UniqueIndexes)
+                block--;
+            return block;
+        }
+
         private long Search(TInd index, long cachedFileCount)
         {
             long start = 0L;
@@ -546,19 +565,19 @@ namespace NYurik.FastBinTimeseries
             while (start <= end)
             {
                 long mid = start + ((end - start) >> 1);
-                TInd timeAtMid;
+                TInd indAtMid;
 
                 // Read new value from file unless we already have it pre-cached in the dictionary
-                if (cache == null || !cache.TryGetValue(mid, out timeAtMid))
+                if (cache == null || !cache.TryGetValue(mid, out indAtMid))
                 {
-                    if (!TryGetIndex(mid, cachedFileCount, out timeAtMid))
+                    if (!TryGetIndex(mid, cachedFileCount, out indAtMid))
                         throw new BinaryFileException("Unable to read index block #{0}", mid);
 
                     if (cache != null)
-                        cache.TryAdd(mid, timeAtMid);
+                        cache.TryAdd(mid, indAtMid);
                 }
 
-                int comp = timeAtMid.CompareTo(index);
+                int comp = indAtMid.CompareTo(index);
                 if (comp == 0)
                 {
                     if (UniqueIndexes)
@@ -634,13 +653,24 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Slightly hacky merge of an old values enumerable with an iterator over the new ones.
         /// This code assumes that it will be called only once for this IEnumerator.
+        /// If includeEquals = true, includes old items with the index that equals to the first new one.
         /// </summary>
-        private IEnumerable<TVal> JoinStreams(TInd firstNewInd, IEnumerator<TVal> newValues,
-                                              IEnumerable<TVal> existingValues)
+        private IEnumerable<TVal> JoinStreams(
+            TInd firstNewInd, IEnumerator<TVal> newValues, bool includeEquals, IEnumerable<TVal> existingValues)
         {
+            Func<TVal, bool> comp;
+            if (includeEquals)
+                comp = val => IndexAccessor(val).CompareTo(firstNewInd) <= 0;
+            else
+                comp = val => IndexAccessor(val).CompareTo(firstNewInd) < 0;
+
             foreach (TVal v in existingValues)
-                if (IndexAccessor(v).CompareTo(firstNewInd) < 0)
+            {
+                if (comp(v))
                     yield return v;
+                else
+                    break;
+            }
 
             do
             {
@@ -667,12 +697,13 @@ namespace NYurik.FastBinTimeseries
 
                         if (!isFirst)
                         {
-                            if (newInd.CompareTo(lastInd) < 0)
+                            int cmp = newInd.CompareTo(lastInd);
+                            if (cmp < 0)
                                 throw new BinaryFileException(
                                     "Segment {0}, last item's index {1} is greater than index of the following item #{2} ({3})",
                                     segInd, lastInd, i, newInd);
 
-                            if (UniqueIndexes && newInd.CompareTo(lastInd) == 0)
+                            if (UniqueIndexes && cmp == 0)
                                 throw new BinaryFileException(
                                     "Segment {0}, last item's index {1} equals to the following item's index at #{2} (enforcing index uniqueness)",
                                     segInd, lastInd, i);

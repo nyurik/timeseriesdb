@@ -43,8 +43,9 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Uses reflection to create an instance of <see cref="BinSeriesFile{TInd,TVal}"/>.
         /// </summary>
-        public static IBinaryFile GenericNew(Type indType, Type itemType, string fileName,
-                                             FieldInfo indexFieldInfo = null)
+        public static IBinaryFile GenericNew(
+            Type indType, Type itemType, string fileName,
+            FieldInfo indexFieldInfo = null)
         {
             return (IBinaryFile)
                    Activator.CreateInstance(
@@ -56,8 +57,7 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Object representing a binary-serialized index-based series file.
     /// </summary>
-    public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IWritableFeed<TInd, TVal>
-        where TInd : IComparable<TInd>
+    public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IWritableFeed<TInd, TVal> where TInd : IComparable<TInd>
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
 
@@ -142,16 +142,12 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        #region IGenericInvoker2 Members
+        #region IWritableFeed<TInd,TVal> Members
 
         public TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
             return callable.Run<TInd, TVal>(this, arg);
         }
-
-        #endregion
-
-        #region IWritableFeed<TInd,TVal> Members
 
         public TInd FirstIndex
         {
@@ -224,9 +220,10 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
-        public IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false,
-                                                              IEnumerable<Buffer<TVal>> bufferProvider = null,
-                                                              long maxItemCount = long.MaxValue)
+        public IEnumerable<ArraySegment<TVal>> StreamSegments(
+            TInd fromInd, bool inReverse = false,
+            IEnumerable<Buffer<TVal>> bufferProvider = null,
+            long maxItemCount = Int64.MaxValue)
         {
             long index = FirstIndexToPos(fromInd);
             if (inReverse)
@@ -289,8 +286,8 @@ namespace NYurik.FastBinTimeseries
             while (start <= end)
             {
                 long mid = start + ((end - start) >> 1);
-                TInd timeAtMid;
-                TInd timeAtMid2 = default(TInd);
+                TInd indAtMid;
+                TInd indAtMid2 = default(TInd);
 
                 // Read new value from file unless we already have it pre-cached in the dictionary
                 if (end - start == 1 && !UniqueIndexes && !findFirst)
@@ -299,35 +296,35 @@ namespace NYurik.FastBinTimeseries
                     // and searching for the last non-unique element,
                     // read both elements to see if the 2nd one matches our search
                     if (cache == null
-                        || !cache.TryGetValue(mid, out timeAtMid)
-                        || !cache.TryGetValue(mid + 1, out timeAtMid2))
+                        || !cache.TryGetValue(mid, out indAtMid)
+                        || !cache.TryGetValue(mid + 1, out indAtMid2))
                     {
                         if (PerformUnsafeBlockAccess(mid, false, new ArraySegment<TVal>(buff), count*ItemSize, useMma)
                             < 2)
                             throw new BinaryFileException("Unable to read two blocks");
 
-                        timeAtMid = IndexAccessor(buff[0]);
-                        timeAtMid2 = IndexAccessor(buff[1]);
+                        indAtMid = IndexAccessor(buff[0]);
+                        indAtMid2 = IndexAccessor(buff[1]);
                         if (cache != null)
                         {
-                            cache.TryAdd(mid, timeAtMid);
-                            cache.TryAdd(mid + 1, timeAtMid2);
+                            cache.TryAdd(mid, indAtMid);
+                            cache.TryAdd(mid + 1, indAtMid2);
                         }
                     }
                 }
                 else
                 {
-                    if (cache == null || !cache.TryGetValue(mid, out timeAtMid))
+                    if (cache == null || !cache.TryGetValue(mid, out indAtMid))
                     {
                         if (PerformUnsafeBlockAccess(mid, false, oneElementSegment, count*ItemSize, useMma) < 1)
                             throw new BinaryFileException("Unable to read index block");
-                        timeAtMid = IndexAccessor(oneElementSegment.Array[0]);
+                        indAtMid = IndexAccessor(oneElementSegment.Array[0]);
                         if (cache != null)
-                            cache.TryAdd(mid, timeAtMid);
+                            cache.TryAdd(mid, indAtMid);
                     }
                 }
 
-                int comp = timeAtMid.CompareTo(index);
+                int comp = indAtMid.CompareTo(index);
                 if (comp == 0)
                 {
                     if (UniqueIndexes)
@@ -349,7 +346,7 @@ namespace NYurik.FastBinTimeseries
 
                         // special case - see above
                         if (end - start == 1)
-                            return timeAtMid2.CompareTo(index) == 0 ? mid + 1 : mid;
+                            return indAtMid2.CompareTo(index) == 0 ? mid + 1 : mid;
 
                         start = mid;
                     }
@@ -363,10 +360,13 @@ namespace NYurik.FastBinTimeseries
             return ~start;
         }
 
-        public void TruncateFile(TInd lastIndexToPreserve)
+        /// <summary>
+        /// Truncate file, making sure that no items exist with <paramref name="deleteOnAndAfter"/> index or greater.
+        /// </summary>
+        public void TruncateFile(TInd deleteOnAndAfter)
         {
-            long newCount = BinarySearch(lastIndexToPreserve, false);
-            newCount = newCount < 0 ? ~newCount : newCount + 1;
+            long newCount = BinarySearch(deleteOnAndAfter, true);
+            if (newCount < 0) newCount = ~newCount;
 
             TruncateFile(newCount);
         }
@@ -426,7 +426,7 @@ namespace NYurik.FastBinTimeseries
             bool isFirstSeg = true;
 
             bool isEmptyFile = IsEmpty;
-            TInd lastTs = isEmptyFile ? default(TInd) : LastIndex;
+            TInd prevSegLast = isEmptyFile ? default(TInd) : LastIndex;
             int segInd = 0;
 
             foreach (var buffer in bufferStream)
@@ -436,77 +436,43 @@ namespace NYurik.FastBinTimeseries
                 if (buffer.Count == 0)
                     continue;
 
-                TInd firstBufferTs = IndexAccessor(buffer.Array[buffer.Offset]);
-                TInd newTs = firstBufferTs;
+                // Validate new data
+                Tuple<TInd, TInd> rng = ValidateSegmentOrder(
+                    buffer, IndexAccessor, UniqueIndexes, segInd);
 
                 if (!isEmptyFile)
                 {
-                    // Make sure new data goes after the last item
-                    if (newTs.CompareTo(lastTs) < 0)
+                    // Make sure new data's first index is after the last item in file or previous segment
+                    int cmp = rng.Item1.CompareTo(prevSegLast);
+                    bool needTruncation = cmp < 0 || (cmp == 0 && (UniqueIndexes || allowFileTruncations));
+
+                    if (needTruncation)
                     {
                         if (!allowFileTruncations)
-                            throw new BinaryFileException(
-                                "Last index in {2} ({0}) is greater than the first new item's index ({1})",
-                                lastTs, newTs, isFirstSeg ? "file" : "segment");
+                            if (cmp < 0)
+                                throw new BinaryFileException(
+                                    "Last index in {2} ({0}) is greater than the first new item's index ({1})",
+                                    prevSegLast, rng.Item1, isFirstSeg ? "file" : "segment");
+                            else
+                                throw new BinaryFileException(
+                                    "Last index in {1} ({0}) equals to the first new item's index (enfocing uniqueness)",
+                                    prevSegLast, isFirstSeg ? "file" : "segment");
+
+                        TruncateFile(rng.Item1);
                     }
-                    else if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
-                        throw new BinaryFileException(
-                            "Last index in {1} ({0}) equals to the first new item's index (enfocing uniqueness)",
-                            lastTs, isFirstSeg ? "file" : "segment");
-                }
-
-                lastTs = newTs;
-
-                // Validate new data
-                int lastOffset = buffer.Offset + buffer.Count;
-                for (int i = buffer.Offset + 1; i < lastOffset; i++)
-                {
-                    newTs = IndexAccessor(buffer.Array[i]);
-                    if (newTs.CompareTo(lastTs) < 0)
-                        throw new BinaryFileException(
-                            "Segment {4}, new item's index at #{0} ({1}) is greater than index of the following item #{2} ({3})",
-                            i - 1, lastTs, i, newTs, segInd);
-                    if (UniqueIndexes && newTs.CompareTo(lastTs) == 0)
-                        throw new BinaryFileException(
-                            "Segment {4} new item's index at #{0} ({1}) equals the index of the following item #{2} (enforcing uniqueness)",
-                            i - 1, lastTs, i, segInd);
-                    lastTs = newTs;
                 }
 
                 yield return buffer;
 
                 if (isEmptyFile)
-                    FirstIndex = firstBufferTs;
-                LastIndex = lastTs;
+                    FirstIndex = rng.Item1;
+                prevSegLast = rng.Item2;
+                LastIndex = rng.Item2;
                 isEmptyFile = false;
                 isFirstSeg = false;
+                allowFileTruncations = false;
                 segInd++;
             }
-        }
-
-        /// <summary>
-        /// Returns the first index and the length of the data available in this file for the given range of dates
-        /// </summary>
-        protected Tuple<long, int> CalcNeededBuffer(TInd fromInclusive, TInd toExclusive)
-        {
-            if (fromInclusive.CompareTo(toExclusive) > 0)
-                throw new ArgumentOutOfRangeException("fromInclusive", "'from' must be <= 'to'");
-
-            long start = FirstIndexToPos(fromInclusive);
-            long end = FirstIndexToPos(toExclusive);
-            return Tuple.Create(start, ToIntCountChecked(end - start));
-        }
-
-        private int ToIntCountChecked(long value)
-        {
-            if (value < 0)
-                throw new ArgumentOutOfRangeException("value", value, "<0");
-            if (value > Int32.MaxValue)
-                throw new ArgumentException(
-                    String.Format(
-                        "Attempted to process {0} items at once, which is over the maximum of {1}.",
-                        value, Int32.MaxValue));
-            return (int) value;
         }
 
         private long FirstIndexToPos(TInd index)
@@ -515,6 +481,35 @@ namespace NYurik.FastBinTimeseries
             if (start < 0)
                 start = ~start;
             return start;
+        }
+
+        private static Tuple<TInd, TInd> ValidateSegmentOrder(
+            ArraySegment<TVal> buffer, Func<TVal, TInd> indAccessor, bool uniqueIndexes, int segInd)
+        {
+            int lastOffset = buffer.Offset + buffer.Count;
+
+            TVal[] data = buffer.Array;
+            TInd firstInd = indAccessor(data[buffer.Offset]);
+            TInd lastInd = firstInd;
+
+            for (int i = buffer.Offset + 1; i < lastOffset; i++)
+            {
+                TInd newInd = indAccessor(data[i]);
+                int cmp = newInd.CompareTo(lastInd);
+
+                if (cmp < 0)
+                    throw new BinaryFileException(
+                        "Segment {4}, new item's index at #{0} ({1}) is greater than index of the following item #{2} ({3})",
+                        i - 1, lastInd, i, newInd, segInd);
+                if (uniqueIndexes && cmp == 0)
+                    throw new BinaryFileException(
+                        "Segment {4} new item's index at #{0} ({1}) equals the index of the following item #{2} (enforcing uniqueness)",
+                        i - 1, lastInd, i, segInd);
+
+                lastInd = newInd;
+            }
+
+            return Tuple.Create(firstInd, lastInd);
         }
     }
 }

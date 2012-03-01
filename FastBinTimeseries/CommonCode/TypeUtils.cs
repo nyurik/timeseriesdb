@@ -77,7 +77,7 @@ namespace NYurik.FastBinTimeseries.CommonCode
             {
                 if (attributes.Length > 1)
                     throw new ArgumentException(
-                        String.Format(
+                        string.Format(
                             "Found {0} (>1) attributes {1} detected for {2}", attributes.Length,
                             typeof (TAttr).Name, customAttrProvider));
                 return attributes[0];

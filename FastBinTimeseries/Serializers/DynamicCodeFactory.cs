@@ -370,7 +370,7 @@ namespace NYurik.FastBinTimeseries.Serializers
                             Type itemType = typeof (TVal);
                             if (fi.DeclaringType != itemType)
                                 throw new InvalidOperationException(
-                                    String.Format(
+                                    string.Format(
                                         "The field {0} does not belong to type {1}",
                                         fi.Name, itemType.FullName));
 

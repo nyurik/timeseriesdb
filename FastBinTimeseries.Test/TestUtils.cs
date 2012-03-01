@@ -87,9 +87,9 @@ namespace NYurik.FastBinTimeseries.Test
             return res.ToArray();
         }
 
-        public static T[] GenerateData<T>(Func<long, T> converter, int count, int startFrom)
+        public static T[] GenerateData<T>(Func<long, T> converter, int count, int startFrom, int step = 1)
         {
-            string key = string.Format("{0},{1},{2}", typeof (T).FullName, startFrom, converter);
+            string key = string.Format("{0},{1},{2},{3}", typeof (T).FullName, startFrom, converter, step);
 
             T[] result;
             LinkedListNode<CacheItem> res = Items.Find(new CacheItem {Key = key});
@@ -114,7 +114,8 @@ namespace NYurik.FastBinTimeseries.Test
 
             result = new T[count + 100];
             for (long i = 0; i < count + 100; i++)
-                result[i] = converter(i + startFrom);
+                result[i] = converter(startFrom + step*i);
+
             Items.AddFirst(new CacheItem {Key = key, Value = result});
             if (Items.Count > 100)
                 Items.RemoveLast();
@@ -124,14 +125,15 @@ namespace NYurik.FastBinTimeseries.Test
             return rNew;
         }
 
-        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(Func<long, T> converter, int segSize,
-                                                                         int minValue, int maxValue)
+        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(
+            Func<long, T> converter, int segSize, int minValue, int maxValue, int step = 1)
         {
             if (segSize <= 0)
                 yield break;
 
-            for (int i = minValue; i < maxValue; i += segSize)
-                yield return new ArraySegment<T>(GenerateData(converter, Math.Min(segSize, maxValue - i), i));
+            for (long i = minValue; i < maxValue; i += segSize)
+                yield return
+                    new ArraySegment<T>(GenerateData(converter, (int) Math.Min(segSize, maxValue - i), (int) i, step));
         }
 
         public static byte NewByte(long i)
@@ -139,7 +141,8 @@ namespace NYurik.FastBinTimeseries.Test
             return (byte) (i & 0xFF);
         }
 
-        public static void AssertException<TEx>(Action operation)
+        [StringFormatMethod("format")]
+        public static void AssertException<TEx>(Action operation, string format = null, params object[] args)
             where TEx : Exception
         {
             AssertException<TEx>(
@@ -147,41 +150,47 @@ namespace NYurik.FastBinTimeseries.Test
                     {
                         operation();
                         return null;
-                    });
+                    }, format, args);
         }
 
-        public static void AssertException<TEx>(Func<object> operation)
+        [StringFormatMethod("format")]
+        public static void AssertException<TEx>(Func<object> operation, string format = null, params object[] args)
             where TEx : Exception
         {
             try
             {
                 object o = operation();
-                Assert.Fail("Should have thrown an {0}, but {1} was returned instead", typeof (TEx).Name, o);
+                string fmt = format == null ? "" : string.Format(format, args) + ": ";
+                Assert.Fail(
+                    "{0}Should have thrown {1}, but instead completed with result {2}", fmt, typeof (TEx).Name, o);
             }
-            catch (TEx ex)
+            catch (TEx)
             {
-                Console.WriteLine("Successfully cought {0}: {1}", typeof (TEx).Name, ex.Message);
+                // Console.WriteLine("Successfully cought {0}: {1}", typeof (TEx).Name, ex.Message);
             }
         }
 
         [StringFormatMethod("format")]
-        public static void CollectionAssertEqual<T>(IEnumerable<ArraySegment<T>> expected, IEnumerable<T> actual,
-                                                    string format = null, params object[] args)
+        public static void CollectionAssertEqual<T>(
+            IEnumerable<ArraySegment<T>> expected, IEnumerable<T> actual,
+            string format = null, params object[] args)
         {
             CollectionAssertEqual(expected.StreamSegmentValues(), actual, null, format, args);
         }
 
         [StringFormatMethod("format")]
-        public static void CollectionAssertEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
-                                                    string format = null, params object[] args)
+        public static void CollectionAssertEqual<T>(
+            IEnumerable<T> expected, IEnumerable<T> actual,
+            string format = null, params object[] args)
         {
             CollectionAssertEqual(expected, actual, null, format, args);
         }
 
         [StringFormatMethod("format")]
-        public static void CollectionAssertEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
-                                                    Func<T, T, bool> comparer,
-                                                    string format = null, params object[] args)
+        public static void CollectionAssertEqual<T>(
+            IEnumerable<T> expected, IEnumerable<T> actual,
+            Func<T, T, bool> comparer,
+            string format = null, params object[] args)
         {
             if (comparer == null)
                 comparer = EqualityComparer<T>.Default.Equals;
@@ -277,5 +286,18 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         #endregion
+
+        public static IEnumerable<ArraySegment<T>> GenerateSimpleData<T>(Func<long,T> factory, int minValue, int maxValue, int step = 1)
+        {
+            if(maxValue<minValue) throw new ArgumentException("max > min");
+            if(step < 1) throw new ArgumentException("step < 1");
+            if((maxValue-minValue)%step != 0) throw new ArgumentException("max does not fall in step");
+
+            var arr = new T[(maxValue - minValue)/step + 1];
+            for (int ind = 0, val = minValue; val <= maxValue; val += step)
+                arr[ind++] = factory(val);
+
+            return new[] {new ArraySegment<T>(arr)};
+        }
     }
 }

@@ -224,8 +224,9 @@ namespace NYurik.FastBinTimeseries
             return instance;
         }
 
-        public static Type ReadType(this BinaryReader reader, Func<string, Type> typeResolver, out string typeName,
-                                    out int fixedBufferSize)
+        public static Type ReadType(
+            this BinaryReader reader, Func<string, Type> typeResolver,
+            out string typeName, out int fixedBufferSize)
         {
             if (reader == null) throw new ArgumentNullException("reader");
             typeName = reader.ReadString();
