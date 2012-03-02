@@ -26,6 +26,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using JetBrains.Annotations;
@@ -38,6 +40,7 @@ namespace NYurik.FastBinTimeseries.Test
         private const Mode InitRunMode = Mode.OneTime;
         private const string StoreDir = "Stored1";
         private const string TestFileSuffix = ".testbsd";
+        private static readonly Dictionary<Type, Delegate> FuncCache = new Dictionary<Type, Delegate>();
 
         private readonly Dictionary<string, int> _files = new Dictionary<string, int>();
         private readonly Stopwatch _stopwatch = new Stopwatch();
@@ -119,7 +122,7 @@ namespace NYurik.FastBinTimeseries.Test
                     Directory.CreateDirectory(StoreDir);
                 dir = StoreDir + "\\";
             }
-            return string.Format("{0}{1}{2}{3}", dir, filename, count, TestFileSuffix);
+            return String.Format("{0}{1}{2}{3}", dir, filename, count, TestFileSuffix);
         }
 
         /// <summary>
@@ -129,6 +132,39 @@ namespace NYurik.FastBinTimeseries.Test
         public static string Dump(IEnumerableFeed f)
         {
             return f.RunGenericMethod(new DumpHelper(), null);
+        }
+
+        protected static IEnumerable<ArraySegment<T>> Data<T>(int minValue, int maxValue, int step = 1)
+        {
+            Type type = typeof (T);
+            Delegate func;
+            if (!FuncCache.TryGetValue(type, out func))
+            {
+                ParameterExpression param = Expression.Parameter(typeof (long));
+                func =
+                    Expression.Lambda<Func<long, T>>(
+                        Expression.Call(
+                            type.GetMethod("New", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic),
+                            param),
+                        param).Compile();
+                FuncCache.Add(type, func);
+            }
+
+            return Data((Func<long, T>) func, minValue, maxValue, step);
+        }
+
+        protected static IEnumerable<ArraySegment<T>> Data<T>(
+            Func<long, T> factory, int minValue, int maxValue, int step = 1)
+        {
+            if (maxValue < minValue) throw new ArgumentException("max > min");
+            if (step < 1) throw new ArgumentException("step < 1");
+            if ((maxValue - minValue)%step != 0) throw new ArgumentException("max does not fall in step");
+
+            var arr = new T[(maxValue - minValue)/step + 1];
+            for (int ind = 0, val = minValue; val <= maxValue; val += step)
+                arr[ind++] = factory(val);
+
+            return new[] {new ArraySegment<T>(arr)};
         }
 
         #region Debug dump suppport
@@ -166,5 +202,10 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         #endregion
+
+        protected static IEnumerable<T> Join<T>(params IEnumerable<T>[] enmrs)
+        {
+            return enmrs.SelectMany(i => i);
+        }
     }
 }

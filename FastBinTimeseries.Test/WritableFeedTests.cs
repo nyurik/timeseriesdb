@@ -24,8 +24,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using Strct = NYurik.FastBinTimeseries.Test._LongByte_SeqPk1;
 
 namespace NYurik.FastBinTimeseries.Test
 {
@@ -34,83 +36,97 @@ namespace NYurik.FastBinTimeseries.Test
     [TestFixture]
     public class WritableFeedTests : TestsBase
     {
-        private void Append(Func<string, IWritableFeed<long, _LongByte_SeqPk1>> newFile)
+        private void Append(Func<string, IWritableFeed<long, Strct>> newFile)
         {
             string fileName = GetBinFileName();
-            using (IWritableFeed<long, _LongByte_SeqPk1> f =
+            using (IWritableFeed<long, Strct> f =
                 AllowCreate
                     ? newFile(fileName)
-                    : (IWritableFeed<long, _LongByte_SeqPk1>) BinaryFile.Open(fileName, false))
+                    : (IWritableFeed<long, Strct>) BinaryFile.Open(fileName, false))
             {
                 if (AllowCreate)
                 {
-                    f.AppendData(Data(10, 20));
-                    TestUtils.CollectionAssertEqual(Data(10, 20), f.Stream(0), "#1");
+                    f.AppendData(Data<Strct>(10, 20));
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 20), f.Stream(0), "#1");
 
-                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data(5, 30)), "#2");
-                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data(10, 20)), "#2a");
-                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data(9, 15)), "#2b");
-                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data(11, 15)), "#2c");
-                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data(19, 20)), "#2d");
-                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data(19, 20)), "#2d");
+                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<Strct>(5, 30)), "#2");
+                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<Strct>(10, 20)), "#2a");
+                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<Strct>(9, 15)), "#2b");
+                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<Strct>(11, 15)), "#2c");
+                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<Strct>(19, 20)), "#2d");
+                    TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<Strct>(19, 20)), "#2d");
 
                     if (f.UniqueIndexes)
                     {
-                        TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data(20, 20)), "#3");
-                        TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data(20, 30)), "#3a");
+                        TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<Strct>(20, 20)), "#3");
+                        TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<Strct>(20, 30)), "#3a");
                     }
 
-                    f.AppendData(new[] {new ArraySegment<_LongByte_SeqPk1>(new _LongByte_SeqPk1[0], 0, 0)});
-                    TestUtils.CollectionAssertEqual(Data(10, 20), f.Stream(0), "#5");
+                    f.AppendData(new[] {new ArraySegment<Strct>(new Strct[0], 0, 0)});
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 20), f.Stream(0), "#5");
 
-                    f.AppendData(new[] {new ArraySegment<_LongByte_SeqPk1>(new _LongByte_SeqPk1[1], 1, 0)});
-                    TestUtils.CollectionAssertEqual(Data(10, 20), f.Stream(0), "#6");
+                    f.AppendData(new[] {new ArraySegment<Strct>(new Strct[1], 1, 0)});
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 20), f.Stream(0), "#6");
 
-                    f.AppendData(new ArraySegment<_LongByte_SeqPk1>[0]);
-                    TestUtils.CollectionAssertEqual(Data(10, 20), f.Stream(0), "#7");
+                    f.AppendData(new ArraySegment<Strct>[0]);
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 20), f.Stream(0), "#7");
 
-                    f.AppendData(Data(10, 14, 2), true);
-                    TestUtils.CollectionAssertEqual(Data(10, 14, 2), f.Stream(0), "#8");
+                    f.AppendData(Data<Strct>(10, 14, 2), true);
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 14, 2), f.Stream(0), "#8");
 
-                    f.AppendData(Data(10, 13), true);
-                    TestUtils.CollectionAssertEqual(Data(10, 13), f.Stream(0), "#9");
+                    f.AppendData(Data<Strct>(10, 13), true);
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 13), f.Stream(0), "#9");
 
-                    f.AppendData(Data(14, 14));
-                    TestUtils.CollectionAssertEqual(Data(10, 14), f.Stream(0), "#10");
+                    f.AppendData(Data<Strct>(14, 14));
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 14), f.Stream(0), "#10");
 
-                    f.AppendData(Data(15, 16));
-                    TestUtils.CollectionAssertEqual(Data(10, 16), f.Stream(0), "#11");
+                    f.AppendData(Data<Strct>(15, 16));
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 16), f.Stream(0), "#11");
 
-                    f.AppendData(Data(10, 10), true);
-                    TestUtils.CollectionAssertEqual(Data(10, 10), f.Stream(0), "#12");
+                    f.AppendData(Data<Strct>(10, 10), true);
+                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 10), f.Stream(0), "#12");
 
                     if (!f.UniqueIndexes)
                     {
-                        f.AppendData(Data(10, 10));
-                        TestUtils.CollectionAssertEqual(Add(Data(10, 10), Data(10, 10)), f.Stream(0), "#13");
+                        f.AppendData(Data<Strct>(10, 10));
+                        TestUtils.CollectionAssertEqual(
+                            Join(Data<Strct>(10, 10), Data<Strct>(10, 10)), f.Stream(0), "#13");
 
-                        f.AppendData(Data(10, 10), true);
-                        TestUtils.CollectionAssertEqual(Data(10, 10), f.Stream(0), "#14");
+                        f.AppendData(Data<Strct>(10, 10), true);
+                        TestUtils.CollectionAssertEqual(Data<Strct>(10, 10), f.Stream(0), "#14");
 
-                        f.AppendData(Data(10, 11));
-                        TestUtils.CollectionAssertEqual(Add(Data(10, 10), Data(10, 11)), f.Stream(0), "#15");
+                        f.AppendData(Data<Strct>(10, 11));
+                        TestUtils.CollectionAssertEqual(
+                            Join(Data<Strct>(10, 10), Data<Strct>(10, 11)), f.Stream(0), "#15");
                     }
 
-                    f.AppendData(Data(5, 10), true);
+                    f.AppendData(Data<Strct>(5, 10), true);
                 }
 
-                TestUtils.CollectionAssertEqual(Data(5, 10), f.Stream(0), "#final");
+                TestUtils.CollectionAssertEqual(Data<Strct>(5, 10), f.Stream(0), "#final");
             }
         }
 
-        private static IEnumerable<T> Add<T>(params IEnumerable<T>[] enmrs)
+        [Test(Description = "Issue #4 by karl23")]
+        public void CompressedAppendBug4()
         {
-            return enmrs.SelectMany(i => i);
-        }
+            string fileName = GetBinFileName();
+            if (!AllowCreate)
+                return;
 
-        private static IEnumerable<ArraySegment<_LongByte_SeqPk1>> Data(int minValue, int maxValue, int step = 1)
-        {
-            return TestUtils.GenerateSimpleData(_LongByte_SeqPk1.New, minValue, maxValue, step);
+            using (var f = new BinCompressedSeriesFile<_CmplxIdx, _4Flds_ComplxIdx>(fileName))
+            {
+                f.UniqueIndexes = false;
+                f.InitializeNewFile();
+
+                f.AppendData(Data<_4Flds_ComplxIdx>(10, 20000));
+                TestUtils.CollectionAssertEqual(
+                    Data<_4Flds_ComplxIdx>(10, 20000),
+                    f.Stream(new _CmplxIdx {Field1 = 0}, new _CmplxIdx {Field1 = 50000}), "#1");
+
+                for (int ix = 0; ix < 5000; ix++)
+                    f.AppendData(Data<_4Flds_ComplxIdx>(20000 + 5*ix, 20000 + 5*(ix + 1)));
+            }
         }
 
         [Test]
@@ -119,7 +135,7 @@ namespace NYurik.FastBinTimeseries.Test
             Append(
                 fn =>
                     {
-                        var r = new BinCompressedSeriesFile<long, _LongByte_SeqPk1>(fn) {UniqueIndexes = isUnique};
+                        var r = new BinCompressedSeriesFile<long, Strct>(fn) {UniqueIndexes = isUnique};
                         r.InitializeNewFile();
                         return r;
                     });
@@ -131,7 +147,7 @@ namespace NYurik.FastBinTimeseries.Test
             Append(
                 fn =>
                     {
-                        var r = new BinSeriesFile<long, _LongByte_SeqPk1>(fn) {UniqueIndexes = isUnique};
+                        var r = new BinSeriesFile<long, Strct>(fn) {UniqueIndexes = isUnique};
                         r.InitializeNewFile();
                         return r;
                     });

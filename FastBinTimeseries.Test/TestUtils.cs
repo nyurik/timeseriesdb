@@ -286,18 +286,5 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         #endregion
-
-        public static IEnumerable<ArraySegment<T>> GenerateSimpleData<T>(Func<long,T> factory, int minValue, int maxValue, int step = 1)
-        {
-            if(maxValue<minValue) throw new ArgumentException("max > min");
-            if(step < 1) throw new ArgumentException("step < 1");
-            if((maxValue-minValue)%step != 0) throw new ArgumentException("max does not fall in step");
-
-            var arr = new T[(maxValue - minValue)/step + 1];
-            for (int ind = 0, val = minValue; val <= maxValue; val += step)
-                arr[ind++] = factory(val);
-
-            return new[] {new ArraySegment<T>(arr)};
-        }
     }
 }

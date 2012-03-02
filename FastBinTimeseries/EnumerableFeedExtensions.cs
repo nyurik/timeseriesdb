@@ -140,6 +140,12 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+        public static IEnumerable<T> StreamSegmentValues<T>(
+            this ArraySegment<T> arraySegment,
+            bool inReverse = false)
+        {
+            return new[] {arraySegment}.StreamSegmentValues(inReverse);
+        }
 
         public static IEnumerable<T> StreamSegmentValues<T>(
             this IEnumerable<ArraySegment<T>> stream,
@@ -152,15 +158,18 @@ namespace NYurik.FastBinTimeseries
             {
                 foreach (var v in stream)
                     if (v.Count > 0)
-                        for (int i = v.Count - 1; i >= v.Offset; i--)
+                        for (int i = v.Count + v.Offset - 1; i >= v.Offset; i--)
                             yield return v.Array[i];
             }
             else
             {
                 foreach (var v in stream)
                     if (v.Count > 0)
-                        for (int i = v.Offset; i < v.Count; i++)
+                    {
+                        int max = v.Offset + v.Count;
+                        for (int i = v.Offset; i < max; i++)
                             yield return v.Array[i];
+                    }
             }
         }
     }

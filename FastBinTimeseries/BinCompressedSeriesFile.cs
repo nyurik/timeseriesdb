@@ -739,7 +739,7 @@ namespace NYurik.FastBinTimeseries
 
         private int CalcMaxItemsInBlock(int blockSize)
         {
-            return 1 + (blockSize - _maxItemByteSize)/_minItemByteSize;
+            return blockSize/_minItemByteSize;
         }
 
         private long CalcBlockCount(long byteSize)

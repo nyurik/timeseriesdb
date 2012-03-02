@@ -523,4 +523,95 @@ namespace NYurik.FastBinTimeseries.Test
 
         #endregion
     }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct _4Flds_ComplxIdx
+    {
+        [Index] public _CmplxIdx Index;
+        public int Field1;
+        public uint Field2;
+        public ulong Field3;
+
+        #region Implementation
+
+        public override string ToString()
+        {
+            return string.Format("{0}, {1}, {2}, {3}", Index, Field1, Field2, Field3);
+        }
+
+        public bool Equals(_4Flds_ComplxIdx other)
+        {
+            return other.Index.Equals(Index) && other.Field1 == Field1 && other.Field2 == Field2
+                   && other.Field3 == Field3;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (obj.GetType() != typeof (_4Flds_ComplxIdx)) return false;
+            return Equals((_4Flds_ComplxIdx) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int result = Index.GetHashCode();
+                result = (result*397) ^ Field1;
+                result = (result*397) ^ Field2.GetHashCode();
+                result = (result*397) ^ Field3.GetHashCode();
+                return result;
+            }
+        }
+
+        public static _4Flds_ComplxIdx New(long ix)
+        {
+            return new _4Flds_ComplxIdx
+                       {
+                           Index = new _CmplxIdx {Field1 = (int) ix, Field2 = (ulong) ix},
+                           Field1 = (int) (-1*ix),
+                           Field2 = (uint) ix,
+                           Field3 = (ulong) (ix << 32),
+                       };
+        }
+
+        #endregion
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct _CmplxIdx : IComparable<_CmplxIdx>
+    {
+        public int Field1;
+        public ulong Field2;
+
+        #region Implementation
+
+        public bool Equals(_CmplxIdx other)
+        {
+            return other.Field1 == Field1 && other.Field2 == Field2;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (obj.GetType() != typeof (_CmplxIdx)) return false;
+            return Equals((_CmplxIdx) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Field1*397) ^ Field2.GetHashCode();
+            }
+        }
+
+        public int CompareTo(_CmplxIdx other)
+        {
+            int comp = Field1.CompareTo(other.Field1);
+            return comp == 0 ? Field2.CompareTo(other.Field2) : comp;
+        }
+
+        #endregion
+    }
 }

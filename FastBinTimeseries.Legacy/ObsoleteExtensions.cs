@@ -29,31 +29,6 @@ namespace NYurik.FastBinTimeseries
 {
     public static class ObsoleteExtensions
     {
-        private class Generic : IGenericCallable<Array, Tuple<long, int>>
-        {
-            [Obsolete]
-            public Array Run<T>(IGenericInvoker source, Tuple<long, int> arg)
-            {
-                var firstItemIdx = arg.Item1;
-                var count = arg.Item2;
-                
-                var file = ((BinaryFile<T>) source);
-
-                long fileCount = file.Count;
-                if (firstItemIdx < 0 || firstItemIdx > fileCount)
-                    throw new ArgumentOutOfRangeException(
-                        "firstItemIdx"+"", firstItemIdx, string.Format("Accepted range [0:{0}]", fileCount));
-                if (count < 0)
-                    throw new ArgumentOutOfRangeException("count"+"", count, "Must be non-negative");
-
-                var result = new T[(int) Math.Min(fileCount - firstItemIdx, count)];
-
-                file.PerformFileAccess(firstItemIdx, new ArraySegment<T>(result), false);
-
-                return result;
-            }
-        }
-
         /// <summary>
         /// Read up to <paramref name="count"/> items beging at <paramref name="firstItemIdx"/>, and return an <see cref="Array"/> object. 
         /// </summary>
@@ -70,7 +45,8 @@ namespace NYurik.FastBinTimeseries
         /// Read data starting at <paramref name="firstItemIdx"/> to fill up the <paramref name="buffer"/>.
         /// </summary>
         [Obsolete("Use streaming methods instead")]
-        public static void ReadData<TInd,TVal>(BinSeriesFile<TInd, TVal> file, long firstItemIdx, ArraySegment<TVal> buffer) 
+        public static void ReadData<TInd, TVal>(
+            BinSeriesFile<TInd, TVal> file, long firstItemIdx, ArraySegment<TVal> buffer)
             where TInd : IComparable<TInd>
         {
             ReadData<TVal>(file, firstItemIdx, buffer);
@@ -88,7 +64,7 @@ namespace NYurik.FastBinTimeseries
             int done = buffer.Offset;
             foreach (var seg in file.PerformStreaming(firstItemIndex, false, maxItemCount: buffer.Count))
             {
-                if (done + seg.Count > buffer.Count)
+                if (done - buffer.Offset + seg.Count > buffer.Count)
                     throw new InvalidOperationException(
                         "Internal logic error: more than maxItemCount elements received");
                 Array.Copy(seg.Array, 0, buffer.Array, done, seg.Count);
@@ -124,8 +100,9 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         /// <returns>An array of items no bigger than <paramref name="maxItemCount"/></returns>
         [Obsolete("Use streaming methods instead")]
-        public static TVal[] ReadData<TVal, TInd>(this BinSeriesFile<TInd, TVal> file, TInd fromInclusive,
-                                                  TInd toExclusive, int maxItemCount)
+        public static TVal[] ReadData<TVal, TInd>(
+            this BinSeriesFile<TInd, TVal> file, TInd fromInclusive,
+            TInd toExclusive, int maxItemCount)
             where TInd : struct, IComparable, IComparable<TInd>
         {
             return file.Stream(fromInclusive, toExclusive, maxItemCount: maxItemCount).ToArray();
@@ -150,5 +127,38 @@ namespace NYurik.FastBinTimeseries
         {
             return binSeriesFile.PerformStreaming(firstItemIdx, false).StreamSegmentValues().ToArray();
         }
+
+        #region Nested type: Generic
+
+        private class Generic : IGenericCallable<Array, Tuple<long, int>>
+        {
+            #region IGenericCallable<Array,Tuple<long,int>> Members
+
+            [Obsolete]
+            public Array Run<T>(IGenericInvoker source, Tuple<long, int> arg)
+            {
+                long firstItemIdx = arg.Item1;
+                int count = arg.Item2;
+
+                var file = ((BinaryFile<T>) source);
+
+                long fileCount = file.Count;
+                if (firstItemIdx < 0 || firstItemIdx > fileCount)
+                    throw new ArgumentOutOfRangeException(
+                        "firstItemIdx" + "", firstItemIdx, string.Format("Accepted range [0:{0}]", fileCount));
+                if (count < 0)
+                    throw new ArgumentOutOfRangeException("count" + "", count, "Must be non-negative");
+
+                var result = new T[(int) Math.Min(fileCount - firstItemIdx, count)];
+
+                file.PerformFileAccess(firstItemIdx, new ArraySegment<T>(result), false);
+
+                return result;
+            }
+
+            #endregion
+        }
+
+        #endregion
     }
 }
