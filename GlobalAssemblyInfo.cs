@@ -1,4 +1,5 @@
 using System.Reflection;
+using NYurik.FastBinTimeseries.Properties;
 
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
