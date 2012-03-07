@@ -28,6 +28,11 @@ using System.Threading;
 
 namespace NYurik.FastBinTimeseries
 {
+    /// <summary>
+    /// Yields buffers that could either be the same instance as previous, or a larger one.
+    /// A weak reference will be kept so as to reduce the number of memory allocations.
+    /// All public methods are thread safe.
+    /// </summary>
     public class BufferProvider<T>
     {
         private WeakReference _buffer;
@@ -73,7 +78,11 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        public IEnumerable<Buffer<T>> YieldFixedSize(int size)
+        /// <summary>
+        /// Yield a single buffer of a given size or larger.
+        /// Buffer.Count will be set to size
+        /// </summary>
+        public IEnumerable<Buffer<T>> YieldSingleFixedSize(int size)
         {
             if (size <= 0)
                 throw new ArgumentOutOfRangeException("size", size, "<=0");
@@ -88,8 +97,8 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary>
-        /// Yield a buffer that could either be the same instance as before, or a larger one.
-        /// A weak reference will be kept so as to reduce the number of memory allocations. The method is thread safe.
+        /// Yields a sequence of buffers with the count set to:
+        /// [blockOne, blockTwo, (growAfter * smallSize), largeSize...]
         /// </summary>
         public IEnumerable<Buffer<T>> YieldFixed(int blockOne, int blockTwo, int smallSize, int growAfter, int largeSize)
         {

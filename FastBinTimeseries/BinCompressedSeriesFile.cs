@@ -499,13 +499,13 @@ namespace NYurik.FastBinTimeseries
                                   ? GetBlockSize(blockIndex, cachedFileCount)
                                   : _maxItemByteSize + CodecBase.ReservedSpace;
 
-            IEnumerable<Buffer<byte>> byteBuffs = _bufferByteProvider.YieldFixedSize(byteBufSize);
+            IEnumerable<Buffer<byte>> byteBuffs = _bufferByteProvider.YieldSingleFixedSize(byteBufSize);
 
             long firstItemIdx = blockIndex*BlockSize + (inReverse ? byteBufSize - 1 : 0);
 
             foreach (var retBuf in
                 (_bufferProvider ?? (_bufferProvider = new BufferProvider<TVal>()))
-                    .YieldFixedSize(inReverse ? CalcMaxItemsInBlock(byteBufSize) : 1))
+                    .YieldSingleFixedSize(inReverse ? CalcMaxItemsInBlock(byteBufSize) : 1))
             {
                 foreach (var seg in
                     // ReSharper disable PossibleMultipleEnumeration
@@ -527,7 +527,8 @@ namespace NYurik.FastBinTimeseries
                 }
             }
 
-            throw new InvalidOperationException("Logic error: buffer provider did not yield one buffer");
+            // Logic error: buffer provider did not yield any buffers
+            throw new InvalidOperationException();
         }
 
         /// <summary>
