@@ -28,6 +28,10 @@ using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries
 {
+    /// <summary>
+    /// Implementors can read values as a stream.
+    /// Any type implementing this interface must also implement <see cref="IEnumerableFeed{TInd,TVal}"/>.
+    /// </summary>
     public interface IEnumerableFeed : IGenericInvoker2, IDisposable
     {
         /// <summary> Type of the items stored in this file </summary>
@@ -37,6 +41,12 @@ namespace NYurik.FastBinTimeseries
         string Tag { get; }
     }
 
+    /// <summary>
+    /// Implementors can read <see cref="TVal"/> values as a stream.
+    /// It is assumed that value's index is somehow stored inside the value.
+    /// </summary>
+    /// <typeparam name="TInd">Type of the index. Must be comparable.</typeparam>
+    /// <typeparam name="TVal">Type of the value stored</typeparam>
     public interface IEnumerableFeed<TInd, TVal> : IEnumerableFeed
         where TInd : IComparable<TInd>
     {
@@ -46,9 +56,11 @@ namespace NYurik.FastBinTimeseries
         Func<TVal, TInd> IndexAccessor { get; }
 
         /// <summary>
-        /// Enumerate all items one block at a time using an internal buffer.
+        /// Read data from the underlying storage one block at a time.
         /// </summary>
-        /// <param name="fromInd">The index of the first element to read. Inclusive if going forward, exclusive when going backwards</param>
+        /// <param name="fromInd">The index of the first element to read.
+        /// Setting to default(<see cref="TInd"/>) will read from the first item going forward, or last when going in reverse.
+        /// Inclusive if going forward, exclusive when going backwards.</param>
         /// <param name="inReverse">Set to true if you want to enumerate backwards, from last to first</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount">Maximum number of items to return</param>
@@ -57,6 +69,10 @@ namespace NYurik.FastBinTimeseries
                                                        long maxItemCount = long.MaxValue);
     }
 
+    /// <summary>
+    /// Implementors can read and store values.
+    /// Any type implementing this interface must also implement <see cref="IWritableFeed{TInd,TVal}"/>.
+    /// </summary>
     public interface IWritableFeed : IEnumerableFeed
     {
         /// <summary>
@@ -70,6 +86,11 @@ namespace NYurik.FastBinTimeseries
         bool UniqueIndexes { get; }
     }
 
+    /// <summary>
+    /// Implementors can read and store values of type <see cref="TVal"/>.
+    /// </summary>
+    /// <typeparam name="TInd">Type of the index. Must be comparable.</typeparam>
+    /// <typeparam name="TVal">Type of the value stored</typeparam>
     public interface IWritableFeed<TInd, TVal> : IWritableFeed, IEnumerableFeed<TInd, TVal>
         where TInd : IComparable<TInd>
     {

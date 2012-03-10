@@ -43,11 +43,11 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Uses reflection to create an instance of <see cref="BinSeriesFile{TInd,TVal}"/>.
         /// </summary>
-        public static IBinaryFile GenericNew(
+        public static IWritableFeed GenericNew(
             Type indType, Type itemType, string fileName,
             FieldInfo indexFieldInfo = null)
         {
-            return (IBinaryFile)
+            return (IWritableFeed)
                    Activator.CreateInstance(
                        typeof (BinSeriesFile<,>).MakeGenericType(indType, itemType),
                        fileName, indexFieldInfo);
@@ -144,7 +144,7 @@ namespace NYurik.FastBinTimeseries
 
         #region IWritableFeed<TInd,TVal> Members
 
-        public TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
+        TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
             return callable.Run<TInd, TVal>(this, arg);
         }
@@ -225,7 +225,10 @@ namespace NYurik.FastBinTimeseries
             IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = Int64.MaxValue)
         {
-            long index = FirstIndexToPos(fromInd);
+            long start = BinarySearch(fromInd, true);
+            if (start < 0)
+                start = ~start;
+            long index = start;
             if (inReverse)
                 index--;
 
@@ -246,7 +249,7 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        public long BinarySearch(TInd index)
+        protected long BinarySearch(TInd index)
         {
             if (!UniqueIndexes)
                 throw new InvalidOperationException(
@@ -254,7 +257,7 @@ namespace NYurik.FastBinTimeseries
             return BinarySearch(index, true);
         }
 
-        public long BinarySearch(TInd index, bool findFirst)
+        protected long BinarySearch(TInd index, bool findFirst)
         {
             long start = 0L;
             long count = GetCount();
@@ -371,7 +374,7 @@ namespace NYurik.FastBinTimeseries
             TruncateFile(newCount);
         }
 
-        public void TruncateFile(long newCount)
+        protected void TruncateFile(long newCount)
         {
             long fileCount = GetCount();
             if (newCount == fileCount)
@@ -473,14 +476,6 @@ namespace NYurik.FastBinTimeseries
                 allowFileTruncations = false;
                 segInd++;
             }
-        }
-
-        private long FirstIndexToPos(TInd index)
-        {
-            long start = BinarySearch(index, true);
-            if (start < 0)
-                start = ~start;
-            return start;
         }
 
         private static Tuple<TInd, TInd> ValidateSegmentOrder(

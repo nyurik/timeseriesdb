@@ -33,12 +33,12 @@ namespace NYurik.FastBinTimeseries
             _feed.Dispose();
         }
 
-        public TDst RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg)
+        TDst IGenericInvoker.RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg)
         {
             return callable.Run<TNew>(this, arg);
         }
 
-        public TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
+        TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
             return callable.Run<TIndex, TNew>(this, arg);
         }

@@ -42,11 +42,11 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Uses reflection to create an instance of <see cref="BinCompressedSeriesFile{TInd,TVal}"/>.
         /// </summary>
-        public static IBinaryFile GenericNew(
+        public static IWritableFeed GenericNew(
             Type indType, Type itemType, string fileName,
             FieldInfo indexFieldInfo = null)
         {
-            return (IBinaryFile)
+            return (IWritableFeed)
                    Activator.CreateInstance(
                        typeof (BinCompressedSeriesFile<,>).MakeGenericType(indType, itemType),
                        fileName, indexFieldInfo);
@@ -187,7 +187,7 @@ namespace NYurik.FastBinTimeseries
 
         #region IWritableFeed<TInd,TVal> Members
 
-        public TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
+        TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
             return callable.Run<TInd, TVal>(this, arg);
         }

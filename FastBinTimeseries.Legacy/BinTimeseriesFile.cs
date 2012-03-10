@@ -32,6 +32,7 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Helper non-generic class aids in creating a new instance of <see cref="BinTimeseriesFile{T}"/>.
     /// </summary>
+    [Obsolete("Use BinSeriesFile<TInd,TVal> instead")]
     public static class BinTimeseriesFile
     {
         /// <summary>
@@ -50,6 +51,7 @@ namespace NYurik.FastBinTimeseries
     /// Object representing a binary-serialized timeseries file.
     /// This is a dummy wrapper to allow backward compatibility with the UtcDateTime index.
     /// </summary>
+    [Obsolete("Use BinSeriesFile<TInd,TVal> instead")]
     public class BinTimeseriesFile<T> : BinSeriesFile<UtcDateTime, T>, IBinaryFile<T>, IBinTimeseriesFile,
                                         IEnumerableFeed<T>
     {
@@ -92,6 +94,21 @@ namespace NYurik.FastBinTimeseries
         {
             get { return UniqueIndexes; }
             set { UniqueIndexes = value; }
+        }
+
+        public new long BinarySearch(UtcDateTime timestamp)
+        {
+            return base.BinarySearch(timestamp);
+        }
+
+        public new long BinarySearch(UtcDateTime timestamp, bool findFirst)
+        {
+            return base.BinarySearch(timestamp, findFirst);
+        }
+
+        public new void TruncateFile(long newCount)
+        {
+            base.TruncateFile(newCount);
         }
 
         #endregion
