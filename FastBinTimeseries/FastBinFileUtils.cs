@@ -66,108 +66,6 @@ namespace NYurik.FastBinTimeseries
             return value - 1 + (multiple - (value - 1)%multiple);
         }
 
-        /// <summary>
-        /// Fast memory copying - copies in blocks of 32 bytes, using either int or long (on 64bit machines)
-        /// Calling the native RtlMemoryMove was slower
-        /// </summary>
-        internal static unsafe void CopyMemory(byte* pDestination, byte* pSource, uint byteCount)
-        {
-            const int blockSize = 32;
-            if (byteCount >= blockSize)
-            {
-                if (NativeWinApis.Is64bit)
-                {
-                    do
-                    {
-                        ((long*) pDestination)[0] = ((long*) pSource)[0];
-                        ((long*) pDestination)[1] = ((long*) pSource)[1];
-                        ((long*) pDestination)[2] = ((long*) pSource)[2];
-                        ((long*) pDestination)[3] = ((long*) pSource)[3];
-                        pDestination += blockSize;
-                        pSource += blockSize;
-                        byteCount -= blockSize;
-                    } while (byteCount >= blockSize);
-                }
-                else
-                {
-                    do
-                    {
-                        ((int*) pDestination)[0] = ((int*) pSource)[0];
-                        ((int*) pDestination)[1] = ((int*) pSource)[1];
-                        ((int*) pDestination)[2] = ((int*) pSource)[2];
-                        ((int*) pDestination)[3] = ((int*) pSource)[3];
-                        ((int*) pDestination)[4] = ((int*) pSource)[4];
-                        ((int*) pDestination)[5] = ((int*) pSource)[5];
-                        ((int*) pDestination)[6] = ((int*) pSource)[6];
-                        ((int*) pDestination)[7] = ((int*) pSource)[7];
-                        pDestination += blockSize;
-                        pSource += blockSize;
-                        byteCount -= blockSize;
-                    } while (byteCount >= blockSize);
-                }
-            }
-
-            while (byteCount > 0)
-            {
-                *(pDestination++) = *(pSource++);
-                byteCount--;
-            }
-        }
-
-        /// <summary>
-        /// Fast memory comparison - compares in blocks of 32 bytes, using either int or long (on 64bit machines)
-        /// </summary>
-        internal static unsafe bool CompareMemory(byte* pSource1, byte* pSource2, uint byteCount)
-        {
-            const int blockSize = 32;
-            if (byteCount >= blockSize)
-            {
-                if (NativeWinApis.Is64bit)
-                {
-                    do
-                    {
-                        if (((long*) pSource1)[0] != ((long*) pSource2)[0]
-                            || ((long*) pSource1)[1] != ((long*) pSource2)[1]
-                            || ((long*) pSource1)[2] != ((long*) pSource2)[2]
-                            || ((long*) pSource1)[3] != ((long*) pSource2)[3]
-                            )
-                            return false;
-                        pSource1 += blockSize;
-                        pSource2 += blockSize;
-                        byteCount -= blockSize;
-                    } while (byteCount >= blockSize);
-                }
-                else
-                {
-                    do
-                    {
-                        if (((int*) pSource1)[0] != ((int*) pSource2)[0]
-                            || ((int*) pSource1)[1] != ((int*) pSource2)[1]
-                            || ((int*) pSource1)[2] != ((int*) pSource2)[2]
-                            || ((int*) pSource1)[3] != ((int*) pSource2)[3]
-                            || ((int*) pSource1)[4] != ((int*) pSource2)[4]
-                            || ((int*) pSource1)[5] != ((int*) pSource2)[5]
-                            || ((int*) pSource1)[6] != ((int*) pSource2)[6]
-                            || ((int*) pSource1)[7] != ((int*) pSource2)[7]
-                            )
-                            return false;
-                        pSource1 += blockSize;
-                        pSource2 += blockSize;
-                        byteCount -= blockSize;
-                    } while (byteCount >= blockSize);
-                }
-            }
-
-            while (byteCount > 0)
-            {
-                if (*(pSource1++) != *(pSource2++))
-                    return false;
-                byteCount--;
-            }
-
-            return true;
-        }
-
         public static SerializerException GetItemSizeChangedException(
             IBinSerializer serializer, string tag, int itemSize)
         {
@@ -269,5 +167,121 @@ namespace NYurik.FastBinTimeseries
             if (aqn == null) throw new ArgumentOutOfRangeException("type", type, "AssemblyQualifiedName is null");
             writer.Write(aqn);
         }
+
+        #region Internal
+
+        internal static bool IsDefault<TInd>(TInd value)
+            where TInd : IComparable<TInd>
+        {
+            // ReSharper disable CompareNonConstrainedGenericWithNull
+            return typeof (TInd).IsClass
+                       ? value == null
+                       : value.CompareTo(default(TInd)) == 0;
+            // ReSharper restore CompareNonConstrainedGenericWithNull
+        }
+
+        /// <summary>
+        /// Fast memory copying - copies in blocks of 32 bytes, using either int or long (on 64bit machines)
+        /// Calling the native RtlMemoryMove was slower
+        /// </summary>
+        internal static unsafe void CopyMemory(byte* pDestination, byte* pSource, uint byteCount)
+        {
+            const int blockSize = 32;
+            if (byteCount >= blockSize)
+            {
+                if (NativeWinApis.Is64bit)
+                {
+                    do
+                    {
+                        ((long*)pDestination)[0] = ((long*)pSource)[0];
+                        ((long*)pDestination)[1] = ((long*)pSource)[1];
+                        ((long*)pDestination)[2] = ((long*)pSource)[2];
+                        ((long*)pDestination)[3] = ((long*)pSource)[3];
+                        pDestination += blockSize;
+                        pSource += blockSize;
+                        byteCount -= blockSize;
+                    } while (byteCount >= blockSize);
+                }
+                else
+                {
+                    do
+                    {
+                        ((int*)pDestination)[0] = ((int*)pSource)[0];
+                        ((int*)pDestination)[1] = ((int*)pSource)[1];
+                        ((int*)pDestination)[2] = ((int*)pSource)[2];
+                        ((int*)pDestination)[3] = ((int*)pSource)[3];
+                        ((int*)pDestination)[4] = ((int*)pSource)[4];
+                        ((int*)pDestination)[5] = ((int*)pSource)[5];
+                        ((int*)pDestination)[6] = ((int*)pSource)[6];
+                        ((int*)pDestination)[7] = ((int*)pSource)[7];
+                        pDestination += blockSize;
+                        pSource += blockSize;
+                        byteCount -= blockSize;
+                    } while (byteCount >= blockSize);
+                }
+            }
+
+            while (byteCount > 0)
+            {
+                *(pDestination++) = *(pSource++);
+                byteCount--;
+            }
+        }
+
+        /// <summary>
+        /// Fast memory comparison - compares in blocks of 32 bytes, using either int or long (on 64bit machines)
+        /// </summary>
+        internal static unsafe bool CompareMemory(byte* pSource1, byte* pSource2, uint byteCount)
+        {
+            const int blockSize = 32;
+            if (byteCount >= blockSize)
+            {
+                if (NativeWinApis.Is64bit)
+                {
+                    do
+                    {
+                        if (((long*) pSource1)[0] != ((long*) pSource2)[0]
+                            || ((long*) pSource1)[1] != ((long*) pSource2)[1]
+                            || ((long*) pSource1)[2] != ((long*) pSource2)[2]
+                            || ((long*) pSource1)[3] != ((long*) pSource2)[3]
+                            )
+                            return false;
+                        pSource1 += blockSize;
+                        pSource2 += blockSize;
+                        byteCount -= blockSize;
+                    } while (byteCount >= blockSize);
+                }
+                else
+                {
+                    do
+                    {
+                        if (((int*) pSource1)[0] != ((int*) pSource2)[0]
+                            || ((int*) pSource1)[1] != ((int*) pSource2)[1]
+                            || ((int*) pSource1)[2] != ((int*) pSource2)[2]
+                            || ((int*) pSource1)[3] != ((int*) pSource2)[3]
+                            || ((int*) pSource1)[4] != ((int*) pSource2)[4]
+                            || ((int*) pSource1)[5] != ((int*) pSource2)[5]
+                            || ((int*) pSource1)[6] != ((int*) pSource2)[6]
+                            || ((int*) pSource1)[7] != ((int*) pSource2)[7]
+                            )
+                            return false;
+                        pSource1 += blockSize;
+                        pSource2 += blockSize;
+                        byteCount -= blockSize;
+                    } while (byteCount >= blockSize);
+                }
+            }
+
+            while (byteCount > 0)
+            {
+                if (*(pSource1++) != *(pSource2++))
+                    return false;
+                byteCount--;
+            }
+
+            return true;
+        }
+
+        #endregion
     }
 }

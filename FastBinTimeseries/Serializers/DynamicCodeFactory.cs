@@ -374,6 +374,13 @@ namespace NYurik.FastBinTimeseries.Serializers
                                         "The field {0} does not belong to type {1}",
                                         fi.Name, itemType.FullName));
 
+                            if (fi.FieldType != typeof(TInd))
+                                throw new InvalidOperationException(
+                                    string.Format(
+                                        "The index field {0}.{1} is of type {2}, whereas {3} was expected",
+                                        itemType.Name, fi.Name, fi.FieldType.AssemblyQualifiedName,
+                                        typeof (TInd).AssemblyQualifiedName));
+
                             ParameterExpression vParam = Expression.Parameter(itemType, "v");
                             Expression expr = Expression.Field(vParam, fi);
 

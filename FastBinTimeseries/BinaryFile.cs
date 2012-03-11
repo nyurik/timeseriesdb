@@ -333,15 +333,17 @@ namespace NYurik.FastBinTimeseries
                 {
                     fileSize = ItemIdxToOffset(cachedCount);
                     fileCount = cachedCount;
-
-                    // TODO: delete
-                    bool isAligned;
-                    if (fileCount != CalculateItemCountFromFilePosition(fileSize, out isAligned))
-                        throw new Exception();
                 }
             }
             else
             {
+                if (enumerateInReverse)
+                    throw new NotSupportedException("Reverse enumeration is not supported when Stream.CanSeek == false");
+                if (firstItemIdx != 0)
+                    throw new ArgumentOutOfRangeException(
+                        "firstItemIdx", firstItemIdx,
+                        "Must be 0 when the base stream is not seekable");
+
                 fileCount = 0;
                 fileSize = 0;
             }
@@ -349,19 +351,12 @@ namespace NYurik.FastBinTimeseries
             long idx;
             if (enumerateInReverse)
             {
-                if (!canSeek)
-                    throw new NotSupportedException("Reverse enumeration is not supported when Stream.CanSeek == false");
                 idx = Math.Min(firstItemIdx, fileCount - 1);
                 if (idx < 0)
                     yield break;
             }
             else
             {
-                if (!canSeek && firstItemIdx != 0)
-                    throw new ArgumentOutOfRangeException(
-                        "firstItemIdx", firstItemIdx,
-                        "Must be 0 when the base stream is not seekable");
-
                 idx = Math.Max(firstItemIdx, 0);
                 if (canSeek && idx >= fileCount)
                     yield break;

@@ -25,15 +25,17 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
-using NYurik.FastBinTimeseries.CommonCode;
 
 // ReSharper disable InconsistentNaming
+// ReSharper disable NonReadonlyFieldInGetHashCode
 
 namespace NYurik.FastBinTimeseries.Test
 {
     public struct _3Byte_noAttr : IEquatable<_3Byte_noAttr>
     {
-        public byte a, b, c;
+        public byte a;
+        public byte b;
+        [Index] public byte c;
 
         #region Implementation
 
@@ -79,104 +81,9 @@ namespace NYurik.FastBinTimeseries.Test
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct _DatetimeByte_SeqPk1 : IEquatable<_DatetimeByte_SeqPk1>
-    {
-        public static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
-
-        public UtcDateTime a;
-        public byte b;
-        public static _DatetimeByte_SeqPk1[] Empty = new _DatetimeByte_SeqPk1[0];
-
-        #region Implementation
-
-        public bool Equals(_DatetimeByte_SeqPk1 other)
-        {
-            return other.a.Equals(a) && other.b == b;
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (obj.GetType() != typeof (_DatetimeByte_SeqPk1)) return false;
-            return Equals((_DatetimeByte_SeqPk1) obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (a.GetHashCode()*397) ^ b.GetHashCode();
-            }
-        }
-
-        public override string ToString()
-        {
-            return string.Format("{0:u}, {1}", a, b);
-        }
-
-        public static _DatetimeByte_SeqPk1 New(long i)
-        {
-            return new _DatetimeByte_SeqPk1
-                       {
-                           a = FirstTimeStamp.AddMinutes(i),
-                           b = (byte) (i & 0xFF),
-                       };
-        }
-
-        #endregion
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct _DatetimeBool_SeqPk1 : IEquatable<_DatetimeBool_SeqPk1>
-    {
-        public static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
-
-        public UtcDateTime a;
-        public bool b;
-
-        #region Implementation
-
-        public bool Equals(_DatetimeBool_SeqPk1 other)
-        {
-            return other.a.Equals(a) && other.b.Equals(b);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (obj.GetType() != typeof (_DatetimeBool_SeqPk1)) return false;
-            return Equals((_DatetimeBool_SeqPk1) obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (a.GetHashCode()*397) ^ b.GetHashCode();
-            }
-        }
-
-        public override string ToString()
-        {
-            return string.Format("{0:u}, {1}", a, b);
-        }
-
-        public static _DatetimeBool_SeqPk1 New(long i)
-        {
-            return new _DatetimeBool_SeqPk1
-                       {
-                           a = FirstTimeStamp.AddMinutes(i),
-                           b = i%2 == 0,
-                       };
-        }
-
-        #endregion
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _LongBool_SeqPk1 : IEquatable<_LongBool_SeqPk1>
     {
-        public long a;
+        [Index] public long a;
         public bool b;
 
         #region Implementation
@@ -259,7 +166,7 @@ namespace NYurik.FastBinTimeseries.Test
     public struct _BoolLongBool_SeqPk1 : IEquatable<_BoolLongBool_SeqPk1>
     {
         public bool a;
-        public long b;
+        [Index] public long b;
         public bool c;
 
         #region Implementation
@@ -304,7 +211,7 @@ namespace NYurik.FastBinTimeseries.Test
     public struct _ByteLongByte_SeqPk1 : IEquatable<_ByteLongByte_SeqPk1>
     {
         public byte a;
-        public long b;
+        [Index] public long b;
         public byte c;
 
         #region Implementation
@@ -348,7 +255,7 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _IntBool_SeqPk1 : IEquatable<_IntBool_SeqPk1>
     {
-        public int a;
+        [Index] public int a;
         public bool b;
 
         #region Implementation
@@ -393,7 +300,7 @@ namespace NYurik.FastBinTimeseries.Test
     {
         [FieldOffset(0)] public byte a;
         [FieldOffset(1)] public byte b;
-        [FieldOffset(2)] public byte c;
+        [Index] [FieldOffset(2)] public byte c;
 
         [FieldOffset(0)] public ushort ab;
         [FieldOffset(1)] public ushort bc;
@@ -443,17 +350,18 @@ namespace NYurik.FastBinTimeseries.Test
         #endregion
     }
 
-//    /// Uncommenting this struct makes the _FixedByteBuff7 test fail if file was created without _FixedByteBuff4 present
-//    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-//    public struct _FixedByteBuff4
-//    {
-//        private const int ArrayLen = 4;
-//        public unsafe fixed byte a [ArrayLen];
-//    }
+    //    /// Uncommenting this struct makes the _FixedByteBuff7 test fail if file was created without _FixedByteBuff4 present
+    //    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    //    public struct _FixedByteBuff4
+    //    {
+    //        private const int ArrayLen = 4;
+    //        public unsafe fixed byte a [ArrayLen];
+    //    }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _FixedByteBuff7 : IEquatable<_FixedByteBuff7>
     {
+        [Index] private long Key;
         private const int ArrayLenA = 3;
         private const int ArrayLenB = 4;
         public unsafe fixed byte a [ArrayLenA];
@@ -464,6 +372,8 @@ namespace NYurik.FastBinTimeseries.Test
         public override unsafe string ToString()
         {
             var sb = new StringBuilder();
+            sb.Append(Key);
+            sb.Append(",");
             fixed (byte* pa = a)
                 for (int i = 0; i < ArrayLenA; i++)
                     sb.AppendFormat("{0},", pa[i]);
@@ -477,6 +387,8 @@ namespace NYurik.FastBinTimeseries.Test
 
         public unsafe bool Equals(_FixedByteBuff7 other)
         {
+            if (Key != other.Key)
+                return false;
             fixed (byte* pa = a)
                 for (int i = 0; i < ArrayLenA; i++)
                     if (pa[i] != other.a[i])
@@ -501,7 +413,7 @@ namespace NYurik.FastBinTimeseries.Test
             {
                 fixed (byte* pa = a, pb = b)
                 {
-                    int result = 0;
+                    var result = (int) Key;
                     for (int i = 0; i < ArrayLenA; i++)
                         result = (result*397) ^ pa[i].GetHashCode();
                     for (int i = 0; i < ArrayLenB; i++)
@@ -513,7 +425,7 @@ namespace NYurik.FastBinTimeseries.Test
 
         public static unsafe _FixedByteBuff7 New(long j)
         {
-            var v = new _FixedByteBuff7();
+            var v = new _FixedByteBuff7 {Key = j};
             for (int i = 0; i < ArrayLenA; i++)
                 v.a[i] = (byte) j++;
             for (int i = 0; i < ArrayLenB; i++)
@@ -525,7 +437,7 @@ namespace NYurik.FastBinTimeseries.Test
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct _4Flds_ComplxIdx
+    public struct _4Flds_ComplxIdx : IEquatable<_4Flds_ComplxIdx>
     {
         [Index] public _CmplxIdx Index;
         public int Field1;
@@ -607,6 +519,191 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         public int CompareTo(_CmplxIdx other)
+        {
+            int comp = Field1.CompareTo(other.Field1);
+            return comp == 0 ? Field2.CompareTo(other.Field2) : comp;
+        }
+
+        #endregion
+    }
+
+    public class _LongBool_Class : IEquatable<_LongBool_Class>
+    {
+        [Index] public long a;
+        public bool b;
+
+        #region Implementation
+
+        public bool Equals(_LongBool_Class other)
+        {
+            return other.a == a && other.b.Equals(b);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0}, {1}", a, b);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (obj.GetType() != typeof (_LongBool_Class)) return false;
+            return Equals((_LongBool_Class) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (a.GetHashCode()*397) ^ b.GetHashCode();
+            }
+        }
+
+        public static _LongBool_Class New(long i)
+        {
+            return new _LongBool_Class {a = i, b = i%2 == 0};
+        }
+
+        #endregion
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct _4Flds_ComplxIdxClass : IEquatable<_4Flds_ComplxIdxClass>
+    {
+        [Index] public _CmplxIdxClass Index;
+        public int Field1;
+        public uint Field2;
+        public ulong Field3;
+
+        #region Implementation
+
+        public override string ToString()
+        {
+            return string.Format("{0}, {1}, {2}, {3}", Index, Field1, Field2, Field3);
+        }
+
+        public bool Equals(_4Flds_ComplxIdxClass other)
+        {
+            return other.Index.Equals(Index) && other.Field1 == Field1 && other.Field2 == Field2
+                   && other.Field3 == Field3;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (obj.GetType() != typeof (_4Flds_ComplxIdxClass)) return false;
+            return Equals((_4Flds_ComplxIdxClass) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int result = Index.GetHashCode();
+                result = (result*397) ^ Field1;
+                result = (result*397) ^ Field2.GetHashCode();
+                result = (result*397) ^ Field3.GetHashCode();
+                return result;
+            }
+        }
+
+        public static _4Flds_ComplxIdxClass New(long ix)
+        {
+            return new _4Flds_ComplxIdxClass
+                       {
+                           Index = new _CmplxIdxClass {Field1 = (int) ix, Field2 = (ulong) ix},
+                           Field1 = (int) (-1*ix),
+                           Field2 = (uint) ix,
+                           Field3 = (ulong) (ix << 32),
+                       };
+        }
+
+        #endregion
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public class _4FldsClass_ComplxIdxClass : IEquatable<_4FldsClass_ComplxIdxClass>
+    {
+        [Index] public _CmplxIdxClass Index;
+        public int Field1;
+        public uint Field2;
+        public ulong Field3;
+
+        #region Implementation
+
+        public override string ToString()
+        {
+            return string.Format("{0}, {1}, {2}, {3}", Index, Field1, Field2, Field3);
+        }
+
+        public bool Equals(_4FldsClass_ComplxIdxClass other)
+        {
+            return other.Index.Equals(Index) && other.Field1 == Field1 && other.Field2 == Field2
+                   && other.Field3 == Field3;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (obj.GetType() != typeof (_4FldsClass_ComplxIdxClass)) return false;
+            return Equals((_4FldsClass_ComplxIdxClass) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int result = Index.GetHashCode();
+                result = (result*397) ^ Field1;
+                result = (result*397) ^ Field2.GetHashCode();
+                result = (result*397) ^ Field3.GetHashCode();
+                return result;
+            }
+        }
+
+        public static _4FldsClass_ComplxIdxClass New(long ix)
+        {
+            return new _4FldsClass_ComplxIdxClass
+                       {
+                           Index = new _CmplxIdxClass {Field1 = (int) ix, Field2 = (ulong) ix},
+                           Field1 = (int) (-1*ix),
+                           Field2 = (uint) ix,
+                           Field3 = (ulong) (ix << 32),
+                       };
+        }
+
+        #endregion
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct _CmplxIdxClass : IComparable<_CmplxIdxClass>
+    {
+        public int Field1;
+        public ulong Field2;
+
+        #region Implementation
+
+        public bool Equals(_CmplxIdxClass other)
+        {
+            return other.Field1 == Field1 && other.Field2 == Field2;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (obj.GetType() != typeof (_CmplxIdxClass)) return false;
+            return Equals((_CmplxIdxClass) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Field1*397) ^ Field2.GetHashCode();
+            }
+        }
+
+        public int CompareTo(_CmplxIdxClass other)
         {
             int comp = Field1.CompareTo(other.Field1);
             return comp == 0 ? Field2.CompareTo(other.Field2) : comp;

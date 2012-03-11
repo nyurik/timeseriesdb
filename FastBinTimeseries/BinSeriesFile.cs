@@ -57,7 +57,8 @@ namespace NYurik.FastBinTimeseries
     /// <summary>
     /// Object representing a binary-serialized index-based series file.
     /// </summary>
-    public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IWritableFeed<TInd, TVal> where TInd : IComparable<TInd>
+    public class BinSeriesFile<TInd, TVal> : BinaryFile<TVal>, IWritableFeed<TInd, TVal>
+        where TInd : IComparable<TInd>
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
 
@@ -225,14 +226,21 @@ namespace NYurik.FastBinTimeseries
             IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = Int64.MaxValue)
         {
-            long start = BinarySearch(fromInd, true);
-            if (start < 0)
-                start = ~start;
-            long index = start;
-            if (inReverse)
-                index--;
+            long start;
+            if (FastBinFileUtils.IsDefault(fromInd))
+            {
+                start = BinarySearch(fromInd, true);
+                if (start < 0)
+                    start = ~start;
+                if (inReverse)
+                    start--;
+            }
+            else
+            {
+                start = inReverse ? long.MaxValue : 0;
+            }
 
-            return PerformStreaming(index, inReverse, bufferProvider, maxItemCount);
+            return PerformStreaming(start, inReverse, bufferProvider, maxItemCount);
         }
 
         public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)

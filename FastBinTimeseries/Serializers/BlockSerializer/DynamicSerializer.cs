@@ -94,6 +94,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                 {
                     case TypeCode.SByte:
                     case TypeCode.Byte:
+                    case TypeCode.Boolean:
                         return new SimpleField(this, valueType, name);
 
                     case TypeCode.Char:

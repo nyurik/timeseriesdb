@@ -92,7 +92,7 @@ namespace NYurik.FastBinTimeseries
             if (feed == null)
                 throw new ArgumentNullException("feed");
 
-            return until.CompareTo(default(TInd)) == 0
+            return FastBinFileUtils.IsDefault(until)
                        ? feed.StreamSegments(fromInd, inReverse, bufferProvider, maxItemCount)
                        : StreamSegmentsUntil(feed, fromInd, until, inReverse, bufferProvider, maxItemCount);
         }

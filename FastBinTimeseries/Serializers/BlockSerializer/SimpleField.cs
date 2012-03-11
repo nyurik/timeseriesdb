@@ -43,34 +43,39 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
-            MethodCallExpression writeMethod;
             switch (ValueTypeCode)
             {
+                case TypeCode.Boolean:
+                    valueExp = Expression.Condition(valueExp, Expression.Constant((byte)1), Expression.Constant((byte)0));
+                    break;
                 case TypeCode.SByte:
-                    writeMethod = Expression.Call(
-                        codec, "WriteByte", null,
-                        Expression.Convert(valueExp, typeof (byte)));
+                    valueExp = Expression.Convert(valueExp, typeof(byte));                    
                     break;
                 case TypeCode.Byte:
-                    writeMethod = Expression.Call(codec, "WriteByte", null, valueExp);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            var writeMethod = Expression.Call(codec, "WriteByte", null, valueExp);
 
             return new Tuple<Expression, Expression>(writeMethod, writeMethod);
         }
 
         protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
-            Expression readMethod;
+            Expression readMethod = Expression.Call(codec, "ReadByte", null);
             switch (ValueTypeCode)
             {
+                case TypeCode.Boolean:
+                    readMethod = Expression.Condition(
+                        Expression.Equal(readMethod, Expression.Constant((byte) 0)),
+                        Expression.Constant(false), Expression.Constant(true));
+                    break;
                 case TypeCode.SByte:
-                    readMethod = Expression.Convert(Expression.Call(codec, "ReadByte", null), typeof (sbyte));
+                    readMethod = Expression.Convert(readMethod, typeof(sbyte));
                     break;
                 case TypeCode.Byte:
-                    readMethod = Expression.Call(codec, "ReadByte", null);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -101,8 +106,9 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             ThrowOnInitialized();
             switch (ValueTypeCode)
             {
-                case TypeCode.Byte:
+                case TypeCode.Boolean:
                 case TypeCode.SByte:
+                case TypeCode.Byte:
                     break;
                 default:
                     throw new SerializerException(

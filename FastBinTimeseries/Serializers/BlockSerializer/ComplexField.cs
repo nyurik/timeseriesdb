@@ -29,6 +29,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using JetBrains.Annotations;
 using NYurik.FastBinTimeseries.EmitExtensions;
@@ -54,10 +55,20 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             _fields = new List<SubFieldInfo>(fis.Length);
             foreach (FieldInfo fi in fis)
             {
-                _fields.Add(
-                    new SubFieldInfo(
-                        fi,
-                        stateStore.GetDefaultField(fi.FieldType, stateName + "." + fi.Name)));
+                var name = stateName + "." + fi.Name;
+
+                if (fi.FieldType.IsNested)
+                {
+                    object[] ca = fi.GetCustomAttributes(typeof (FixedBufferAttribute), false);
+                    if (ca.Length > 0)
+                    {
+                        // ((FixedBufferAttribute)ca[0]).Length;
+                        throw new NotImplementedException("Fixed arrays are not supported at this time");
+                    }
+                }
+
+                var fld = stateStore.GetDefaultField(fi.FieldType, name);
+                _fields.Add(new SubFieldInfo(fi, fld));
             }
         }
 
@@ -141,15 +152,16 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             // T current;
             ParameterExpression currentVar = Expression.Variable(ValueType, "current");
 
-            // (class)  T current = FormatterServices.GetUninitializedObject(typeof(T));
+            // (class)  T current = (T) FormatterServices.GetUninitializedObject(typeof(T));
             // (struct) T current = default(T);
             BinaryExpression assignNewT = Expression.Assign(
                 currentVar,
                 ValueType.IsValueType
                     ? (Expression) Expression.Default(ValueType)
-                    : Expression.Call(
-                        typeof (FormatterServices), "GetUninitializedObject", null,
-                        Expression.Constant(ValueType)));
+                    : Expression.Convert(
+                        Expression.Call(
+                            typeof (FormatterServices), "GetUninitializedObject", null,
+                            Expression.Constant(ValueType)), ValueType));
 
             var readAllInit = new List<Expression> {assignNewT};
             var readAllNext = new List<Expression> {assignNewT};

@@ -311,7 +311,7 @@ namespace NYurik.FastBinTimeseries.Test
             EmptyFile<_LongByte_SeqPk1>(9);
             EmptyFile<_BoolLongBool_SeqPk1>(10);
             EmptyFile<_ByteLongByte_SeqPk1>(10);
-            EmptyFile<_FixedByteBuff7>(7);
+            EmptyFile<_FixedByteBuff7>(15);
         }
 
         [Test]
