@@ -24,6 +24,7 @@
 
 using System;
 using System.IO;
+using JetBrains.Annotations;
 using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
@@ -59,6 +60,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Allow Activator non-public instantiation
         /// </summary>
+        [UsedImplicitly]
         protected BinUniformTimeseriesFile()
         {
         }

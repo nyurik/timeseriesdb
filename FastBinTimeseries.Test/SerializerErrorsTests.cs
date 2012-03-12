@@ -30,7 +30,7 @@ using NYurik.FastBinTimeseries.Serializers;
 namespace NYurik.FastBinTimeseries.Test
 {
     [TestFixture]
-    public class ErrorConditionTests : TestsBase
+    public class SerializerErrorsTests : TestsBase
     {
         // ReSharper disable UnusedTypeParameter
         [UsedImplicitly]
@@ -50,13 +50,13 @@ namespace NYurik.FastBinTimeseries.Test
             #endregion
         }
 
-        [UsedImplicitly]
+        [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
         private struct ValTypeWithRef
         {
             public RefType Val;
         }
 
-        [UsedImplicitly]
+        [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
         private struct ValTypeWithGen
         {
             public GenType<int> Val;

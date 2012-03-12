@@ -174,9 +174,7 @@ namespace NYurik.FastBinTimeseries
             where TInd : IComparable<TInd>
         {
             // ReSharper disable CompareNonConstrainedGenericWithNull
-            return typeof (TInd).IsClass
-                       ? value == null
-                       : value.CompareTo(default(TInd)) == 0;
+            return value == null || value.CompareTo(default(TInd)) == 0;
             // ReSharper restore CompareNonConstrainedGenericWithNull
         }
 

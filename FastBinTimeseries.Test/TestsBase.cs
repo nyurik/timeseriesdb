@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using JetBrains.Annotations;
@@ -160,7 +159,7 @@ namespace NYurik.FastBinTimeseries.Test
                 var f = (IEnumerableFeed<TInd, TVal>) source;
 
                 var sb = new StringBuilder();
-                foreach (TVal v in f.Stream(default(TInd)))
+                foreach (TVal v in f.Stream())
                 {
                     sb.Append(v);
                     sb.Append("\n");

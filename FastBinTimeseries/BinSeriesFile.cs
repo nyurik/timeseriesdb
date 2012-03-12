@@ -80,6 +80,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Allow Activator non-public instantiation
         /// </summary>
+        [UsedImplicitly]
         protected BinSeriesFile()
         {
         }
@@ -222,7 +223,7 @@ namespace NYurik.FastBinTimeseries
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
         public IEnumerable<ArraySegment<TVal>> StreamSegments(
-            TInd fromInd, bool inReverse = false,
+            TInd fromInd = default(TInd), bool inReverse = false,
             IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = Int64.MaxValue)
         {

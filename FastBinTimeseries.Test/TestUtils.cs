@@ -86,12 +86,9 @@ namespace NYurik.FastBinTimeseries.Test
                 result = (T[]) res.Value.Value;
                 if (result.Length >= count)
                 {
-                    if (result.Length > count)
-                    {
-                        T[] rOld = result;
-                        result = new T[count];
-                        Array.Copy(rOld, result, count);
-                    }
+                    T[] rOld = result;
+                    result = new T[count];
+                    Array.Copy(rOld, result, count);
 
                     Items.AddFirst(res);
                     return result;

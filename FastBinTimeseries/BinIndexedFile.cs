@@ -25,6 +25,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using JetBrains.Annotations;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -38,6 +39,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Allow Activator non-public instantiation
         /// </summary>
+        [UsedImplicitly]
         protected BinIndexedFile()
         {
         }

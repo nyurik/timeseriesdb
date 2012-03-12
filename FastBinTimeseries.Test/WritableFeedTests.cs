@@ -43,7 +43,7 @@ namespace NYurik.FastBinTimeseries.Test
                 if (AllowCreate)
                 {
                     f.AppendData(Data<T>(10, 20));
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 20), f.Stream(default(TInd)), "#1");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 20), f.Stream(), "#1");
 
                     TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<T>(5, 30)), "#2");
                     TestUtils.AssertException<BinaryFileException>(() => f.AppendData(Data<T>(10, 20)), "#2a");
@@ -59,47 +59,47 @@ namespace NYurik.FastBinTimeseries.Test
                     }
 
                     f.AppendData(new[] {new ArraySegment<T>(new T[0], 0, 0)});
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 20), f.Stream(default(TInd)), "#5");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 20), f.Stream(), "#5");
 
                     f.AppendData(new[] {new ArraySegment<T>(new T[1], 1, 0)});
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 20), f.Stream(default(TInd)), "#6");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 20), f.Stream(), "#6");
 
                     f.AppendData(new ArraySegment<T>[0]);
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 20), f.Stream(default(TInd)), "#7");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 20), f.Stream(), "#7");
 
                     f.AppendData(Data<T>(10, 14, 2), true);
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 14, 2), f.Stream(default(TInd)), "#8");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 14, 2), f.Stream(), "#8");
 
                     f.AppendData(Data<T>(10, 13), true);
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 13), f.Stream(default(TInd)), "#9");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 13), f.Stream(), "#9");
 
                     f.AppendData(Data<T>(14, 14));
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 14), f.Stream(default(TInd)), "#10");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 14), f.Stream(), "#10");
 
                     f.AppendData(Data<T>(15, 16));
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 16), f.Stream(default(TInd)), "#11");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 16), f.Stream(), "#11");
 
                     f.AppendData(Data<T>(10, 10), true);
-                    TestUtils.CollectionAssertEqual(Data<T>(10, 10), f.Stream(default(TInd)), "#12");
+                    TestUtils.CollectionAssertEqual(Data<T>(10, 10), f.Stream(), "#12");
 
                     if (!f.UniqueIndexes)
                     {
                         f.AppendData(Data<T>(10, 10));
                         TestUtils.CollectionAssertEqual(
-                            Join(Data<T>(10, 10), Data<T>(10, 10)), f.Stream(default(TInd)), "#13");
+                            Join(Data<T>(10, 10), Data<T>(10, 10)), f.Stream(), "#13");
 
                         f.AppendData(Data<T>(10, 10), true);
-                        TestUtils.CollectionAssertEqual(Data<T>(10, 10), f.Stream(default(TInd)), "#14");
+                        TestUtils.CollectionAssertEqual(Data<T>(10, 10), f.Stream(), "#14");
 
                         f.AppendData(Data<T>(10, 11));
                         TestUtils.CollectionAssertEqual(
-                            Join(Data<T>(10, 10), Data<T>(10, 11)), f.Stream(default(TInd)), "#15");
+                            Join(Data<T>(10, 10), Data<T>(10, 11)), f.Stream(), "#15");
                     }
 
                     f.AppendData(Data<T>(5, 10), true);
                 }
 
-                TestUtils.CollectionAssertEqual(Data<T>(5, 10), f.Stream(default(TInd)), "#final");
+                TestUtils.CollectionAssertEqual(Data<T>(5, 10), f.Stream(), "#final");
             }
         }
 

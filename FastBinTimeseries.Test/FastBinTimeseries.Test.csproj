@@ -105,9 +105,9 @@
     <Compile Include="Legacy\CompressedFileTests.cs" />
     <Compile Include="ConfigurableStream.cs" />
     <Compile Include="BlockSerializer\PrimitiveTypeTests.cs" />
-    <Compile Include="ErrorConditionTests.cs" />
+    <Compile Include="SerializerErrorsTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StreamingTests.cs" />
+    <Compile Include="Legacy\StreamingTests.cs" />
     <Compile Include="TestsBase.cs" />
     <Compile Include="TestStructures.cs" />
     <Compile Include="Legacy\BinIndexedFileTests.cs" />

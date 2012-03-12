@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using JetBrains.Annotations;
 using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
@@ -125,6 +126,7 @@ namespace NYurik.FastBinTimeseries
         /// <summary>
         /// Allow Activator non-public instantiation
         /// </summary>
+        [UsedImplicitly]
         protected BinCompressedSeriesFile()
         {
         }
@@ -259,13 +261,13 @@ namespace NYurik.FastBinTimeseries
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
         public IEnumerable<ArraySegment<TVal>> StreamSegments(
-            TInd fromInd, bool inReverse = false,
+            TInd fromInd = default(TInd), bool inReverse = false,
             IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = long.MaxValue)
         {
             long cachedFileCount = GetCount();
 
-            long block = GetBlockByIndex(fromInd, cachedFileCount);
+            long block = GetBlockByIndex(fromInd, inReverse, cachedFileCount);
 
             return StreamSegments(fromInd, block, cachedFileCount, inReverse, bufferProvider, maxItemCount);
         }
@@ -286,7 +288,7 @@ namespace NYurik.FastBinTimeseries
                 if (!newValues.MoveNext())
                     return;
 
-                TInd firstBufferInd = IndexAccessor(newValues.Current);
+                TInd firstNewItemInd = IndexAccessor(newValues.Current);
 
                 IEnumerator<TVal> iterToDispose = null;
                 try
@@ -299,11 +301,11 @@ namespace NYurik.FastBinTimeseries
                         if (!allowFileTruncation)
                         {
                             TInd lastInd = LastIndex;
-                            int cmp = firstBufferInd.CompareTo(lastInd);
+                            int cmp = firstNewItemInd.CompareTo(lastInd);
                             if (cmp < 0)
                                 throw new BinaryFileException(
                                     "Last index in file ({0}) is greater than the first new item's index ({1})",
-                                    lastInd, firstBufferInd);
+                                    lastInd, firstNewItemInd);
                             else if (cmp == 0 && UniqueIndexes)
                                 throw new BinaryFileException(
                                     "Last index in file ({0}) equals to the first new item's index (enfocing uniqueness)",
@@ -314,14 +316,14 @@ namespace NYurik.FastBinTimeseries
                         }
                         else
                         {
-                            firstBufferBlock = GetBlockByIndex(firstBufferInd, count);
+                            firstBufferBlock = GetBlockByIndex(firstNewItemInd, false, count);
                         }
 
                         if (firstBufferBlock >= 0)
                         {
                             // start at the begining of the found block
                             iterToDispose = JoinStreams(
-                                firstBufferInd, newValues, !UniqueIndexes && !allowFileTruncation,
+                                firstNewItemInd, newValues, !UniqueIndexes && !allowFileTruncation,
                                 StreamSegments(default(TInd), firstBufferBlock, count).StreamSegmentValues()
                                 ).GetEnumerator();
 
@@ -344,7 +346,7 @@ namespace NYurik.FastBinTimeseries
                     }
 
                     if (isEmptyFile)
-                        FirstIndex = firstBufferInd;
+                        FirstIndex = firstNewItemInd;
                     _hasLastIndex = false;
                 }
                 finally
@@ -535,8 +537,22 @@ namespace NYurik.FastBinTimeseries
         /// Using binary search, find the block that would contain needed index.
         /// Returns -1 if index is before the first item.
         /// </summary>
-        private long GetBlockByIndex(TInd index, long cachedFileCount)
+        private long GetBlockByIndex(TInd index, bool inReverse, long cachedFileCount)
         {
+            var blockCount = CalcBlockCount(cachedFileCount);
+
+            if(blockCount == 0)
+                return -1;
+
+            if (FastBinFileUtils.IsDefault(index))
+            {
+                if (inReverse) // Start from the last block
+                    return blockCount - 1;
+
+                // When appending, it is possible for the first item in file to have index == default, so use merge.
+                return 0;
+            }
+
             long block = Search(index, cachedFileCount);
             if (block < 0)
                 block = ~block - 1;
@@ -548,17 +564,12 @@ namespace NYurik.FastBinTimeseries
         private long Search(TInd index, long cachedFileCount)
         {
             long start = 0L;
-            long blockCount = CalcBlockCount(cachedFileCount);
-            long end = blockCount - 1;
-
-            // empty file
-            if (blockCount <= 0)
-                return ~0;
+            long end = CalcBlockCount(cachedFileCount) - 1;
 
             ConcurrentDictionary<long, TInd> cache = null;
             if (BinarySearchCacheSize >= 0)
             {
-                cache = ResetOnChangedAndGetCache(blockCount, true);
+                cache = ResetOnChangedAndGetCache(cachedFileCount, true);
                 if (cache.Count > (BinarySearchCacheSize == 0 ? DefaultMaxBinaryCacheSize : BinarySearchCacheSize))
                     cache.Clear();
             }
@@ -600,16 +611,16 @@ namespace NYurik.FastBinTimeseries
             return ~start;
         }
 
-        private ConcurrentDictionary<long, TInd> ResetOnChangedAndGetCache(long count, bool createCache)
+        private ConcurrentDictionary<long, TInd> ResetOnChangedAndGetCache(long fileCount, bool createCache)
         {
             Tuple<long, ConcurrentDictionary<long, TInd>> sc = _searchCache;
 
-            if (sc == null || sc.Item1 != count || (createCache && sc.Item2 == null))
+            if (sc == null || sc.Item1 != fileCount || (createCache && sc.Item2 == null))
             {
                 lock (LockObj)
                 {
                     sc = _searchCache;
-                    bool countChanged = sc == null || sc.Item1 != count;
+                    bool countChanged = sc == null || sc.Item1 != fileCount;
 
                     if (countChanged)
                     {
@@ -623,7 +634,7 @@ namespace NYurik.FastBinTimeseries
                         ConcurrentDictionary<long, TInd> cache =
                             createCache ? new ConcurrentDictionary<long, TInd>() : null;
 
-                        _searchCache = Tuple.Create(count, cache);
+                        _searchCache = Tuple.Create(fileCount, cache);
                         return cache;
                     }
                 }
@@ -695,6 +706,15 @@ namespace NYurik.FastBinTimeseries
                     for (int i = v.Offset; i < v.Count; i++)
                     {
                         TInd newInd = IndexAccessor(v.Array[i]);
+
+                        // ReSharper disable CompareNonConstrainedGenericWithNull
+                        if (newInd == null)
+                        {
+                            throw new BinaryFileException(
+                                "Segment {0}, item #{1} has an index field of type {2} set to null",
+                                segInd, i, typeof (TInd).FullName);
+                        }
+                        // ReSharper restore CompareNonConstrainedGenericWithNull
 
                         if (!isFirst)
                         {

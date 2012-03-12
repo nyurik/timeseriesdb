@@ -26,9 +26,10 @@ using System;
 using System.IO;
 using NUnit.Framework;
 
-namespace NYurik.FastBinTimeseries.Test
+namespace NYurik.FastBinTimeseries.Test.Legacy
 {
     [TestFixture]
+    [Obsolete]
     public class StreamingTests : TestsBase
     {
         [Test]

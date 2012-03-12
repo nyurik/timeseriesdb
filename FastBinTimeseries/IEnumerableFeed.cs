@@ -59,12 +59,12 @@ namespace NYurik.FastBinTimeseries
         /// Read data from the underlying storage one block at a time.
         /// </summary>
         /// <param name="fromInd">The index of the first element to read.
-        /// Setting to default(<see cref="TInd"/>) will read from the first item going forward, or last when going in reverse.
+        /// If default(<see cref="TInd"/>), will read from the first item going forward, or last when going in reverse.
         /// Inclusive if going forward, exclusive when going backwards.</param>
         /// <param name="inReverse">Set to true if you want to enumerate backwards, from last to first</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount">Maximum number of items to return</param>
-        IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd, bool inReverse = false,
+        IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd = default(TInd), bool inReverse = false,
                                                        IEnumerable<Buffer<TVal>> bufferProvider = null,
                                                        long maxItemCount = long.MaxValue);
     }
