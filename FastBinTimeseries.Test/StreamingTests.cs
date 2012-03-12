@@ -31,17 +31,12 @@ namespace NYurik.FastBinTimeseries.Test
     [TestFixture]
     public class StreamingTests : TestsBase
     {
-        private static byte NewByte(long i)
-        {
-            return (byte) (i%byte.MaxValue);
-        }
-
         [Test]
         public void StreamingTest()
         {
             string fileName = GetBinFileName();
 
-            byte[] data = TestUtils.GenerateData(NewByte, 10000, 0);
+            byte[] data = TestUtils.GenerateData<byte>(10000, 0);
             if (AllowCreate)
             {
                 using (var b = new BinIndexedFile<byte>(fileName))
@@ -65,10 +60,10 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(b.ItemSize, b2.ItemSize);
 
                 b2.ReadData(0, new ArraySegment<byte>(data2));
-                TestUtils.CollectionAssertEqual(TestUtils.GenerateData(NewByte, data.Length/2, 0), data2);
+                TestUtils.CollectionAssertEqual(TestUtils.GenerateData<byte>(data.Length/2, 0), data2);
 
                 b2.ReadData(0, new ArraySegment<byte>(data2));
-                TestUtils.CollectionAssertEqual(TestUtils.GenerateData(NewByte, data.Length/2, data.Length/2), data2);
+                TestUtils.CollectionAssertEqual(TestUtils.GenerateData<byte>(data.Length/2, data.Length/2), data2);
             }
         }
     }

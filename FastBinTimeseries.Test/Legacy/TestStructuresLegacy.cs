@@ -24,17 +24,21 @@
 
 using System;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using NYurik.FastBinTimeseries.CommonCode;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable NonReadonlyFieldInGetHashCode
 
+// ReSharper disable CheckNamespace
 namespace NYurik.FastBinTimeseries.Test
+// ReSharper restore CheckNamespace
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [Obsolete]
     public struct _DatetimeBool_SeqPk1 : IEquatable<_DatetimeBool_SeqPk1>
     {
-        public static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
+        private static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
 
         public UtcDateTime a;
         public bool b;
@@ -66,6 +70,7 @@ namespace NYurik.FastBinTimeseries.Test
             return string.Format("{0:u}, {1}", a, b);
         }
 
+        [UsedImplicitly]
         public static _DatetimeBool_SeqPk1 New(long i)
         {
             return new _DatetimeBool_SeqPk1
@@ -79,13 +84,13 @@ namespace NYurik.FastBinTimeseries.Test
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [Obsolete]
     public struct _DatetimeByte_SeqPk1 : IEquatable<_DatetimeByte_SeqPk1>
     {
-        public static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
+        private static UtcDateTime FirstTimeStamp = new UtcDateTime(2000, 1, 1);
 
         public UtcDateTime a;
         public byte b;
-        public static _DatetimeByte_SeqPk1[] Empty = new _DatetimeByte_SeqPk1[0];
 
         #region Implementation
 

@@ -28,10 +28,11 @@ using System.Linq;
 using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
 
-namespace NYurik.FastBinTimeseries.Test
+namespace NYurik.FastBinTimeseries.Test.Legacy
 {
     [TestFixture]
-    public class BinTimeseriesFileTests : TestsBase
+    [Obsolete]
+    public class BinTimeseriesFileTests : LegacyTestsBase
     {
         private void RunTest(int itemCount, int repeatRuns, bool uniqueTimestamps, bool enableCache)
         {
@@ -45,7 +46,7 @@ namespace NYurik.FastBinTimeseries.Test
                 f.BinarySearchCacheSize = enableCache ? 0 : -1;
 
                 _DatetimeByte_SeqPk1[] newData =
-                    TestUtils.GenerateData(_DatetimeByte_SeqPk1.New, itemCount, 0);
+                    TestUtils.GenerateData<_DatetimeByte_SeqPk1>(itemCount, 0);
 
                 if (AllowCreate)
                 {
@@ -60,6 +61,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                 Array.Reverse(newData);
                 TestUtils.CollectionAssertEqual(newData, f.Stream(UtcDateTime.MaxValue, inReverse: true));
+                TestUtils.CollectionAssertEqual(newData, f.Stream(default(UtcDateTime), inReverse: true));
 
                 if (itemCount > 0)
                 {
@@ -70,8 +72,7 @@ namespace NYurik.FastBinTimeseries.Test
 
                         res = f.ReadData(fromInd, untilInd, int.MaxValue);
 
-                        _DatetimeByte_SeqPk1[] expected = TestUtils.GenerateData(
-                            _DatetimeByte_SeqPk1.New, i, itemCount - i);
+                        _DatetimeByte_SeqPk1[] expected = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(i, itemCount - i);
                         TestUtils.AreEqual(expected, res);
 
                         List<_DatetimeByte_SeqPk1> res1 = f.Stream(fromInd, untilInd.AddTicks(1)).ToList();
@@ -89,8 +90,7 @@ namespace NYurik.FastBinTimeseries.Test
         [Test, Ignore]
         public void BasicFunctionality()
         {
-            _DatetimeByte_SeqPk1[] newData = TestUtils.GenerateData(
-                _DatetimeByte_SeqPk1.New, 10000, 0);
+            _DatetimeByte_SeqPk1[] newData = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(10000, 0);
 
             string fileName = GetBinFileName();
             using (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1> f =

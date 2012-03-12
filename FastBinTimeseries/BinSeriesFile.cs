@@ -227,7 +227,7 @@ namespace NYurik.FastBinTimeseries
             long maxItemCount = Int64.MaxValue)
         {
             long start;
-            if (FastBinFileUtils.IsDefault(fromInd))
+            if (!FastBinFileUtils.IsDefault(fromInd))
             {
                 start = BinarySearch(fromInd, true);
                 if (start < 0)

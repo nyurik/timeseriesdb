@@ -25,6 +25,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using JetBrains.Annotations;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable NonReadonlyFieldInGetHashCode
@@ -67,6 +68,7 @@ namespace NYurik.FastBinTimeseries.Test
             return string.Format("{0}, {1}, {2}", a, b, c);
         }
 
+        [UsedImplicitly]
         public static _3Byte_noAttr New(long i)
         {
             return new _3Byte_noAttr
@@ -113,6 +115,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _LongBool_SeqPk1 New(long i)
         {
             return new _LongBool_SeqPk1 {a = i, b = i%2 == 0};
@@ -154,6 +157,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _LongByte_SeqPk1 New(long i)
         {
             return new _LongByte_SeqPk1 {a = i, b = ((byte) (i & 0xFF))};
@@ -199,6 +203,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _BoolLongBool_SeqPk1 New(long i)
         {
             return new _BoolLongBool_SeqPk1 {a = i%2 == 1, b = i, c = i%2 == 0,};
@@ -244,6 +249,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _ByteLongByte_SeqPk1 New(long i)
         {
             return new _ByteLongByte_SeqPk1 {a = ((byte) (i & 0xFF)), b = i, c = ((byte) ((i & 0xFF00) >> 8)),};
@@ -280,6 +286,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _IntBool_SeqPk1 New(long i)
         {
             unchecked
@@ -337,6 +344,7 @@ namespace NYurik.FastBinTimeseries.Test
             return string.Format("{0}, {1}, {2}", a, b, c);
         }
 
+        [UsedImplicitly]
         public static _3Byte_2Shrt_ExplPk1 New(long i)
         {
             return new _3Byte_2Shrt_ExplPk1
@@ -423,6 +431,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static unsafe _FixedByteBuff7 New(long j)
         {
             var v = new _FixedByteBuff7 {Key = j};
@@ -476,6 +485,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _4Flds_ComplxIdx New(long ix)
         {
             return new _4Flds_ComplxIdx
@@ -559,6 +569,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _LongBool_Class New(long i)
         {
             return new _LongBool_Class {a = i, b = i%2 == 0};
@@ -607,6 +618,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _4Flds_ComplxIdxClass New(long ix)
         {
             return new _4Flds_ComplxIdxClass
@@ -661,6 +673,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly]
         public static _4FldsClass_ComplxIdxClass New(long ix)
         {
             return new _4FldsClass_ComplxIdxClass

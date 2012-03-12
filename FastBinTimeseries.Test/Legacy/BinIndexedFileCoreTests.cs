@@ -27,10 +27,13 @@ using System.IO;
 using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
 
-namespace NYurik.FastBinTimeseries.Test
+namespace NYurik.FastBinTimeseries.Test.Legacy
 {
+    // ReSharper disable AccessToDisposedClosure
+
     [TestFixture]
-    public class BinIndexedFileCoreTests : TestsBase
+    [Obsolete]
+    public class BinIndexedFileCoreTests : LegacyTestsBase
     {
         private const string TagString = "Test123";
 
@@ -222,7 +225,7 @@ namespace NYurik.FastBinTimeseries.Test
         public void MappingTest()
         {
             string fileName = GetBinFileName();
-            _DatetimeByte_SeqPk1[] data = TestUtils.GenerateData(_DatetimeByte_SeqPk1.New, 1, 10);
+            _DatetimeByte_SeqPk1[] data = TestUtils.GenerateData<_DatetimeByte_SeqPk1>(1, 10);
             if (AllowCreate)
             {
                 using (var f = new BinIndexedFile<_DatetimeByte_SeqPk1>(fileName))

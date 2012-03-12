@@ -93,15 +93,16 @@
     <Compile Include="..\GlobalAssemblyInfo.cs">
       <Link>Properties\GlobalAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="LegacyTests.cs" />
-    <Compile Include="TestStructuresLegacy.cs" />
+    <Compile Include="Legacy\LegacyTests.cs" />
+    <Compile Include="Legacy\LegacyTestsBase.cs" />
+    <Compile Include="Legacy\TestStructuresLegacy.cs" />
     <Compile Include="WritableFeedTests.cs" />
     <Compile Include="BlockSerializer\BinBlockSerializerTests.cs" />
-    <Compile Include="BinIndexedFileCoreTests.cs" />
+    <Compile Include="Legacy\BinIndexedFileCoreTests.cs" />
     <Compile Include="BlockSerializer\ComplexTypeTests.cs" />
     <Compile Include="BlockSerializer\SerializtionTestsBase.cs" />
     <Compile Include="BlockSerializer\StreamCodecTests.cs" />
-    <Compile Include="CompressedFileTests.cs" />
+    <Compile Include="Legacy\CompressedFileTests.cs" />
     <Compile Include="ConfigurableStream.cs" />
     <Compile Include="BlockSerializer\PrimitiveTypeTests.cs" />
     <Compile Include="ErrorConditionTests.cs" />
@@ -109,8 +110,8 @@
     <Compile Include="StreamingTests.cs" />
     <Compile Include="TestsBase.cs" />
     <Compile Include="TestStructures.cs" />
-    <Compile Include="BinIndexedFileTests.cs" />
-    <Compile Include="BinTimeseriesFileTests.cs" />
+    <Compile Include="Legacy\BinIndexedFileTests.cs" />
+    <Compile Include="Legacy\BinTimeseriesFileTests.cs" />
     <Compile Include="TestUtils.cs" />
   </ItemGroup>
   <ItemGroup>

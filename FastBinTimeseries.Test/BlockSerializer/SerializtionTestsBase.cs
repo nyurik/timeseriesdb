@@ -25,23 +25,21 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using NUnit.Framework;
 using NYurik.FastBinTimeseries.Serializers;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
 namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 {
-    [TestFixture]
     public class SerializtionTestsBase : TestsBase
     {
-        public IEnumerable<T> Values<T>(Func<long, T> converter, long min = long.MinValue, long max = long.MaxValue)
+        protected IEnumerable<T> Values<T>(Func<long, T> converter, long min = long.MinValue, long max = long.MaxValue)
         {
             foreach (long i in StreamCodecTests.TestValuesGenerator())
                 if (i >= min && i <= max)
                     yield return converter(i);
         }
 
-        public IEnumerable<T> Range<T>(T min, T max, Func<T, T> inc)
+        protected IEnumerable<T> Range<T>(T min, T max, Func<T, T> inc)
             where T : IComparable<T>
         {
             T val = min;
@@ -55,8 +53,8 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         }
 
 
-        public void Run<T>(IEnumerable<T> values, string name = null,
-                           Action<BaseField> updateSrlzr = null, Func<T, T, bool> comparer = null)
+        protected void Run<T>(IEnumerable<T> values, string name = null,
+                              Action<BaseField> updateSrlzr = null, Func<T, T, bool> comparer = null)
         {
             using (var codec = new CodecWriter(10000))
             {
@@ -124,7 +122,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                         throw new SerializerException(x, msg);
                     }
 
-                    var result = buff.AsArraySegment();
+                    ArraySegment<T> result = buff.AsArraySegment();
                     for (int i = result.Offset; i < result.Count; i++)
                         yield return result.Array[i];
                 }

@@ -24,6 +24,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Reflection;
 using JetBrains.Annotations;
 using NUnit.Framework;
 
@@ -47,33 +49,18 @@ namespace NYurik.FastBinTimeseries.Test
             AreNotEqual(new ArraySegment<T>(expected), new ArraySegment<T>(values), description);
         }
 
-        public static void AreNotEqual<T>(ArraySegment<T> expected, ArraySegment<T> values)
-        {
-            AreNotEqual(expected, values, null);
-        }
-
-        public static void AreNotEqual<T>(ArraySegment<T> expected, ArraySegment<T> values, string description)
+        public static void AreNotEqual<T>(ArraySegment<T> expected, ArraySegment<T> values, string description = null)
         {
             var s = new DefaultTypeSerializer<T>();
             Assert.IsFalse(s.BinaryArrayCompare(expected, values), description);
         }
 
-        public static void AreEqual<T>(T[] expected, T[] values)
-        {
-            AreEqual(expected, values, null);
-        }
-
-        public static void AreEqual<T>(T[] expected, T[] values, string description)
+        public static void AreEqual<T>(T[] expected, T[] values, string description = null)
         {
             AreEqual(new ArraySegment<T>(expected), new ArraySegment<T>(values), description);
         }
 
-        public static void AreEqual<T>(ArraySegment<T> expected, ArraySegment<T> values)
-        {
-            AreEqual(expected, values, null);
-        }
-
-        public static void AreEqual<T>(ArraySegment<T> expected, ArraySegment<T> values, string description)
+        public static void AreEqual<T>(ArraySegment<T> expected, ArraySegment<T> values, string description = null)
         {
             var s = new DefaultTypeSerializer<T>();
             Assert.IsTrue(s.BinaryArrayCompare(expected, values), description);
@@ -87,12 +74,11 @@ namespace NYurik.FastBinTimeseries.Test
             return res.ToArray();
         }
 
-        public static T[] GenerateData<T>(Func<long, T> converter, int count, int startFrom, int step = 1)
+        public static T[] GenerateData<T>(int count, int startFrom, int step = 1)
         {
-            string key = string.Format("{0},{1},{2},{3}", typeof (T).FullName, startFrom, converter, step);
-
+            string key = String.Format("{0},{1},{2}", typeof (T).FullName, startFrom, step);
             T[] result;
-            LinkedListNode<CacheItem> res = Items.Find(new CacheItem {Key = key});
+            LinkedListNode<CacheItem> res = Items.Find(new CacheItem(key));
             if (res != null)
             {
                 Items.Remove(res);
@@ -112,11 +98,12 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
 
+            var newObj = GetObjFactory<T>();
             result = new T[count + 100];
             for (long i = 0; i < count + 100; i++)
-                result[i] = converter(startFrom + step*i);
+                result[i] = newObj(startFrom + step*i);
 
-            Items.AddFirst(new CacheItem {Key = key, Value = result});
+            Items.AddFirst(new CacheItem(key, result));
             if (Items.Count > 100)
                 Items.RemoveLast();
 
@@ -125,20 +112,15 @@ namespace NYurik.FastBinTimeseries.Test
             return rNew;
         }
 
-        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(
-            Func<long, T> converter, int segSize, int minValue, int maxValue, int step = 1)
+        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(int segSize, int minValue, int maxValue,
+                                                                         int step = 1)
         {
             if (segSize <= 0)
                 yield break;
 
             for (long i = minValue; i < maxValue; i += segSize)
                 yield return
-                    new ArraySegment<T>(GenerateData(converter, (int) Math.Min(segSize, maxValue - i), (int) i, step));
-        }
-
-        public static byte NewByte(long i)
-        {
-            return (byte) (i & 0xFF);
+                    new ArraySegment<T>(GenerateData<T>((int) Math.Min(segSize, maxValue - i), (int) i, step));
         }
 
         [StringFormatMethod("format")]
@@ -160,7 +142,7 @@ namespace NYurik.FastBinTimeseries.Test
             try
             {
                 object o = operation();
-                string fmt = format == null ? "" : string.Format(format, args) + ": ";
+                string fmt = format == null ? "" : String.Format(format, args) + ": ";
                 Assert.Fail(
                     "{0}Should have thrown {1}, but instead completed with result {2}", fmt, typeof (TEx).Name, o);
             }
@@ -195,7 +177,7 @@ namespace NYurik.FastBinTimeseries.Test
             if (comparer == null)
                 comparer = EqualityComparer<T>.Default.Equals;
 
-            string msg = format != null ? string.Format(format + ": ", args) : "";
+            string msg = format != null ? String.Format(format + ": ", args) : "";
 
             int count = 0;
             T lastValue = default(T);
@@ -237,11 +219,11 @@ namespace NYurik.FastBinTimeseries.Test
                     {
                         // ReSharper disable FormatStringProblem
                         string failMsg =
-                            string.Format(
+                            String.Format(
                                 "{0}After {1} items, expected value {2" + fmt + "} != actual value {3" + fmt + "}",
                                 msg, count, e.Current, a.Current);
                         if (count > 0)
-                            failMsg += string.Format(", lastValue = {0" + fmt + "}", lastValue);
+                            failMsg += String.Format(", lastValue = {0" + fmt + "}", lastValue);
                         // ReSharper restore FormatStringProblem
 
                         Assert.Fail(failMsg);
@@ -257,8 +239,14 @@ namespace NYurik.FastBinTimeseries.Test
 
         private class CacheItem : IEquatable<CacheItem>
         {
-            public string Key;
-            public object Value;
+            private readonly string _key;
+            public readonly object Value;
+
+            public CacheItem(string key, object value = null)
+            {
+                _key = key;
+                Value = value;
+            }
 
             #region IEquatable<CacheItem> Members
 
@@ -266,7 +254,7 @@ namespace NYurik.FastBinTimeseries.Test
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return Equals(other.Key, Key);
+                return Equals(other._key, _key);
             }
 
             #endregion
@@ -281,10 +269,49 @@ namespace NYurik.FastBinTimeseries.Test
 
             public override int GetHashCode()
             {
-                return (Key != null ? Key.GetHashCode() : 0);
+                return (_key != null ? _key.GetHashCode() : 0);
             }
         }
 
         #endregion
+
+        private static readonly Dictionary<Type, Delegate> FuncCache = new Dictionary<Type, Delegate>();
+
+        public static Func<long, T> GetObjFactory<T>()
+        {
+            Type type = typeof (T);
+            Delegate func;
+
+            if (!FuncCache.TryGetValue(type, out func))
+            {
+                if (type.IsPrimitive)
+                {
+                    switch (Type.GetTypeCode(type))
+                    {
+                        case TypeCode.Byte:
+                            func = (Func<long, byte>) (i => (byte) (i%byte.MaxValue));
+                            break;
+                        default:
+                            throw new NotImplementedException("Primitive type not supported: " + type.Name);
+                    }
+
+                }
+                else
+                {
+                    ParameterExpression param = Expression.Parameter(typeof (long));
+                    func =
+                        Expression.Lambda<Func<long, T>>(
+                            Expression.Call(
+                                type.GetMethod(
+                                    "New", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic),
+                                param),
+                            param).Compile();
+                }
+
+                FuncCache.Add(type, func);
+            }
+
+            return (Func<long, T>) func;
+        }
     }
 }

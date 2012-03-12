@@ -28,10 +28,11 @@ using System.IO;
 using System.Runtime.InteropServices;
 using NUnit.Framework;
 
-namespace NYurik.FastBinTimeseries.Test
+namespace NYurik.FastBinTimeseries.Test.Legacy
 {
     [TestFixture]
-    public class BinIndexedFileTests : TestsBase
+    [Obsolete]
+    public class BinIndexedFileTests : LegacyTestsBase
     {
         private const bool EnableLongerTests = false;
 
@@ -130,16 +131,16 @@ namespace NYurik.FastBinTimeseries.Test
             sw.Stop();
         }
 
-        private void FileIncrementalAddition<T>(Func<long, T> converter) where T : IEquatable<T>
+        private void FileIncrementalAddition<T>() where T : IEquatable<T>
         {
             const string testName = "FileIncrementalAddition";
             try
             {
                 Stopwatch sw = TestStart();
 
-                T[] data0 = TestUtils.GenerateData(converter, 1, 10);
-                T[] data1 = TestUtils.GenerateData(converter, 2, 20);
-                T[] data2 = TestUtils.GenerateData(converter, 3, 30);
+                T[] data0 = TestUtils.GenerateData<T>(1, 10);
+                T[] data1 = TestUtils.GenerateData<T>(2, 20);
+                T[] data2 = TestUtils.GenerateData<T>(3, 30);
 
                 string fileName = GetBinFileName();
 
@@ -195,9 +196,8 @@ namespace NYurik.FastBinTimeseries.Test
                 throw;
             }
         }
-
-        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess,
-                                             bool enableLargePages)
+        
+        private void PageBorderOperations<T>(bool enableMemoryMappedAccess, bool enableLargePages)
             where T : IEquatable<T>
         {
             string testName = "PageBorderOperations_" + (enableMemoryMappedAccess ? "MMF" : "Stream");
@@ -206,24 +206,20 @@ namespace NYurik.FastBinTimeseries.Test
                 Stopwatch sw = TestStart();
 
                 for (int i = 1; i < 5; i++)
-                    PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
+                    PageBorderOperations<T>(enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
 
-                PageBorderOperations(
-                    converter, enableMemoryMappedAccess,
+                PageBorderOperations<T>(enableMemoryMappedAccess,
                     BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
-                PageBorderOperations(converter, enableMemoryMappedAccess, BinaryFile.MaxLargePageSize);
-                PageBorderOperations(
-                    converter, enableMemoryMappedAccess,
+                PageBorderOperations<T>(enableMemoryMappedAccess, BinaryFile.MaxLargePageSize);
+                PageBorderOperations<T>(enableMemoryMappedAccess,
                     BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
 
                 if (enableLargePages)
                 {
-                    PageBorderOperations(
-                        converter, enableMemoryMappedAccess,
+                    PageBorderOperations<T>(enableMemoryMappedAccess,
                         2*BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
-                    PageBorderOperations(converter, enableMemoryMappedAccess, 2*BinaryFile.MaxLargePageSize);
-                    PageBorderOperations(
-                        converter, enableMemoryMappedAccess,
+                    PageBorderOperations<T>(enableMemoryMappedAccess, 2*BinaryFile.MaxLargePageSize);
+                    PageBorderOperations<T>(enableMemoryMappedAccess,
                         2*BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
                 }
 
@@ -236,7 +232,7 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
-        private void PageBorderOperations<T>(Func<long, T> converter, bool enableMemoryMappedAccess, int pageSize)
+        private void PageBorderOperations<T>(bool enableMemoryMappedAccess, int pageSize)
             where T : IEquatable<T>
         {
             DeleteTempFiles();
@@ -263,9 +259,9 @@ namespace NYurik.FastBinTimeseries.Test
                 if (items1StPg == 0)
                     items1StPg = itemsPerPage;
 
-                T[] dataMinusOne = TestUtils.GenerateData(converter, items1StPg - 1, 0);
-                T[] dataZero = TestUtils.GenerateData(converter, items1StPg, 0);
-                T[] dataPlusOne = TestUtils.GenerateData(converter, items1StPg + 1, 0);
+                T[] dataMinusOne = TestUtils.GenerateData<T>(items1StPg - 1, 0);
+                T[] dataZero = TestUtils.GenerateData<T>(items1StPg, 0);
+                T[] dataPlusOne = TestUtils.GenerateData<T>(items1StPg + 1, 0);
 
                 if (AllowCreate)
                 {
@@ -283,9 +279,9 @@ namespace NYurik.FastBinTimeseries.Test
                 Assert.AreEqual(f.HeaderSize + (items1StPg + 1)*f.ItemSize, new FileInfo(fileName).Length);
                 ReadAndAssert(dataPlusOne, f, 0, dataPlusOne.Length);
 
-                ReadAndAssert(TestUtils.GenerateData(converter, 1, items1StPg - 1), f, items1StPg - 1, 1);
-                ReadAndAssert(TestUtils.GenerateData(converter, 1, items1StPg), f, items1StPg, 1);
-                ReadAndAssert(TestUtils.GenerateData(converter, 2, items1StPg - 1), f, items1StPg - 1, 2);
+                ReadAndAssert(TestUtils.GenerateData<T>(1, items1StPg - 1), f, items1StPg - 1, 1);
+                ReadAndAssert(TestUtils.GenerateData<T>(1, items1StPg), f, items1StPg, 1);
+                ReadAndAssert(TestUtils.GenerateData<T>(2, items1StPg - 1), f, items1StPg - 1, 2);
             }
         }
 
@@ -317,34 +313,34 @@ namespace NYurik.FastBinTimeseries.Test
         [Test]
         public void IncrementalAddition()
         {
-            FileIncrementalAddition(TestUtils.NewByte);
-            FileIncrementalAddition(_3Byte_noAttr.New);
-            FileIncrementalAddition(_3Byte_2Shrt_ExplPk1.New);
-            FileIncrementalAddition(_IntBool_SeqPk1.New);
-            FileIncrementalAddition(_DatetimeByte_SeqPk1.New);
-            FileIncrementalAddition(_DatetimeBool_SeqPk1.New);
-            FileIncrementalAddition(_LongBool_SeqPk1.New);
-            FileIncrementalAddition(_LongByte_SeqPk1.New);
-            FileIncrementalAddition(_BoolLongBool_SeqPk1.New);
-            FileIncrementalAddition(_ByteLongByte_SeqPk1.New);
-            FileIncrementalAddition(_FixedByteBuff7.New);
+            FileIncrementalAddition<byte>();
+            FileIncrementalAddition<_3Byte_noAttr>();
+            FileIncrementalAddition<_3Byte_2Shrt_ExplPk1>();
+            FileIncrementalAddition<_IntBool_SeqPk1>();
+            FileIncrementalAddition<_DatetimeByte_SeqPk1>();
+            FileIncrementalAddition<_DatetimeBool_SeqPk1>();
+            FileIncrementalAddition<_LongBool_SeqPk1>();
+            FileIncrementalAddition<_LongByte_SeqPk1>();
+            FileIncrementalAddition<_BoolLongBool_SeqPk1>();
+            FileIncrementalAddition<_ByteLongByte_SeqPk1>();
+            FileIncrementalAddition<_FixedByteBuff7>();
         }
 
         [Test]
         public void PageCheckMmf(
             [Values(true, false)] bool enableMemoryMappedAccess)
         {
-            PageBorderOperations(TestUtils.NewByte, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_3Byte_noAttr.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_3Byte_2Shrt_ExplPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_IntBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_DatetimeByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_DatetimeBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_LongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_LongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_BoolLongBool_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_ByteLongByte_SeqPk1.New, enableMemoryMappedAccess, EnableLongerTests);
-            PageBorderOperations(_FixedByteBuff7.New, enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<byte>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_3Byte_noAttr>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_3Byte_2Shrt_ExplPk1>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_IntBool_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_DatetimeByte_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_DatetimeBool_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_LongBool_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_LongByte_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_BoolLongBool_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_ByteLongByte_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
+            PageBorderOperations<_FixedByteBuff7>(enableMemoryMappedAccess, EnableLongerTests);
         }
 
         [Test]

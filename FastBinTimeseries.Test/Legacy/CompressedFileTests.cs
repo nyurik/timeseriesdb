@@ -29,17 +29,15 @@ using NUnit.Framework;
 using NYurik.FastBinTimeseries.CommonCode;
 using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 
-namespace NYurik.FastBinTimeseries.Test
+namespace NYurik.FastBinTimeseries.Test.Legacy
 {
-    using BinCompressedFile = BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>;
-    using BinUncompressedFile = BinTimeseriesFile<_DatetimeByte_SeqPk1>;
-
     // ReSharper disable PossibleMultipleEnumeration
 
     [TestFixture, Explicit("Slow tests, some not working")]
-    public class CompressedFileTests : TestsBase
+    [Obsolete]
+    public class CompressedFileTests : LegacyTestsBase
     {
-        private readonly _DatetimeByte_SeqPk1[] _empty = _DatetimeByte_SeqPk1.Empty;
+        private readonly _DatetimeByte_SeqPk1[] _empty = new _DatetimeByte_SeqPk1[0];
 
         private void Run(string name, int itemCount,
                          Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
@@ -207,12 +205,13 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
-        private IEnumerable<T> DuplicatesEvery<T>(long start, long until, long duplEvery, Func<long, T> converter)
+        private IEnumerable<T> DuplicatesEvery<T>(long start, long until, long duplEvery)
         {
             int cnt = 0;
+            var newObj = TestUtils.GetObjFactory<T>();
             for (long i = start; i < until; i++)
             {
-                T v = converter(i);
+                T v = newObj(i);
                 yield return v;
                 if (++cnt%duplEvery == 0)
                     yield return v;
@@ -269,7 +268,7 @@ namespace NYurik.FastBinTimeseries.Test
                 init(f);
 
                 IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> dat =
-                    Segments(DuplicatesEvery(0, 2, 1, _DatetimeByte_SeqPk1.New), SameValue(segSize));
+                    Segments(DuplicatesEvery<_DatetimeByte_SeqPk1>(0, 2, 1), SameValue(segSize));
 
                 f.AppendData(dat);
 
@@ -282,13 +281,12 @@ namespace NYurik.FastBinTimeseries.Test
 
         private static IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> Data(int segSize, int minValue, int maxValue)
         {
-            return TestUtils.GenerateDataStream(_DatetimeByte_SeqPk1.New, segSize, minValue, maxValue);
+            return TestUtils.GenerateDataStream<_DatetimeByte_SeqPk1>(segSize, minValue, maxValue);
         }
 
         private static IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> DataDupl(int segSize, int minValue, int maxValue)
         {
-            return TestUtils.GenerateDataStream(
-                i => _DatetimeByte_SeqPk1.New((long) (i*0.9)), segSize, minValue, maxValue);
+            return TestUtils.GenerateDataStream<_DatetimeByte_SeqPk1>(segSize, minValue, maxValue);
         }
 
 //        static void Main(string[] args)
@@ -313,14 +311,14 @@ namespace NYurik.FastBinTimeseries.Test
                 segSize,
                 fileName =>
                     {
-                        var bf = new BinCompressedFile(fileName) {UniqueIndexes = false};
+                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = false};
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         return bf;
                     },
-                f => ((BinCompressedFile) f).BinarySearchCacheSize = enableCache ? 0 : -1,
-                f => ((BinCompressedFile) f).InitializeNewFile());
+                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).InitializeNewFile());
         }
 
         [Test]
@@ -344,14 +342,14 @@ namespace NYurik.FastBinTimeseries.Test
                 segSize, itemCount, data,
                 fileName =>
                     {
-                        var bf = new BinCompressedFile(fileName) {UniqueIndexes = uniqueIndexes};
+                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = uniqueIndexes};
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         return bf;
                     },
-                f => ((BinCompressedFile) f).BinarySearchCacheSize = enableCache ? 0 : -1,
-                f => ((BinCompressedFile) f).InitializeNewFile());
+                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).InitializeNewFile());
         }
 
         [Test, Combinatorial]
@@ -366,15 +364,15 @@ namespace NYurik.FastBinTimeseries.Test
                 itemCount,
                 fileName =>
                     {
-                        var bf = new BinCompressedFile(fileName) {UniqueIndexes = true};
+                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = true};
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         bf.ValidateOnRead = true;
                         return bf;
                     },
-                f => ((BinCompressedFile) f).BinarySearchCacheSize = enableCache ? 0 : -1,
-                f => ((BinCompressedFile) f).InitializeNewFile());
+                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).InitializeNewFile());
         }
 
         [Test, Combinatorial]
@@ -386,8 +384,8 @@ namespace NYurik.FastBinTimeseries.Test
                 string.Format("in itemCount={0}, cache={1}", itemCount, enableCache),
                 itemCount,
                 fileName => new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = true},
-                f => ((BinUncompressedFile) f).BinarySearchCacheSize = enableCache ? 0 : -1,
-                f => ((BinUncompressedFile) f).InitializeNewFile());
+                f => ((BinTimeseriesFile<_DatetimeByte_SeqPk1>) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f => ((BinTimeseriesFile<_DatetimeByte_SeqPk1>) f).InitializeNewFile());
         }
     }
 }

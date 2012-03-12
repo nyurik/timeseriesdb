@@ -24,20 +24,19 @@
 
 using System;
 using NUnit.Framework;
-using Strct = NYurik.FastBinTimeseries.Test._LongByte_SeqPk1;
 
-namespace NYurik.FastBinTimeseries.Test
+namespace NYurik.FastBinTimeseries.Test.Legacy
 {
     [TestFixture]
     [Obsolete("All these tests check obsolete methods")]
-    public class LegacyTests : TestsBase
+    public class LegacyTests : LegacyTestsBase
     {
-        private BinSeriesFile<long, Strct> OpenFile(string fileName)
+        private BinSeriesFile<long, _LongByte_SeqPk1> OpenFile(string fileName)
         {
             if (!AllowCreate)
-                return (BinSeriesFile<long, Strct>) BinaryFile.Open(fileName, false);
+                return (BinSeriesFile<long, _LongByte_SeqPk1>) BinaryFile.Open(fileName, false);
 
-            var r = new BinSeriesFile<long, Strct>(fileName) {UniqueIndexes = false};
+            var r = new BinSeriesFile<long, _LongByte_SeqPk1>(fileName) {UniqueIndexes = false};
             r.InitializeNewFile();
             return r;
         }
@@ -45,17 +44,17 @@ namespace NYurik.FastBinTimeseries.Test
         [Test(Description = "Issue #8 by karl23")]
         public void TestLegacyReadSupportWithOffset()
         {
-            using (BinSeriesFile<long, Strct> f = OpenFile(GetBinFileName()))
+            using (BinSeriesFile<long, _LongByte_SeqPk1> f = OpenFile(GetBinFileName()))
             {
                 if (AllowCreate)
                 {
-                    f.AppendData(Data<Strct>(10, 20));
-                    TestUtils.CollectionAssertEqual(Data<Strct>(10, 20), f.Stream(0), "#1");
+                    f.AppendData(Data<_LongByte_SeqPk1>(10, 20));
+                    TestUtils.CollectionAssertEqual(Data<_LongByte_SeqPk1>(10, 20), f.Stream(0), "#1");
                 }
 
-                var buf = new ArraySegment<Strct>(new Strct[21], 10, 11);
+                var buf = new ArraySegment<_LongByte_SeqPk1>(new _LongByte_SeqPk1[21], 10, 11);
                 f.ReadData(0, buf);
-                TestUtils.CollectionAssertEqual(Data<Strct>(10, 20), buf.StreamSegmentValues(), "#2");
+                TestUtils.CollectionAssertEqual(Data<_LongByte_SeqPk1>(10, 20), buf.StreamSegmentValues(), "#2");
             }
         }
     }
