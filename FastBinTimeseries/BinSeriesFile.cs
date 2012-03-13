@@ -463,12 +463,12 @@ namespace NYurik.FastBinTimeseries
                         if (!allowFileTruncations)
                             if (cmp < 0)
                                 throw new BinaryFileException(
-                                    "Last index in {2} ({0}) is greater than the first new item's index ({1})",
-                                    prevSegLast, rng.Item1, isFirstSeg ? "file" : "segment");
+                                    "Last index in {0} ({1}) is greater than the first new item's index ({2})",
+                                    isFirstSeg ? "file" : "segment", prevSegLast, rng.Item1);
                             else
                                 throw new BinaryFileException(
-                                    "Last index in {1} ({0}) equals to the first new item's index (enfocing uniqueness)",
-                                    prevSegLast, isFirstSeg ? "file" : "segment");
+                                    "Last index in {0} ({1}) equals to the first new item's index (enfocing uniqueness)",
+                                    isFirstSeg ? "file" : "segment", prevSegLast);
 
                         TruncateFile(rng.Item1);
                     }
@@ -503,12 +503,12 @@ namespace NYurik.FastBinTimeseries
 
                 if (cmp < 0)
                     throw new BinaryFileException(
-                        "Segment {4}, new item's index at #{0} ({1}) is greater than index of the following item #{2} ({3})",
-                        i - 1, lastInd, i, newInd, segInd);
+                        "Segment {0}, new item's index at #{1} ({2}) is greater than index of the following item #{3} ({4})",
+                        segInd, i - 1, lastInd, i, newInd);
                 if (uniqueIndexes && cmp == 0)
                     throw new BinaryFileException(
-                        "Segment {4} new item's index at #{0} ({1}) equals the index of the following item #{2} (enforcing uniqueness)",
-                        i - 1, lastInd, i, segInd);
+                        "Segment {0} new item's index at #{1} ({2}) equals the index of the following item #{3} (enforcing uniqueness)",
+                        segInd, i - 1, lastInd, i);
 
                 lastInd = newInd;
             }

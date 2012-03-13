@@ -110,10 +110,10 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         {
             if (_multiplier < 1)
                 throw new SerializerException(
-                    "Multiplier = {2} for value {0} ({1}), but must be >= 1", StateName, ValueType.FullName, _multiplier);
+                    "Multiplier = {0} for value {1} ({2}), but must be >= 1", _multiplier, StateName, ValueType.FullName);
             if (_divider < 1)
                 throw new SerializerException(
-                    "Divider = {2} for value {0} ({1}), but must be >= 1", StateName, ValueType.FullName, _divider);
+                    "Divider = {0} for value {1} ({2}), but must be >= 1", _divider, StateName, ValueType.FullName);
 
             ulong maxDivider = 0;
             _isInteger = true;
@@ -155,18 +155,18 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {0}", StateName, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, ValueType.AssemblyQualifiedName);
             }
 
             if (_isInteger)
             {
                 if (_multiplier != 1)
                     throw new SerializerException(
-                        "Integer types must have multiplier == 1, but {0} was given instead for value {0} ({1})",
+                        "Integer types must have multiplier == 1, but {0} was given instead for value {1} ({2})",
                         _multiplier, StateName, ValueType.FullName);
                 if ((ulong) _divider > maxDivider)
                     throw new SerializerException(
-                        "Divider = {2} for value {0} ({1}), but must be < {3}", StateName, ValueType.FullName, _divider,
+                        "Divider = {0} for value {1} ({2}), but must be < {3}", _divider, StateName, ValueType.FullName,
                         maxDivider);
             }
 
@@ -269,8 +269,8 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
             return new Tuple<Expression, Expression>(initExp, deltaExp);
         }
 
-        private Expression FloatingGetValExp<T>(Expression value, Expression codec, T divider,
-                                                T minValue, T maxValue)
+        private Expression FloatingGetValExp<T>(
+            Expression value, Expression codec, T divider, T minValue, T maxValue)
         {
             Expression multExp = Expression.Multiply(value, Expression.Constant(divider));
             if (value.Type == typeof (float))

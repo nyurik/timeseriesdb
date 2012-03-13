@@ -59,13 +59,12 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
         private static long ValidateDivider(TimeSpan value)
         {
             if (value < TimeSpan.Zero)
-                throw new SerializerException(
-                    "Divider ({0}) must be positive", value);
+                throw new SerializerException("Divider ({0}) must be positive", value);
             if (value > TimeSpan.FromDays(1))
                 throw new SerializerException("Divider {0} is > 1 day", value);
             if (value > TimeSpan.Zero && TimeSpan.TicksPerDay%value.Ticks != 0)
                 throw new SerializerException(
-                    "TimeSpan.TicksPerDay must be divisible by time slice {0}", value);
+                    "TimeSpan.TicksPerDay must be divisible by time slice " + value);
             return value == TimeSpan.Zero ? 1 : value.Ticks;
         }
 

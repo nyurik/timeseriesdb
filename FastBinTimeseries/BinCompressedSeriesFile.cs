@@ -583,7 +583,7 @@ namespace NYurik.FastBinTimeseries
                 if (cache == null || !cache.TryGetValue(mid, out indAtMid))
                 {
                     if (!TryGetIndex(mid, cachedFileCount, out indAtMid))
-                        throw new BinaryFileException("Unable to read index block #{0}", mid);
+                        throw new BinaryFileException("Unable to read index block #" + mid);
 
                     if (cache != null)
                         cache.TryAdd(mid, indAtMid);

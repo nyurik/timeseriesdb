@@ -70,10 +70,10 @@ namespace NYurik.FastBinTimeseries
             IBinSerializer serializer, string tag, int itemSize)
         {
             return new SerializerException(
-                "Serializer {1} ({2}){0} was created with ItemSize={3}, but now the ItemSize={4}",
-                tag == null ? "" : " Tag='" + tag + "'",
+                "Serializer {0} ({1}){2} was created with ItemSize={3}, but now the ItemSize={4}",
                 serializer.GetType().AssemblyQualifiedName,
                 serializer.Version,
+                tag == null ? "" : " Tag='" + tag + "'",
                 itemSize,
                 serializer.TypeSize);
         }
@@ -115,8 +115,8 @@ namespace NYurik.FastBinTimeseries
             {
                 string aqn = type.AssemblyQualifiedName;
                 throw new BinaryFileException(
-                    "Type {0}{1} cannot be cast into {2}", aqn,
-                    aqn == typeName ? "" : " (re-mapped from " + typeName + ")",
+                    "Type {0}{1} cannot be cast into {2}",
+                    aqn, aqn == typeName ? "" : " (re-mapped from " + typeName + ")",
                     typeof (T).AssemblyQualifiedName);
             }
             return instance;
@@ -191,10 +191,10 @@ namespace NYurik.FastBinTimeseries
                 {
                     do
                     {
-                        ((long*)pDestination)[0] = ((long*)pSource)[0];
-                        ((long*)pDestination)[1] = ((long*)pSource)[1];
-                        ((long*)pDestination)[2] = ((long*)pSource)[2];
-                        ((long*)pDestination)[3] = ((long*)pSource)[3];
+                        ((long*) pDestination)[0] = ((long*) pSource)[0];
+                        ((long*) pDestination)[1] = ((long*) pSource)[1];
+                        ((long*) pDestination)[2] = ((long*) pSource)[2];
+                        ((long*) pDestination)[3] = ((long*) pSource)[3];
                         pDestination += blockSize;
                         pSource += blockSize;
                         byteCount -= blockSize;
@@ -204,14 +204,14 @@ namespace NYurik.FastBinTimeseries
                 {
                     do
                     {
-                        ((int*)pDestination)[0] = ((int*)pSource)[0];
-                        ((int*)pDestination)[1] = ((int*)pSource)[1];
-                        ((int*)pDestination)[2] = ((int*)pSource)[2];
-                        ((int*)pDestination)[3] = ((int*)pSource)[3];
-                        ((int*)pDestination)[4] = ((int*)pSource)[4];
-                        ((int*)pDestination)[5] = ((int*)pSource)[5];
-                        ((int*)pDestination)[6] = ((int*)pSource)[6];
-                        ((int*)pDestination)[7] = ((int*)pSource)[7];
+                        ((int*) pDestination)[0] = ((int*) pSource)[0];
+                        ((int*) pDestination)[1] = ((int*) pSource)[1];
+                        ((int*) pDestination)[2] = ((int*) pSource)[2];
+                        ((int*) pDestination)[3] = ((int*) pSource)[3];
+                        ((int*) pDestination)[4] = ((int*) pSource)[4];
+                        ((int*) pDestination)[5] = ((int*) pSource)[5];
+                        ((int*) pDestination)[6] = ((int*) pSource)[6];
+                        ((int*) pDestination)[7] = ((int*) pSource)[7];
                         pDestination += blockSize;
                         pSource += blockSize;
                         byteCount -= blockSize;

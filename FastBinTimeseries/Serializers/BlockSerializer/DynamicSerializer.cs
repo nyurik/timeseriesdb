@@ -110,7 +110,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                         return new ScaledDeltaField(this, valueType, name);
 
                     default:
-                        throw new SerializerException("Unsupported primitive type {0}", valueType);
+                        throw new SerializerException("Unsupported primitive type " + valueType);
                 }
             }
 

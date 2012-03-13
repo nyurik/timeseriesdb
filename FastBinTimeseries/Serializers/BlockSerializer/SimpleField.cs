@@ -112,7 +112,7 @@ namespace NYurik.FastBinTimeseries.Serializers.BlockSerializer
                     break;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {0}", StateName, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, ValueType.AssemblyQualifiedName);
             }
 
             base.MakeReadonly();

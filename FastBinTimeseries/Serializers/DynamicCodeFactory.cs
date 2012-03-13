@@ -40,14 +40,14 @@ namespace NYurik.FastBinTimeseries.Serializers
         public static readonly Lazy<DynamicCodeFactory> Instance =
             new Lazy<DynamicCodeFactory>(() => new DynamicCodeFactory());
 
-        private readonly ConcurrentDictionary<Type, BinSerializerInfo> _serializers =
-            new ConcurrentDictionary<Type, BinSerializerInfo>();
-
         private readonly ConcurrentDictionary<FieldInfo, Delegate> _indAccessorCache =
             new ConcurrentDictionary<FieldInfo, Delegate>();
 
         private readonly ConcurrentDictionary<Type, FieldInfo> _indFieldsCache =
             new ConcurrentDictionary<Type, FieldInfo>();
+
+        private readonly ConcurrentDictionary<Type, BinSerializerInfo> _serializers =
+            new ConcurrentDictionary<Type, BinSerializerInfo>();
 
         private DynamicCodeFactory()
         {
@@ -160,8 +160,9 @@ namespace NYurik.FastBinTimeseries.Serializers
             return method;
         }
 
-        private static DynamicMethod CreateSerializerMethod(Type itemType, Type baseType, string methodName,
-                                                            string methodToCallName, Type firstParamType)
+        private static DynamicMethod CreateSerializerMethod(
+            Type itemType, Type baseType, string methodName,
+            string methodToCallName, Type firstParamType)
         {
             MethodInfo methodToCall = GetMethodInfo(baseType, methodToCallName);
 
@@ -300,7 +301,7 @@ namespace NYurik.FastBinTimeseries.Serializers
         {
             FieldInfo res = FindIndexField(type);
             if (res == null)
-                throw new SerializerException("No field of indexable type was found in type {0}", type.FullName);
+                throw new SerializerException("No field of indexable type was found in type " + type.FullName);
             return res;
         }
 
@@ -316,7 +317,7 @@ namespace NYurik.FastBinTimeseries.Serializers
                     {
                         FieldInfo[] fieldInfo = t.GetFields(TypeExtensions.AllInstanceMembers);
                         if (fieldInfo.Length < 1)
-                            throw new SerializerException("No fields found in type {0}", t.FullName);
+                            throw new SerializerException("No fields found in type " + t.FullName);
 
                         FieldInfo result = null;
                         bool foundIndAttribute = false;
@@ -374,7 +375,7 @@ namespace NYurik.FastBinTimeseries.Serializers
                                         "The field {0} does not belong to type {1}",
                                         fi.Name, itemType.FullName));
 
-                            if (fi.FieldType != typeof(TInd))
+                            if (fi.FieldType != typeof (TInd))
                                 throw new InvalidOperationException(
                                     string.Format(
                                         "The index field {0}.{1} is of type {2}, whereas {3} was expected",
@@ -400,8 +401,9 @@ namespace NYurik.FastBinTimeseries.Serializers
             public readonly DynamicMethod MemPtrMethod;
             public readonly int TypeSize;
 
-            public BinSerializerInfo(int typeSize, DynamicMethod fileStreamMethod, DynamicMethod memPtrMethod,
-                                     DynamicMethod memCompareMethod)
+            public BinSerializerInfo(
+                int typeSize, DynamicMethod fileStreamMethod, DynamicMethod memPtrMethod,
+                DynamicMethod memCompareMethod)
             {
                 TypeSize = typeSize;
                 FileStreamMethod = fileStreamMethod;
