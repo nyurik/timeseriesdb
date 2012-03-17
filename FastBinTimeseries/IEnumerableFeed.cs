@@ -42,7 +42,7 @@ namespace NYurik.FastBinTimeseries
     }
 
     /// <summary>
-    /// Implementors can read <see cref="TVal"/> values as a stream.
+    /// Implementors can read <typeparamref name="TVal"/> values as a stream.
     /// It is assumed that value's index is somehow stored inside the value.
     /// </summary>
     /// <typeparam name="TInd">Type of the index. Must be comparable.</typeparam>
@@ -59,7 +59,7 @@ namespace NYurik.FastBinTimeseries
         /// Read data from the underlying storage one block at a time.
         /// </summary>
         /// <param name="fromInd">The index of the first element to read.
-        /// If default(<see cref="TInd"/>), will read from the first item going forward, or last when going in reverse.
+        /// If default(<typeparamref name="TInd"/>), will read from the first item going forward, or last when going in reverse.
         /// Inclusive if going forward, exclusive when going backwards.</param>
         /// <param name="inReverse">Set to true if you want to enumerate backwards, from last to first</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
@@ -87,7 +87,7 @@ namespace NYurik.FastBinTimeseries
     }
 
     /// <summary>
-    /// Implementors can read and store values of type <see cref="TVal"/>.
+    /// Implementors can read and store values of type <typeparamref name="TVal"/>.
     /// </summary>
     /// <typeparam name="TInd">Type of the index. Must be comparable.</typeparam>
     /// <typeparam name="TVal">Type of the value stored</typeparam>

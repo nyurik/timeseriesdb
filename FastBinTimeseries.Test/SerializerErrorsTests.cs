@@ -50,6 +50,7 @@ namespace NYurik.FastBinTimeseries.Test
             #endregion
         }
 
+#pragma warning disable 649
         [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
         private struct ValTypeWithRef
         {
@@ -61,6 +62,7 @@ namespace NYurik.FastBinTimeseries.Test
         {
             public GenType<int> Val;
         }
+#pragma warning restore 649
 
         [Test]
         public void CreateSerializer()
