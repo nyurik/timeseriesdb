@@ -24,7 +24,6 @@
 
 using System;
 using System.Collections.Generic;
-using NYurik.FastBinTimeseries.CommonCode;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -104,10 +103,10 @@ namespace NYurik.FastBinTimeseries
                     continue;
                 }
 
-                int pos = segm.Array.BinarySearch(
-                    untilInd, (v, ts) => tsa(v).CompareTo(ts),
-                    ListExtensions.Find.FirstEqual,
-                    segm.Offset, segm.Count);
+                var pos = (int)
+                          FastBinFileUtils.BinarySearch(
+                              untilInd, segm.Offset, segm.Count, false, i => tsa(segm.Array[i]));
+
                 if (pos < 0)
                     pos = ~pos;
 
@@ -120,7 +119,7 @@ namespace NYurik.FastBinTimeseries
                 else
                 {
                     if (pos > 0)
-                        yield return new ArraySegment<TVal>(segm.Array, segm.Offset, pos);
+                        yield return new ArraySegment<TVal>(segm.Array, segm.Offset, pos - segm.Offset);
                 }
 
                 yield break;

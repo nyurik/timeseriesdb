@@ -23,10 +23,8 @@
 #endregion
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using JetBrains.Annotations;
@@ -72,7 +70,7 @@ namespace NYurik.FastBinTimeseries
         private bool _hasLastIndex;
         private FieldInfo _indexFieldInfo;
         private TInd _lastIndex;
-        private Tuple<long, ConcurrentDictionary<long, TInd>> _searchCache;
+        private CachedIndex<TInd> _searchCache;
         private bool _uniqueIndexes;
 
         #region Constructors
@@ -144,7 +142,43 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
+        private CachedIndex<TInd> SearchCache
+        {
+            get
+            {
+                if (_searchCache == null)
+                {
+                    ThrowOnNotInitialized();
+
+                    var buff = new TVal[1];
+                    var oneElementSegment = new ArraySegment<TVal>(buff);
+                    int itemSize = ItemSize;
+
+                    _searchCache = new CachedIndex<TInd>(
+                        DefaultMaxBinaryCacheSize, () => BinarySearchCacheSize, GetCount,
+                        (ind, cnt) =>
+                            {
+                                if (PerformUnsafeBlockAccess(ind, false, oneElementSegment, cnt*itemSize, false) < 1)
+                                    throw new BinaryFileException("Unable to read index block");
+                                return IndexAccessor(oneElementSegment.Array[0]);
+                            },
+                        cnt =>
+                            {
+                                _hasFirstIndex = false;
+                                _hasLastIndex = false;
+                            });
+                }
+
+                return _searchCache;
+            }
+        }
+
         #region IWritableFeed<TInd,TVal> Members
+
+        public override bool IsEmpty
+        {
+            get { return SearchCache.Count == 0; }
+        }
 
         TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
@@ -153,25 +187,7 @@ namespace NYurik.FastBinTimeseries
 
         public TInd FirstIndex
         {
-            get
-            {
-                long count = GetCount();
-                ResetOnChangedAndGetCache(count, false);
-
-                if (!_hasFirstIndex && count > 0)
-                {
-                    ArraySegment<TVal> seg = PerformStreaming(0, false, maxItemCount: 1).FirstOrDefault();
-                    if (seg.Count > 0)
-                    {
-                        _firstIndex = IndexAccessor(seg.Array[0]);
-                        _hasFirstIndex = true;
-                    }
-                }
-
-                if (_hasFirstIndex)
-                    return _firstIndex;
-                return default(TInd);
-            }
+            get { return GetFirstIndex(SearchCache.Count); }
             private set
             {
                 _firstIndex = value;
@@ -181,25 +197,7 @@ namespace NYurik.FastBinTimeseries
 
         public TInd LastIndex
         {
-            get
-            {
-                long count = GetCount();
-                ResetOnChangedAndGetCache(count, false);
-
-                if (!_hasLastIndex && count > 0)
-                {
-                    ArraySegment<TVal> seg = PerformStreaming(count - 1, false, maxItemCount: 1).FirstOrDefault();
-                    if (seg.Count > 0)
-                    {
-                        _lastIndex = IndexAccessor(seg.Array[0]);
-                        _hasLastIndex = true;
-                    }
-                }
-
-                if (_hasLastIndex)
-                    return _lastIndex;
-                return default(TInd);
-            }
+            get { return GetLastIndex(SearchCache.Count); }
             private set
             {
                 _lastIndex = value;
@@ -230,7 +228,7 @@ namespace NYurik.FastBinTimeseries
             long start;
             if (!FastBinFileUtils.IsDefault(fromInd))
             {
-                start = BinarySearch(fromInd, true);
+                start = BinarySearch(fromInd);
                 if (start < 0)
                     start = ~start;
                 if (inReverse)
@@ -258,118 +256,47 @@ namespace NYurik.FastBinTimeseries
 
         #endregion
 
-        protected long BinarySearch(TInd index)
+        private TInd GetFirstIndex(long count)
         {
-            if (!UniqueIndexes)
-                throw new InvalidOperationException(
-                    "This method call is only allowed for the unique index file. Use BinarySearch(TInd, bool) instead.");
-            return BinarySearch(index, true);
+            return GetFirstLastIndex(count, true, ref _hasFirstIndex, ref _firstIndex);
         }
 
-        protected long BinarySearch(TInd index, bool findFirst)
+        private TInd GetLastIndex(long count)
         {
-            long start = 0L;
-            long count = GetCount();
-            long end = count - 1;
+            return GetFirstLastIndex(count, false, ref _hasLastIndex, ref _lastIndex);
+        }
+
+        private TInd GetFirstLastIndex(long count, bool isFirst, ref bool hasIndex, ref TInd index)
+        {
+            if (!hasIndex && count > 0)
+            {
+                index = SearchCache.GetValueAt(isFirst ? 0 : count - 1);
+                hasIndex = true;
+            }
+
+            return hasIndex ? index : default(TInd);
+        }
+
+        /// <summary>
+        /// Search for the first occurence of the index in the file
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        protected long BinarySearch(TInd value)
+        {
+            long count = SearchCache.Count;
 
             // Optimize in case we search outside of the file
             if (count <= 0)
                 return ~0;
 
-            if (index.CompareTo(FirstIndex) < 0)
+            if (value.CompareTo(GetFirstIndex(count)) < 0)
                 return ~0;
 
-            if (index.CompareTo(LastIndex) > 0)
+            if (value.CompareTo(GetLastIndex(count)) > 0)
                 return ~count;
 
-            var buff = new TVal[2];
-            var oneElementSegment = new ArraySegment<TVal>(buff, 0, 1);
-
-            ConcurrentDictionary<long, TInd> cache = null;
-            if (BinarySearchCacheSize >= 0)
-            {
-                cache = ResetOnChangedAndGetCache(count, true);
-                if (cache.Count > (BinarySearchCacheSize == 0 ? DefaultMaxBinaryCacheSize : BinarySearchCacheSize))
-                    cache.Clear();
-            }
-
-            bool useMma = UseMemoryMappedAccess(1, false);
-
-            while (start <= end)
-            {
-                long mid = start + ((end - start) >> 1);
-                TInd indAtMid;
-                TInd indAtMid2 = default(TInd);
-
-                // Read new value from file unless we already have it pre-cached in the dictionary
-                if (end - start == 1 && !UniqueIndexes && !findFirst)
-                {
-                    // for the special case where we are left with two elements,
-                    // and searching for the last non-unique element,
-                    // read both elements to see if the 2nd one matches our search
-                    if (cache == null
-                        || !cache.TryGetValue(mid, out indAtMid)
-                        || !cache.TryGetValue(mid + 1, out indAtMid2))
-                    {
-                        if (PerformUnsafeBlockAccess(mid, false, new ArraySegment<TVal>(buff), count*ItemSize, useMma)
-                            < 2)
-                            throw new BinaryFileException("Unable to read two blocks");
-
-                        indAtMid = IndexAccessor(buff[0]);
-                        indAtMid2 = IndexAccessor(buff[1]);
-                        if (cache != null)
-                        {
-                            cache.TryAdd(mid, indAtMid);
-                            cache.TryAdd(mid + 1, indAtMid2);
-                        }
-                    }
-                }
-                else
-                {
-                    if (cache == null || !cache.TryGetValue(mid, out indAtMid))
-                    {
-                        if (PerformUnsafeBlockAccess(mid, false, oneElementSegment, count*ItemSize, useMma) < 1)
-                            throw new BinaryFileException("Unable to read index block");
-                        indAtMid = IndexAccessor(oneElementSegment.Array[0]);
-                        if (cache != null)
-                            cache.TryAdd(mid, indAtMid);
-                    }
-                }
-
-                int comp = indAtMid.CompareTo(index);
-                if (comp == 0)
-                {
-                    if (UniqueIndexes)
-                        return mid;
-
-                    // In case when the exact index has been found and not forcing uniqueness,
-                    // we must find the first/last of them in a row of equal indexes.
-                    // To do that, we continue dividing until the last element.
-                    if (findFirst)
-                    {
-                        if (start == mid)
-                            return mid;
-                        end = mid;
-                    }
-                    else
-                    {
-                        if (end == mid)
-                            return mid;
-
-                        // special case - see above
-                        if (end - start == 1)
-                            return indAtMid2.CompareTo(index) == 0 ? mid + 1 : mid;
-
-                        start = mid;
-                    }
-                }
-                else if (comp < 0)
-                    start = mid + 1;
-                else
-                    end = mid - 1;
-            }
-
-            return ~start;
+            return FastBinFileUtils.BinarySearch(value, 0L, count, UniqueIndexes, SearchCache.GetValueAt);
         }
 
         /// <summary>
@@ -377,7 +304,7 @@ namespace NYurik.FastBinTimeseries
         /// </summary>
         public void TruncateFile(TInd deleteOnAndAfter)
         {
-            long newCount = BinarySearch(deleteOnAndAfter, true);
+            long newCount = BinarySearch(deleteOnAndAfter);
             if (newCount < 0) newCount = ~newCount;
 
             TruncateFile(newCount);
@@ -385,7 +312,7 @@ namespace NYurik.FastBinTimeseries
 
         protected void TruncateFile(long newCount)
         {
-            long fileCount = GetCount();
+            long fileCount = SearchCache.Count;
             if (newCount == fileCount)
                 return;
 
@@ -395,38 +322,6 @@ namespace NYurik.FastBinTimeseries
             if (newCount == 0)
                 _hasFirstIndex = false;
             _hasLastIndex = false;
-        }
-
-        private ConcurrentDictionary<long, TInd> ResetOnChangedAndGetCache(long count, bool createCache)
-        {
-            Tuple<long, ConcurrentDictionary<long, TInd>> sc = _searchCache;
-
-            if (sc == null || sc.Item1 != count || (createCache && sc.Item2 == null))
-            {
-                lock (LockObj)
-                {
-                    sc = _searchCache;
-                    bool countChanged = sc == null || sc.Item1 != count;
-
-                    if (countChanged)
-                    {
-                        // always reset just in case
-                        _hasFirstIndex = false;
-                        _hasLastIndex = false;
-                    }
-
-                    if (countChanged || (createCache && sc.Item2 == null))
-                    {
-                        ConcurrentDictionary<long, TInd> cache =
-                            createCache ? new ConcurrentDictionary<long, TInd>() : null;
-
-                        _searchCache = Tuple.Create(count, cache);
-                        return cache;
-                    }
-                }
-            }
-
-            return sc.Item2;
         }
 
         /// <summary>

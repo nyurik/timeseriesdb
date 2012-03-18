@@ -168,6 +168,53 @@ namespace NYurik.FastBinTimeseries
             writer.Write(aqn);
         }
 
+        /// <summary>
+        /// Using binary search locate value in any data structure using accessor.
+        /// For non-unique sequences, if found more than one identical value, will return position of the first.
+        /// </summary>
+        /// <typeparam name="TInd">Type of the index, must be comparable</typeparam>
+        /// <param name="value">Value to find</param>
+        /// <param name="start">First position to look at</param>
+        /// <param name="count">Number of elements to look at</param>
+        /// <param name="uniqueIndexes">If true, return first found position, otherwise will find the first one</param>
+        /// <param name="getValueAt">Function to get value at a given position</param>
+        /// <returns>Position of the first found value, or bitwise-NOT of the position it should be at.</returns>
+        public static long BinarySearch<TInd>(TInd value, long start, long count, bool uniqueIndexes,
+                                              [NotNull] Func<long, TInd> getValueAt)
+            where TInd : IComparable<TInd>
+        {
+            if (getValueAt == null) throw new ArgumentNullException("getValueAt");
+            if (count < 0) throw new ArgumentOutOfRangeException("count", count, "<0");
+
+            long end = start + count - 1;
+
+            while (start <= end)
+            {
+                long mid = start + ((end - start) >> 1);
+                TInd indAtMid = getValueAt(mid);
+                int comp = indAtMid.CompareTo(value);
+
+                if (comp == 0)
+                {
+                    if (uniqueIndexes)
+                        return mid;
+
+                    // In case when the exact index has been found and not forcing uniqueness,
+                    // we must find the first of them in a row of equal indexes.
+                    // To do that, we continue dividing until the last element.
+                    if (start == mid)
+                        return mid;
+                    end = mid;
+                }
+                else if (comp < 0)
+                    start = mid + 1;
+                else
+                    end = mid - 1;
+            }
+
+            return ~start;
+        }
+
         #region Internal
 
         internal static bool IsDefault<TInd>(TInd value)

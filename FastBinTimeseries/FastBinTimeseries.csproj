@@ -138,6 +138,7 @@
     <None Include="_ClassDiagram.cd" />
     <Compile Include="BinCompressedSeriesFile.cs" />
     <Compile Include="BufferProvider.cs" />
+    <Compile Include="CachedIndex.cs" />
     <Compile Include="CommonCode\TypeSpec.cs" />
     <Compile Include="FeedConverter.cs" />
     <Compile Include="IEnumerableFeed.cs" />
@@ -145,7 +146,6 @@
     <Compile Include="CommonCode\JetBrains.cs" />
     <Compile Include="EnumerableFeedExtensions.cs" />
     <Compile Include="IGenericInvoker.cs" />
-    <Compile Include="CommonCode\ListExtensions.cs" />
     <Compile Include="Serializers\BinarySerializerAttribute.cs" />
     <Compile Include="BinIndexedFile.cs" />
     <Compile Include="CombinedException.cs" />

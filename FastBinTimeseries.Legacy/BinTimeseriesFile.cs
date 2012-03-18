@@ -105,7 +105,9 @@ namespace NYurik.FastBinTimeseries
 
         public new long BinarySearch(UtcDateTime timestamp, bool findFirst)
         {
-            return base.BinarySearch(timestamp, findFirst);
+            if (!findFirst)
+                throw new NotSupportedException("Find LAST is no longer supported. Consider switching to Streaming methods");
+            return base.BinarySearch(timestamp);
         }
 
         public new void TruncateFile(long newCount)

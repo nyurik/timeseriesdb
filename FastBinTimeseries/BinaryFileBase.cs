@@ -42,9 +42,6 @@ namespace NYurik.FastBinTimeseries
 
         private static readonly Version[] KnownVersions = {BaseVersion10, BaseVersion11, BaseVersion12};
 
-        /// <summary> Used by any derived classes for their explicit locking requirements </summary>
-        protected readonly object LockObj = new object();
-
         /// <summary> Base version for new files by default </summary>
         private Version _baseVersion = BaseVersion12;
 
@@ -148,7 +145,7 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        public bool IsEmpty
+        public virtual bool IsEmpty
         {
             get { return GetCount() == 0; }
         }
