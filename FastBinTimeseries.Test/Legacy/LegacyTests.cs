@@ -54,7 +54,7 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
 
                 var buf = new ArraySegment<_LongByte_SeqPk1>(new _LongByte_SeqPk1[21], 10, 11);
                 f.ReadData(0, buf);
-                TestUtils.CollectionAssertEqual(Data<_LongByte_SeqPk1>(10, 20), buf.StreamSegmentValues(), "#2");
+                TestUtils.CollectionAssertEqual(Data<_LongByte_SeqPk1>(10, 20), buf.Stream(), "#2");
             }
         }
     }

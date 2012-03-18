@@ -73,10 +73,7 @@ namespace NYurik.FastBinTimeseries
                 Buffer<TNew> buff = null;
                 int maxCount = 0;
 
-                foreach (
-                    TOld old in
-                        _feed.StreamSegments(fromInd, inReverse, maxItemCount: maxItemCount)
-                            .StreamSegmentValues(inReverse))
+                foreach (TOld old in _feed.Stream(fromInd, inReverse: inReverse, maxItemCount: maxItemCount))
                 {
                     if (filter != null && !filter(old))
                         continue;
@@ -88,7 +85,6 @@ namespace NYurik.FastBinTimeseries
                         buff = buffers.Current;
                         maxCount = buff.Count > 0 ? buff.Count : buff.Capacity;
                         buff.Count = 0;
-                        buff.InReverse = inReverse;
                     }
 
                     buff.Add(conv(old));

@@ -125,7 +125,7 @@ namespace NYurik.FastBinTimeseries
         public static TVal[] ReadDataToEnd<TVal, TInd>(this BinSeriesFile<TInd, TVal> binSeriesFile, long firstItemIdx)
             where TInd : struct, IComparable, IComparable<TInd>
         {
-            return binSeriesFile.PerformStreaming(firstItemIdx, false).StreamSegmentValues().ToArray();
+            return binSeriesFile.PerformStreaming(firstItemIdx, false).Stream().ToArray();
         }
 
         #region Nested type: Generic

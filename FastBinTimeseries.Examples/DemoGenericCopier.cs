@@ -35,6 +35,8 @@ namespace NYurik.FastBinTimeseries.Examples
             const string srcFile = "GenericCopier1.bts";
             const string dstFile = "GenericCopier2.bts";
 
+            Console.WriteLine("\n **** GenericCopier example ****\n");
+
             try
             {
                 // Create sample file and put some data into it
@@ -53,6 +55,7 @@ namespace NYurik.FastBinTimeseries.Examples
                         return;
                     }
 
+                    // Print content of the source file
                     Console.WriteLine("Source file\n{0}", Utils.DumpFeed(src));
 
                     // We need a class that implements IGenericCallable2<,>

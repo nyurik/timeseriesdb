@@ -154,7 +154,7 @@ namespace NYurik.FastBinTimeseries.Test
             IEnumerable<ArraySegment<T>> expected, IEnumerable<T> actual,
             string format = null, params object[] args)
         {
-            CollectionAssertEqual(expected.StreamSegmentValues(), actual, null, format, args);
+            CollectionAssertEqual(expected.Stream(), actual, null, format, args);
         }
 
         [StringFormatMethod("format")]

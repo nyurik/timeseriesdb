@@ -35,7 +35,7 @@ namespace NYurik.FastBinTimeseries
             IEnumerable<Buffer<TVal>> bufferProvider = null, long maxItemCount = long.MaxValue)
             where TInd : IComparable<TInd>
         {
-            return Stream(() => feed, fromInd, untilInd, inReverse, bufferProvider, maxItemCount);
+            return feed.StreamSegments(fromInd, untilInd, inReverse, bufferProvider, maxItemCount).Stream();
         }
 
         public static IEnumerable<TVal> Stream<TInd, TVal>(
@@ -53,12 +53,8 @@ namespace NYurik.FastBinTimeseries
             {
                 foreach (var segm in feed.StreamSegments(fromInd, untilInd, inReverse, bufferProvider, maxItemCount))
                 {
-                    if (inReverse)
-                        for (int i = segm.Offset + segm.Count - 1; i >= segm.Offset; i--)
-                            yield return segm.Array[i];
-                    else
-                        for (int i = segm.Offset; i < segm.Offset + segm.Count; i++)
-                            yield return segm.Array[i];
+                    for (int i = segm.Offset; i < segm.Offset + segm.Count; i++)
+                        yield return segm.Array[i];
                 }
             }
             finally
@@ -95,9 +91,8 @@ namespace NYurik.FastBinTimeseries
                 if (segm.Count == 0)
                     continue;
 
-                if (inReverse
-                        ? tsa(segm.Array[segm.Offset]).CompareTo(untilInd) >= 0
-                        : tsa(segm.Array[segm.Offset + segm.Count - 1]).CompareTo(untilInd) < 0)
+                int comp = tsa(segm.Array[segm.Offset + segm.Count - 1]).CompareTo(untilInd);
+                if (inReverse ? comp >= 0 : comp < 0)
                 {
                     yield return segm;
                     continue;
@@ -105,58 +100,41 @@ namespace NYurik.FastBinTimeseries
 
                 var pos = (int)
                           FastBinFileUtils.BinarySearch(
-                              untilInd, segm.Offset, segm.Count, false, i => tsa(segm.Array[i]));
+                              untilInd, segm.Offset, segm.Count, false, inReverse, i => tsa(segm.Array[i]));
 
                 if (pos < 0)
                     pos = ~pos;
+                else if (inReverse)
+                    pos++;
 
-                if (inReverse)
-                {
-                    int count = segm.Count - pos;
-                    if (count > 0)
-                        yield return new ArraySegment<TVal>(segm.Array, pos, count);
-                }
-                else
-                {
-                    if (pos > 0)
-                        yield return new ArraySegment<TVal>(segm.Array, segm.Offset, pos - segm.Offset);
-                }
+                if (pos > segm.Offset)
+                    yield return new ArraySegment<TVal>(segm.Array, segm.Offset, pos - segm.Offset);
 
                 yield break;
             }
         }
 
-        public static IEnumerable<T> StreamSegmentValues<T>(
-            this ArraySegment<T> arraySegment,
-            bool inReverse = false)
+        public static IEnumerable<T> Stream<T>(this ArraySegment<T> arraySegment)
         {
-            return new[] {arraySegment}.StreamSegmentValues(inReverse);
+            if (arraySegment.Count > 0)
+            {
+                int max = arraySegment.Offset + arraySegment.Count;
+                for (int i = arraySegment.Offset; i < max; i++)
+                    yield return arraySegment.Array[i];
+            }
         }
 
-        public static IEnumerable<T> StreamSegmentValues<T>(
-            this IEnumerable<ArraySegment<T>> stream,
-            bool inReverse = false)
+        public static IEnumerable<T> Stream<T>(this IEnumerable<ArraySegment<T>> stream)
         {
-            if (stream == null)
-                throw new ArgumentNullException("stream");
+            if (stream == null) throw new ArgumentNullException("stream");
 
-            if (inReverse)
-            {
-                foreach (var v in stream)
-                    if (v.Count > 0)
-                        for (int i = v.Count + v.Offset - 1; i >= v.Offset; i--)
-                            yield return v.Array[i];
-            }
-            else
-            {
-                foreach (var v in stream)
-                    if (v.Count > 0)
-                    {
-                        int max = v.Offset + v.Count;
-                        for (int i = v.Offset; i < max; i++)
-                            yield return v.Array[i];
-                    }
-            }
+            foreach (var v in stream)
+                if (v.Count > 0)
+                {
+                    int max = v.Offset + v.Count;
+                    for (int i = v.Offset; i < max; i++)
+                        yield return v.Array[i];
+                }
         }
     }
 }

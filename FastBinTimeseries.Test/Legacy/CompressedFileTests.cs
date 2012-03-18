@@ -47,7 +47,7 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
             string fileName = GetBinFileName();
 
             IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>> newData = Data(itemCount, 0, itemCount);
-            List<_DatetimeByte_SeqPk1> expected = newData.StreamSegmentValues().ToList();
+            List<_DatetimeByte_SeqPk1> expected = newData.Stream().ToList();
             Assert.AreEqual(itemCount, expected.Count);
             _DatetimeByte_SeqPk1[] expectedRev = expected.ToArray();
             Array.Reverse(expectedRev);

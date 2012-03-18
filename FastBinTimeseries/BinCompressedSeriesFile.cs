@@ -310,7 +310,7 @@ namespace NYurik.FastBinTimeseries
                             // start at the begining of the found block
                             iterToDispose = JoinStreams(
                                 firstNewItemInd, newValues, !UniqueIndexes && !allowFileTruncation,
-                                StreamSegments(default(TInd), firstBufferBlock, count).StreamSegmentValues()
+                                StreamSegments(default(TInd), firstBufferBlock, count).Stream()
                                 ).GetEnumerator();
 
                             mergedIter = iterToDispose;
@@ -444,40 +444,30 @@ namespace NYurik.FastBinTimeseries
                                 codec.Validate(BlockSize);
                         }
 
-                        int pos =
+                        var res = inReverse ? retBuf.AsArraySegmentReversed() : retBuf.AsArraySegment();
+
+                        int offset =
                             getFullBlock
-                                ? (inReverse ? ~retBuf.Count : ~0)
+                                ? ~0
                                 : (int) FastBinFileUtils.BinarySearch(
-                                    firstInd, 0, retBuf.Count, UniqueIndexes, p => IndexAccessor(retBuf.Array[p]));
-                        if (pos < 0)
-                            pos = ~pos;
+                                    firstInd, res.Offset, res.Count, UniqueIndexes, inReverse,
+                                    p => IndexAccessor(res.Array[p]));
+
+                        if (offset < 0)
+                            offset = ~offset;
+                        else if (inReverse)
+                            offset++;
 
                         getFullBlock = true;
 
-                        int count, offset;
-                        if (inReverse)
-                        {
-                            offset = 0;
-                            count = pos;
-                            if (count > maxItemCount)
-                            {
-                                int shrinkBy = count - (int) maxItemCount;
-                                offset += shrinkBy;
-                                count -= shrinkBy;
-                            }
-                        }
-                        else
-                        {
-                            offset = pos;
-                            count = retBuf.Count - offset;
-                            if (count > maxItemCount)
-                                count = (int) maxItemCount;
-                        }
+                        int count = res.Count - offset;
+                        if (count > maxItemCount)
+                            count = (int) maxItemCount;
 
                         if (count > 0)
                         {
                             maxItemCount -= count;
-                            yield return new ArraySegment<TVal>(retBuf.Array, offset, count);
+                            yield return new ArraySegment<TVal>(res.Array, offset, count);
 
                             if (maxItemCount <= 0)
                                 yield break;
@@ -560,7 +550,7 @@ namespace NYurik.FastBinTimeseries
                 return 0;
             }
 
-            long block = FastBinFileUtils.BinarySearch(index, 0, blockCount, UniqueIndexes, SearchCache.GetValueAt);
+            long block = FastBinFileUtils.BinarySearch(index, 0, blockCount, UniqueIndexes, false, SearchCache.GetValueAt);
 
             if (block < 0)
                 block = ~block - 1;

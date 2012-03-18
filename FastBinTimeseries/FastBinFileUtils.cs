@@ -177,9 +177,10 @@ namespace NYurik.FastBinTimeseries
         /// <param name="start">First position to look at</param>
         /// <param name="count">Number of elements to look at</param>
         /// <param name="uniqueIndexes">If true, return first found position, otherwise will find the first one</param>
+        /// <param name="inReverse">True if the sequence is sorted in decreasing order</param>
         /// <param name="getValueAt">Function to get value at a given position</param>
         /// <returns>Position of the first found value, or bitwise-NOT of the position it should be at.</returns>
-        public static long BinarySearch<TInd>(TInd value, long start, long count, bool uniqueIndexes,
+        public static long BinarySearch<TInd>(TInd value, long start, long count, bool uniqueIndexes, bool inReverse,
                                               [NotNull] Func<long, TInd> getValueAt)
             where TInd : IComparable<TInd>
         {
@@ -193,6 +194,7 @@ namespace NYurik.FastBinTimeseries
                 long mid = start + ((end - start) >> 1);
                 TInd indAtMid = getValueAt(mid);
                 int comp = indAtMid.CompareTo(value);
+                if (inReverse) comp = -comp;
 
                 if (comp == 0)
                 {

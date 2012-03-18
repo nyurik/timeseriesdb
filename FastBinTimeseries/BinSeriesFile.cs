@@ -30,6 +30,7 @@ using System.Runtime.Serialization;
 using JetBrains.Annotations;
 using NYurik.FastBinTimeseries.EmitExtensions;
 using NYurik.FastBinTimeseries.Serializers;
+using System.Linq;
 
 namespace NYurik.FastBinTimeseries
 {
@@ -239,7 +240,16 @@ namespace NYurik.FastBinTimeseries
                 start = inReverse ? long.MaxValue : 0;
             }
 
-            return PerformStreaming(start, inReverse, bufferProvider, maxItemCount);
+            var stream = PerformStreaming(start, inReverse, bufferProvider, maxItemCount);
+
+            return inReverse
+                       ? stream.Select(
+                           seg =>
+                               {
+                                   Array.Reverse(seg.Array, seg.Offset, seg.Count);
+                                   return seg;
+                               })
+                       : stream;
         }
 
         public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
@@ -296,7 +306,7 @@ namespace NYurik.FastBinTimeseries
             if (value.CompareTo(GetLastIndex(count)) > 0)
                 return ~count;
 
-            return FastBinFileUtils.BinarySearch(value, 0L, count, UniqueIndexes, SearchCache.GetValueAt);
+            return FastBinFileUtils.BinarySearch(value, 0L, count, UniqueIndexes, false, SearchCache.GetValueAt);
         }
 
         /// <summary>
