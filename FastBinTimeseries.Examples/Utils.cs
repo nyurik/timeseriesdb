@@ -24,6 +24,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace NYurik.FastBinTimeseries.Examples
 {
@@ -50,5 +51,67 @@ namespace NYurik.FastBinTimeseries.Examples
             if (i > 0)
                 yield return new ArraySegment<T>(arr, 0, i);
         }
+
+        /// <summary>
+        /// Join multiple items converting each to string using provided converter with a separator in-between.
+        /// </summary>
+        public static string JoinStr<T>(this IEnumerable<T> source, string separator = ", ",
+                                        Converter<T, string> converter = null)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+            if (separator == null)
+                throw new ArgumentNullException("separator");
+            
+            if (converter == null)
+            {
+                // ReSharper disable CompareNonConstrainedGenericWithNull
+                converter = i => i == null ? "" : i.ToString();
+                // ReSharper restore CompareNonConstrainedGenericWithNull
+            }
+
+            bool isFirst = true;
+            var sb = new StringBuilder();
+            foreach (T t in source)
+            {
+                if (isFirst)
+                    isFirst = false;
+                else
+                    sb.Append(separator);
+
+                sb.Append(converter(t));
+            }
+            return sb.ToString();
+        }
+
+        public static string DumpFeed(IEnumerableFeed f)
+        {
+            return f.RunGenericMethod(new DumpHelper(), null);
+        }
+
+        #region Nested type: DumpHelper
+
+        private class DumpHelper : IGenericCallable2<string, object>
+        {
+            #region IGenericCallable2<string,object> Members
+
+            public string Run<TInd, TVal>(IGenericInvoker source, object arg)
+                where TInd : IComparable<TInd>
+            {
+                var f = (IEnumerableFeed<TInd, TVal>) source;
+
+                var sb = new StringBuilder();
+                foreach (TVal v in f.Stream())
+                {
+                    sb.Append(v);
+                    sb.Append("\n");
+                }
+                return sb.Length == 0 ? "(empty)" : sb.ToString();
+            }
+
+            #endregion
+        }
+
+        #endregion
     }
 }

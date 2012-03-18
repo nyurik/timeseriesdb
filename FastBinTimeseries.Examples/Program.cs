@@ -34,6 +34,7 @@ namespace NYurik.FastBinTimeseries.Examples
                 {
                     {"binseriesfile", () => DemoBinSeriesFile.Run()},
                     {"bincompressedseriesfile", () => DemoBinCompressedSeriesFile.Run()},
+                    {"genericcopier", () => DemoGenericCopier.Run()},
                 };
 
         /// <summary>

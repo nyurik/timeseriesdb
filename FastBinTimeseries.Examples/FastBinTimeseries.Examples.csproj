@@ -48,6 +48,7 @@
     <Compile Include="DemoBinCompressedSeriesFile.cs" />
     <Compile Include="DemoBinSeriesFile.cs" />
     <Compile Include="DataStructures.cs" />
+    <Compile Include="DemoGenericCopier.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils.cs" />
