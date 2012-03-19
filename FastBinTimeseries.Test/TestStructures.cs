@@ -29,6 +29,8 @@ using JetBrains.Annotations;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable NonReadonlyFieldInGetHashCode
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable FieldCanBeMadeReadOnly.Global
 
 namespace NYurik.FastBinTimeseries.Test
 {
@@ -39,6 +41,9 @@ namespace NYurik.FastBinTimeseries.Test
         [Index] public byte c;
 
         #region Implementation
+
+        [UsedImplicitly] public static _3Byte_noAttr MaxValue
+            = new _3Byte_noAttr {a = Byte.MaxValue, b = Byte.MaxValue, c = Byte.MaxValue};
 
         public bool Equals(_3Byte_noAttr other)
         {
@@ -115,6 +120,9 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly] public static _LongBool_SeqPk1 MaxValue
+            = new _LongBool_SeqPk1 {a = long.MaxValue, b = true};
+
         [UsedImplicitly]
         public static _LongBool_SeqPk1 New(long i)
         {
@@ -156,6 +164,9 @@ namespace NYurik.FastBinTimeseries.Test
                 return (a.GetHashCode()*397) ^ b.GetHashCode();
             }
         }
+
+        [UsedImplicitly] public static _LongByte_SeqPk1 MaxValue
+            = new _LongByte_SeqPk1 {a = long.MaxValue, b = byte.MaxValue};
 
         [UsedImplicitly]
         public static _LongByte_SeqPk1 New(long i)
@@ -203,6 +214,9 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly] public static _BoolLongBool_SeqPk1 MaxValue
+            = new _BoolLongBool_SeqPk1 {a = true, b = long.MaxValue, c = true};
+
         [UsedImplicitly]
         public static _BoolLongBool_SeqPk1 New(long i)
         {
@@ -249,6 +263,9 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        [UsedImplicitly] public static _ByteLongByte_SeqPk1 MaxValue
+            = new _ByteLongByte_SeqPk1 {a = byte.MaxValue, b = long.MaxValue, c = byte.MaxValue};
+
         [UsedImplicitly]
         public static _ByteLongByte_SeqPk1 New(long i)
         {
@@ -285,6 +302,9 @@ namespace NYurik.FastBinTimeseries.Test
                 return (a*397) ^ b.GetHashCode();
             }
         }
+
+        [UsedImplicitly] public static _IntBool_SeqPk1 MaxValue
+            = new _IntBool_SeqPk1 {a = int.MaxValue, b = true};
 
         [UsedImplicitly]
         public static _IntBool_SeqPk1 New(long i)
@@ -344,6 +364,9 @@ namespace NYurik.FastBinTimeseries.Test
             return string.Format("{0}, {1}, {2}", a, b, c);
         }
 
+        [UsedImplicitly] public static _3Byte_2Shrt_ExplPk1 MaxValue
+            = new _3Byte_2Shrt_ExplPk1 {a = byte.MaxValue, b = byte.MaxValue, c = byte.MaxValue};
+
         [UsedImplicitly]
         public static _3Byte_2Shrt_ExplPk1 New(long i)
         {
@@ -369,25 +392,27 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _FixedByteBuff7 : IEquatable<_FixedByteBuff7>
     {
-        [Index] private long Key;
-        private const int ArrayLenA = 3;
-        private const int ArrayLenB = 4;
-        public unsafe fixed byte a [ArrayLenA];
+        [Index] private long a;
+        private const int ArrayLenB = 3;
+        private const int ArrayLenC = 4;
+        // ReSharper disable FieldCanBeMadeReadOnly.Local
         private unsafe fixed byte b [ArrayLenB];
+        private unsafe fixed byte c [ArrayLenC];
+        // ReSharper restore FieldCanBeMadeReadOnly.Local
 
         #region Implementation
 
         public override unsafe string ToString()
         {
             var sb = new StringBuilder();
-            sb.Append(Key);
+            sb.Append(a);
             sb.Append(",");
-            fixed (byte* pa = a)
-                for (int i = 0; i < ArrayLenA; i++)
-                    sb.AppendFormat("{0},", pa[i]);
             fixed (byte* pb = b)
                 for (int i = 0; i < ArrayLenB; i++)
                     sb.AppendFormat("{0},", pb[i]);
+            fixed (byte* pc = c)
+                for (int i = 0; i < ArrayLenC; i++)
+                    sb.AppendFormat("{0},", pc[i]);
 
             sb.Remove(sb.Length - 1, 1);
             return sb.ToString();
@@ -395,15 +420,15 @@ namespace NYurik.FastBinTimeseries.Test
 
         public unsafe bool Equals(_FixedByteBuff7 other)
         {
-            if (Key != other.Key)
+            if (a != other.a)
                 return false;
-            fixed (byte* pa = a)
-                for (int i = 0; i < ArrayLenA; i++)
-                    if (pa[i] != other.a[i])
-                        return false;
             fixed (byte* pb = b)
                 for (int i = 0; i < ArrayLenB; i++)
                     if (pb[i] != other.b[i])
+                        return false;
+            fixed (byte* pc = c)
+                for (int i = 0; i < ArrayLenC; i++)
+                    if (pc[i] != other.c[i])
                         return false;
             return true;
         }
@@ -419,26 +444,28 @@ namespace NYurik.FastBinTimeseries.Test
         {
             unchecked
             {
-                fixed (byte* pa = a, pb = b)
+                fixed (byte* pb = b, pc = c)
                 {
-                    var result = (int) Key;
-                    for (int i = 0; i < ArrayLenA; i++)
-                        result = (result*397) ^ pa[i].GetHashCode();
+                    var result = (int) a;
                     for (int i = 0; i < ArrayLenB; i++)
                         result = (result*397) ^ pb[i].GetHashCode();
+                    for (int i = 0; i < ArrayLenC; i++)
+                        result = (result*397) ^ pc[i].GetHashCode();
                     return result;
                 }
             }
         }
 
+        [UsedImplicitly] public static _FixedByteBuff7 MaxValue = New(long.MaxValue);
+
         [UsedImplicitly]
         public static unsafe _FixedByteBuff7 New(long j)
         {
-            var v = new _FixedByteBuff7 {Key = j};
-            for (int i = 0; i < ArrayLenA; i++)
-                v.a[i] = (byte) j++;
+            var v = new _FixedByteBuff7 {a = j};
             for (int i = 0; i < ArrayLenB; i++)
                 v.b[i] = (byte) j++;
+            for (int i = 0; i < ArrayLenC; i++)
+                v.c[i] = (byte) j++;
             return v;
         }
 
@@ -448,22 +475,22 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _4Flds_ComplxIdx : IEquatable<_4Flds_ComplxIdx>
     {
-        [Index] public _CmplxIdx Index;
-        public int Field1;
-        public uint Field2;
-        public ulong Field3;
+        [Index] public _CmplxIdx a;
+        public int b;
+        public uint c;
+        public ulong d;
 
         #region Implementation
 
         public override string ToString()
         {
-            return string.Format("{0}, {1}, {2}, {3}", Index, Field1, Field2, Field3);
+            return string.Format("{0}, {1}, {2}, {3}", a, b, c, d);
         }
 
         public bool Equals(_4Flds_ComplxIdx other)
         {
-            return other.Index.Equals(Index) && other.Field1 == Field1 && other.Field2 == Field2
-                   && other.Field3 == Field3;
+            return other.a.Equals(a) && other.b == b && other.c == c
+                   && other.d == d;
         }
 
         public override bool Equals(object obj)
@@ -477,23 +504,26 @@ namespace NYurik.FastBinTimeseries.Test
         {
             unchecked
             {
-                int result = Index.GetHashCode();
-                result = (result*397) ^ Field1;
-                result = (result*397) ^ Field2.GetHashCode();
-                result = (result*397) ^ Field3.GetHashCode();
+                int result = a.GetHashCode();
+                result = (result*397) ^ b;
+                result = (result*397) ^ c.GetHashCode();
+                result = (result*397) ^ d.GetHashCode();
                 return result;
             }
         }
+
+        [UsedImplicitly] public static _4Flds_ComplxIdx MaxValue
+            = new _4Flds_ComplxIdx {a = _CmplxIdx.MaxValue, b = int.MaxValue, c = uint.MaxValue, d = ulong.MaxValue};
 
         [UsedImplicitly]
         public static _4Flds_ComplxIdx New(long ix)
         {
             return new _4Flds_ComplxIdx
                        {
-                           Index = new _CmplxIdx {Field1 = (int) ix, Field2 = (ulong) ix},
-                           Field1 = (int) (-1*ix),
-                           Field2 = (uint) ix,
-                           Field3 = (ulong) (ix << 32),
+                           a = new _CmplxIdx {a = (int) ix, b = (ulong) ix},
+                           b = (int) (-1*ix),
+                           c = (uint) ix,
+                           d = (ulong) (ix << 32),
                        };
         }
 
@@ -503,14 +533,16 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _CmplxIdx : IComparable<_CmplxIdx>
     {
-        public int Field1;
-        public ulong Field2;
+        public int a;
+        public ulong b;
+
+        public static _CmplxIdx MaxValue = new _CmplxIdx {a = int.MaxValue, b = ulong.MaxValue};
 
         #region Implementation
 
         public bool Equals(_CmplxIdx other)
         {
-            return other.Field1 == Field1 && other.Field2 == Field2;
+            return other.a == a && other.b == b;
         }
 
         public override bool Equals(object obj)
@@ -524,14 +556,14 @@ namespace NYurik.FastBinTimeseries.Test
         {
             unchecked
             {
-                return (Field1*397) ^ Field2.GetHashCode();
+                return (a*397) ^ b.GetHashCode();
             }
         }
 
         public int CompareTo(_CmplxIdx other)
         {
-            int comp = Field1.CompareTo(other.Field1);
-            return comp == 0 ? Field2.CompareTo(other.Field2) : comp;
+            int comp = a.CompareTo(other.a);
+            return comp == 0 ? b.CompareTo(other.b) : comp;
         }
 
         #endregion
@@ -543,6 +575,9 @@ namespace NYurik.FastBinTimeseries.Test
         public bool b;
 
         #region Implementation
+
+        [UsedImplicitly] public static _LongBool_Class MaxValue
+            = new _LongBool_Class {a = long.MaxValue, b = true};
 
         public bool Equals(_LongBool_Class other)
         {
@@ -581,22 +616,22 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _4Flds_ComplxIdxClass : IEquatable<_4Flds_ComplxIdxClass>
     {
-        [Index] public _CmplxIdxClass Index;
-        public int Field1;
-        public uint Field2;
-        public ulong Field3;
+        [Index] public _CmplxIdxClass a;
+        public int b;
+        public uint c;
+        public ulong d;
 
         #region Implementation
 
         public override string ToString()
         {
-            return string.Format("{0}, {1}, {2}, {3}", Index, Field1, Field2, Field3);
+            return string.Format("{0}, {1}, {2}, {3}", a, b, c, d);
         }
 
         public bool Equals(_4Flds_ComplxIdxClass other)
         {
-            return other.Index.Equals(Index) && other.Field1 == Field1 && other.Field2 == Field2
-                   && other.Field3 == Field3;
+            return other.a.Equals(a) && other.b == b && other.c == c
+                   && other.d == d;
         }
 
         public override bool Equals(object obj)
@@ -610,23 +645,27 @@ namespace NYurik.FastBinTimeseries.Test
         {
             unchecked
             {
-                int result = Index.GetHashCode();
-                result = (result*397) ^ Field1;
-                result = (result*397) ^ Field2.GetHashCode();
-                result = (result*397) ^ Field3.GetHashCode();
+                int result = a.GetHashCode();
+                result = (result*397) ^ b;
+                result = (result*397) ^ c.GetHashCode();
+                result = (result*397) ^ d.GetHashCode();
                 return result;
             }
         }
+
+        [UsedImplicitly] public static _4Flds_ComplxIdxClass MaxValue
+            = new _4Flds_ComplxIdxClass
+                  {a = _CmplxIdxClass.MaxValue, b = int.MaxValue, c = uint.MaxValue, d = ulong.MaxValue};
 
         [UsedImplicitly]
         public static _4Flds_ComplxIdxClass New(long ix)
         {
             return new _4Flds_ComplxIdxClass
                        {
-                           Index = new _CmplxIdxClass {Field1 = (int) ix, Field2 = (ulong) ix},
-                           Field1 = (int) (-1*ix),
-                           Field2 = (uint) ix,
-                           Field3 = (ulong) (ix << 32),
+                           a = new _CmplxIdxClass {a = (int) ix, b = (ulong) ix},
+                           b = (int) (-1*ix),
+                           c = (uint) ix,
+                           d = (ulong) (ix << 32),
                        };
         }
 
@@ -636,22 +675,22 @@ namespace NYurik.FastBinTimeseries.Test
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public class _4FldsClass_ComplxIdxClass : IEquatable<_4FldsClass_ComplxIdxClass>
     {
-        [Index] public _CmplxIdxClass Index;
-        public int Field1;
-        public uint Field2;
-        public ulong Field3;
+        [Index] public _CmplxIdxClass a;
+        public int b;
+        public uint c;
+        public ulong d;
 
         #region Implementation
 
         public override string ToString()
         {
-            return string.Format("{0}, {1}, {2}, {3}", Index, Field1, Field2, Field3);
+            return string.Format("{0}, {1}, {2}, {3}", a, b, c, d);
         }
 
         public bool Equals(_4FldsClass_ComplxIdxClass other)
         {
-            return other.Index.Equals(Index) && other.Field1 == Field1 && other.Field2 == Field2
-                   && other.Field3 == Field3;
+            return other.a.Equals(a) && other.b == b && other.c == c
+                   && other.d == d;
         }
 
         public override bool Equals(object obj)
@@ -665,23 +704,27 @@ namespace NYurik.FastBinTimeseries.Test
         {
             unchecked
             {
-                int result = Index.GetHashCode();
-                result = (result*397) ^ Field1;
-                result = (result*397) ^ Field2.GetHashCode();
-                result = (result*397) ^ Field3.GetHashCode();
+                int result = a.GetHashCode();
+                result = (result*397) ^ b;
+                result = (result*397) ^ c.GetHashCode();
+                result = (result*397) ^ d.GetHashCode();
                 return result;
             }
         }
+
+        [UsedImplicitly] public static _4FldsClass_ComplxIdxClass MaxValue
+            = new _4FldsClass_ComplxIdxClass
+                  {a = _CmplxIdxClass.MaxValue, b = int.MaxValue, c = uint.MaxValue, d = ulong.MaxValue};
 
         [UsedImplicitly]
         public static _4FldsClass_ComplxIdxClass New(long ix)
         {
             return new _4FldsClass_ComplxIdxClass
                        {
-                           Index = new _CmplxIdxClass {Field1 = (int) ix, Field2 = (ulong) ix},
-                           Field1 = (int) (-1*ix),
-                           Field2 = (uint) ix,
-                           Field3 = (ulong) (ix << 32),
+                           a = new _CmplxIdxClass {a = (int) ix, b = (ulong) ix},
+                           b = (int) (-1*ix),
+                           c = (uint) ix,
+                           d = (ulong) (ix << 32),
                        };
         }
 
@@ -689,21 +732,26 @@ namespace NYurik.FastBinTimeseries.Test
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct _CmplxIdxClass : IComparable<_CmplxIdxClass>
+    public class _CmplxIdxClass : IComparable<_CmplxIdxClass>, IEquatable<_CmplxIdxClass>
     {
-        public int Field1;
-        public ulong Field2;
+        public int a;
+        public ulong b;
+
+        public static readonly _CmplxIdxClass MaxValue = new _CmplxIdxClass {a = int.MaxValue, b = ulong.MaxValue};
 
         #region Implementation
 
         public bool Equals(_CmplxIdxClass other)
         {
-            return other.Field1 == Field1 && other.Field2 == Field2;
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return other.a == a && other.b == b;
         }
 
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != typeof (_CmplxIdxClass)) return false;
             return Equals((_CmplxIdxClass) obj);
         }
@@ -712,14 +760,19 @@ namespace NYurik.FastBinTimeseries.Test
         {
             unchecked
             {
-                return (Field1*397) ^ Field2.GetHashCode();
+                return (a*397) ^ b.GetHashCode();
             }
         }
 
         public int CompareTo(_CmplxIdxClass other)
         {
-            int comp = Field1.CompareTo(other.Field1);
-            return comp == 0 ? Field2.CompareTo(other.Field2) : comp;
+            int comp = a.CompareTo(other.a);
+            return comp == 0 ? b.CompareTo(other.b) : comp;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("({0},{1})", a, b);
         }
 
         #endregion

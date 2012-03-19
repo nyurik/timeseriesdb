@@ -172,14 +172,14 @@ namespace NYurik.FastBinTimeseries
         /// Using binary search locate value in any data structure using accessor.
         /// For non-unique sequences, if found more than one identical value, will return position of the first.
         /// </summary>
-        /// <typeparam name="TInd">Type of the index, must be comparable</typeparam>
-        /// <param name="value">Value to find</param>
-        /// <param name="start">First position to look at</param>
-        /// <param name="count">Number of elements to look at</param>
-        /// <param name="uniqueIndexes">If true, return first found position, otherwise will find the first one</param>
-        /// <param name="inReverse">True if the sequence is sorted in decreasing order</param>
-        /// <param name="getValueAt">Function to get value at a given position</param>
-        /// <returns>Position of the first found value, or bitwise-NOT of the position it should be at.</returns>
+        /// <typeparam name="TInd"> Type of the index, must be comparable </typeparam>
+        /// <param name="value"> Value to find </param>
+        /// <param name="start"> First position to look at </param>
+        /// <param name="count"> Number of elements to look at </param>
+        /// <param name="uniqueIndexes"> If true, return first found position, otherwise will find the first one </param>
+        /// <param name="inReverse"> True if the sequence is sorted in decreasing order </param>
+        /// <param name="getValueAt"> Function to get value at a given position </param>
+        /// <returns> Position of the first found value, or bitwise-NOT of the position it should be at. </returns>
         public static long BinarySearch<TInd>(TInd value, long start, long count, bool uniqueIndexes, bool inReverse,
                                               [NotNull] Func<long, TInd> getValueAt)
             where TInd : IComparable<TInd>
@@ -222,8 +222,13 @@ namespace NYurik.FastBinTimeseries
         internal static bool IsDefault<TInd>(TInd value)
             where TInd : IComparable<TInd>
         {
+            // For value types, it is safe to call IComparable.CompareTo(default) method
+            // For refs or interfaces we should only check for null
+
             // ReSharper disable CompareNonConstrainedGenericWithNull
-            return value == null || value.CompareTo(default(TInd)) == 0;
+            return typeof (TInd).IsValueType
+                       ? value.CompareTo(default(TInd)) == 0
+                       : value == null;
             // ReSharper restore CompareNonConstrainedGenericWithNull
         }
 
@@ -276,7 +281,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary>
-        /// Fast memory comparison - compares in blocks of 32 bytes, using either int or long (on 64bit machines)
+        ///   Fast memory comparison - compares in blocks of 32 bytes, using either int or long (on 64bit machines)
         /// </summary>
         internal static unsafe bool CompareMemory(byte* pSource1, byte* pSource2, uint byteCount)
         {

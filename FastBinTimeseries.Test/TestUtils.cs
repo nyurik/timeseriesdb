@@ -35,6 +35,9 @@ namespace NYurik.FastBinTimeseries.Test
     {
         private static readonly LinkedList<CacheItem> Items = new LinkedList<CacheItem>();
 
+        private static readonly Dictionary<Type, Tuple<Delegate, object>> FuncCache =
+            new Dictionary<Type, Tuple<Delegate, object>>();
+
         public static long RoundUpToMultiple(long value, long multiple)
         {
             if (value < 0)
@@ -95,7 +98,7 @@ namespace NYurik.FastBinTimeseries.Test
                 }
             }
 
-            var newObj = GetObjFactory<T>();
+            var newObj = GetObjInfo<T>().Item1;
             result = new T[count + 100];
             for (long i = 0; i < count + 100; i++)
                 result[i] = newObj(startFrom + step*i);
@@ -118,35 +121,6 @@ namespace NYurik.FastBinTimeseries.Test
             for (long i = minValue; i < maxValue; i += segSize)
                 yield return
                     new ArraySegment<T>(GenerateData<T>((int) Math.Min(segSize, maxValue - i), (int) i, step));
-        }
-
-        [StringFormatMethod("format")]
-        public static void AssertException<TEx>(Action operation, string format = null, params object[] args)
-            where TEx : Exception
-        {
-            AssertException<TEx>(
-                () =>
-                    {
-                        operation();
-                        return null;
-                    }, format, args);
-        }
-
-        [StringFormatMethod("format")]
-        public static void AssertException<TEx>(Func<object> operation, string format = null, params object[] args)
-            where TEx : Exception
-        {
-            try
-            {
-                object o = operation();
-                string fmt = format == null ? "" : String.Format(format, args) + ": ";
-                Assert.Fail(
-                    "{0}Should have thrown {1}, but instead completed with result {2}", fmt, typeof (TEx).Name, o);
-            }
-            catch (TEx)
-            {
-                // Console.WriteLine("Successfully cought {0}: {1}", typeof (TEx).Name, ex.Message);
-            }
         }
 
         [StringFormatMethod("format")]
@@ -232,12 +206,58 @@ namespace NYurik.FastBinTimeseries.Test
             }
         }
 
+        public static Tuple<Func<long, T>, T> GetObjInfo<T>()
+        {
+            Type type = typeof (T);
+            Tuple<Delegate, object> val;
+
+            if (!FuncCache.TryGetValue(type, out val))
+            {
+                if (type.IsPrimitive)
+                {
+                    switch (Type.GetTypeCode(type))
+                    {
+                        case TypeCode.Byte:
+                            val =
+                                Tuple.Create(
+                                    (Delegate) (Func<long, byte>) (i => (byte) (i%byte.MaxValue)),
+                                    (object) byte.MaxValue);
+                            break;
+                        default:
+                            throw new NotImplementedException("Primitive type not supported: " + type.Name);
+                    }
+                }
+                else
+                {
+                    ParameterExpression param = Expression.Parameter(typeof (long));
+                    val =
+                        Tuple.Create(
+                            (Delegate) Expression.Lambda<Func<long, T>>(
+                                Expression.Call(
+                                    type.GetMethod(
+                                        "New", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic),
+                                    param),
+                                param).Compile(),
+// ReSharper disable PossibleNullReferenceException
+                            type
+                                .GetField(
+                                    "MaxValue", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+// ReSharper restore PossibleNullReferenceException
+                                .GetValue(null));
+                }
+
+                FuncCache.Add(type, val);
+            }
+
+            return Tuple.Create((Func<long, T>) val.Item1, (T) val.Item2);
+        }
+
         #region Nested type: CacheItem
 
         private class CacheItem : IEquatable<CacheItem>
         {
-            private readonly string _key;
             public readonly object Value;
+            private readonly string _key;
 
             public CacheItem(string key, object value = null)
             {
@@ -271,44 +291,5 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         #endregion
-
-        private static readonly Dictionary<Type, Delegate> FuncCache = new Dictionary<Type, Delegate>();
-
-        public static Func<long, T> GetObjFactory<T>()
-        {
-            Type type = typeof (T);
-            Delegate func;
-
-            if (!FuncCache.TryGetValue(type, out func))
-            {
-                if (type.IsPrimitive)
-                {
-                    switch (Type.GetTypeCode(type))
-                    {
-                        case TypeCode.Byte:
-                            func = (Func<long, byte>) (i => (byte) (i%byte.MaxValue));
-                            break;
-                        default:
-                            throw new NotImplementedException("Primitive type not supported: " + type.Name);
-                    }
-
-                }
-                else
-                {
-                    ParameterExpression param = Expression.Parameter(typeof (long));
-                    func =
-                        Expression.Lambda<Func<long, T>>(
-                            Expression.Call(
-                                type.GetMethod(
-                                    "New", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic),
-                                param),
-                            param).Compile();
-                }
-
-                FuncCache.Add(type, func);
-            }
-
-            return (Func<long, T>) func;
-        }
     }
 }

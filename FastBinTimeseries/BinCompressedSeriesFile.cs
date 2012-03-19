@@ -35,12 +35,12 @@ using NYurik.FastBinTimeseries.Serializers.BlockSerializer;
 namespace NYurik.FastBinTimeseries
 {
     /// <summary>
-    /// Helper non-generic class aids in creating a new instance of <see cref="BinCompressedSeriesFile{TInd,TVal}"/>.
+    ///   Helper non-generic class aids in creating a new instance of <see cref="BinCompressedSeriesFile{TInd,TVal}" /> .
     /// </summary>
     public static class BinCompressedSeriesFile
     {
         /// <summary>
-        /// Uses reflection to create an instance of <see cref="BinCompressedSeriesFile{TInd,TVal}"/>.
+        ///   Uses reflection to create an instance of <see cref="BinCompressedSeriesFile{TInd,TVal}" /> .
         /// </summary>
         public static IWritableFeed GenericNew(
             Type indType, Type itemType, string fileName,
@@ -54,7 +54,7 @@ namespace NYurik.FastBinTimeseries
     }
 
     /// <summary>
-    /// Object representing a binary-serialized long-based series file.
+    ///   Object representing a binary-serialized long-based series file.
     /// </summary>
     public class BinCompressedSeriesFile<TInd, TVal> : BinaryFile<byte>, IWritableFeed<TInd, TVal>
         where TInd : IComparable<TInd>
@@ -92,7 +92,9 @@ namespace NYurik.FastBinTimeseries
             }
         }
 
-        /// <summary> Number of binary search lookups to cache. 0-internal defaults, negative-disable </summary>
+        /// <summary>
+        /// Number of binary search lookups to cache. 0-internal defaults, negative-disable
+        /// </summary>
         public int BinarySearchCacheSize { get; set; }
 
         public FieldInfo IndexFieldInfo
@@ -143,7 +145,7 @@ namespace NYurik.FastBinTimeseries
         #region Constructors
 
         /// <summary>
-        /// Allow Activator non-public instantiation
+        ///   Allow Activator non-public instantiation
         /// </summary>
         [UsedImplicitly]
         protected BinCompressedSeriesFile()
@@ -151,10 +153,10 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary>
-        /// Create new timeseries file. If the file already exists, an <see cref="IOException"/> is thrown.
+        ///   Create new timeseries file. If the file already exists, an <see cref="IOException" /> is thrown.
         /// </summary>
-        /// <param name="fileName">A relative or absolute path for the file to create.</param>
-        /// <param name="indexFieldInfo">Field containing the TInd index, or null to get default</param>
+        /// <param name="fileName"> A relative or absolute path for the file to create. </param>
+        /// <param name="indexFieldInfo"> Field containing the TInd index, or null to get default </param>
         public BinCompressedSeriesFile(string fileName, FieldInfo indexFieldInfo = null)
             : base(fileName)
         {
@@ -242,7 +244,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary>
-        /// A delegate to a function that extracts index of a given item
+        ///   A delegate to a function that extracts index of a given item
         /// </summary>
         public Func<TVal, TInd> IndexAccessor { get; private set; }
 
@@ -259,7 +261,7 @@ namespace NYurik.FastBinTimeseries
         }
 
         /// <summary>
-        /// Add new items at the end of the existing file
+        ///   Add new items at the end of the existing file
         /// </summary>
         public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
         {
@@ -550,7 +552,8 @@ namespace NYurik.FastBinTimeseries
                 return 0;
             }
 
-            long block = FastBinFileUtils.BinarySearch(index, 0, blockCount, UniqueIndexes, false, SearchCache.GetValueAt);
+            long block = FastBinFileUtils.BinarySearch(
+                index, 0, blockCount, UniqueIndexes, false, SearchCache.GetValueAt);
 
             if (block < 0)
                 block = ~block - 1;
@@ -621,9 +624,12 @@ namespace NYurik.FastBinTimeseries
                 {
                     for (int i = v.Offset; i < v.Count; i++)
                     {
-                        TInd newInd = IndexAccessor(v.Array[i]);
-
+                        var val = v.Array[i];
                         // ReSharper disable CompareNonConstrainedGenericWithNull
+                        if (val == null)
+                            throw new BinaryFileException("Segment {0}, item #{1} is null", segInd, i);
+
+                        TInd newInd = IndexAccessor(val);
                         if (newInd == null)
                         {
                             throw new BinaryFileException(
@@ -650,7 +656,7 @@ namespace NYurik.FastBinTimeseries
 
                         lastInd = newInd;
 
-                        yield return v.Array[i];
+                        yield return val;
                     }
                 }
 

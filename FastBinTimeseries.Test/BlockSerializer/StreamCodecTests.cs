@@ -111,9 +111,9 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
         }
 
         /// <summary>
-        /// Batch sequential values as an IEnumerable of arrays (same array is resued for each yield, do not cache).
+        ///   Batch sequential values as an IEnumerable of arrays (same array is resued for each yield, do not cache).
         /// </summary>
-        public static IEnumerable<T[]> BatchGroup<T>(IEnumerable<T> source, int groupSize = 1000)
+        private static IEnumerable<T[]> BatchGroup<T>(IEnumerable<T> source, int groupSize = 1000)
         {
             T[] result = null;
             int ind = 0;
@@ -199,7 +199,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             int pos = 0;
 
             // ReSharper disable AccessToModifiedClosure
-            TestUtils.AssertException<SerializerException>(
+            Assert.Throws<SerializerException>(
                 () =>
                     {
                         fixed (byte* pbuf = buf)
@@ -209,12 +209,11 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
 
             Assert.AreEqual(0, pos, "ReadSignedValueUnsafe pos shifted");
 
-            TestUtils.AssertException<SerializerException>(
+            Assert.Throws<SerializerException>(
                 () =>
                     {
                         fixed (byte* pbuf = buf)
-                            return CodecReader.ReadUnsignedValueUnsafe(
-                                pbuf, ref pos);
+                            CodecReader.ReadUnsignedValueUnsafe(pbuf, ref pos);
                     });
 
             Assert.AreEqual(0, pos, "ReadSignedValueUnsafe pos shifted");
@@ -223,12 +222,12 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
             using (var codecRdr = new CodecReader(new ArraySegment<byte>(buf)))
             {
                 // ReSharper disable AccessToDisposedClosure
-                TestUtils.AssertException<SerializerException>(() => codecRdr.ReadSignedValue());
+                Assert.Throws<SerializerException>(() => codecRdr.ReadSignedValue());
                 // ReSharper restore AccessToDisposedClosure
                 Assert.AreEqual(0, codecRdr.BufferPos, "ReadSignedValue pos shifted");
 
                 // ReSharper disable AccessToDisposedClosure
-                TestUtils.AssertException<SerializerException>(() => codecRdr.ReadUnsignedValue());
+                Assert.Throws<SerializerException>(() => codecRdr.ReadUnsignedValue());
                 // ReSharper restore AccessToDisposedClosure
                 Assert.AreEqual(0, codecRdr.BufferPos, "ReadUnsignedValue pos shifted");
             }

@@ -124,7 +124,41 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         /// <summary>
-        /// This method is useful during debugging to view file's content as a string in the immediate window or expression eval
+        ///   This method is useful during debugging to view IEnumerable's content as a string in the immediate window or expression eval
+        /// </summary>
+        [UsedImplicitly]
+        public static string Dump<T>(IEnumerable<ArraySegment<T>> source)
+        {
+            return Dump(source.Stream());
+        }
+
+        /// <summary>
+        ///   This method is useful during debugging to view IEnumerable's content as a string in the immediate window or expression eval
+        /// </summary>
+        public static string Dump<T>(IEnumerable<T> source)
+        {
+            if (source == null) throw new ArgumentNullException("source");
+
+            // ReSharper disable CompareNonConstrainedGenericWithNull
+            Func<T, string> converter = i => i == null ? "" : i.ToString();
+            // ReSharper restore CompareNonConstrainedGenericWithNull
+
+            bool isFirst = true;
+            var sb = new StringBuilder();
+            foreach (T t in source)
+            {
+                if (isFirst)
+                    isFirst = false;
+                else
+                    sb.Append(Environment.NewLine);
+
+                sb.Append(converter(t));
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        ///   This method is useful during debugging to view file's content as a string in the immediate window or expression eval
         /// </summary>
         [UsedImplicitly]
         public static string Dump(IEnumerableFeed f)
@@ -138,13 +172,18 @@ namespace NYurik.FastBinTimeseries.Test
             if (step < 1) throw new ArgumentException("step < 1");
             if ((maxValue - minValue)%step != 0) throw new ArgumentException("max does not fall in step");
 
-            var newObj = TestUtils.GetObjFactory<T>();
-            var arr = new T[(maxValue - minValue) / step + 1];
-            
+            var newObj = TestUtils.GetObjInfo<T>().Item1;
+            var arr = new T[(maxValue - minValue)/step + 1];
+
             for (int ind = 0, val = minValue; val <= maxValue; val += step)
                 arr[ind++] = newObj(val);
 
             return new[] {new ArraySegment<T>(arr)};
+        }
+
+        protected static IEnumerable<T> Join<T>(params IEnumerable<T>[] enmrs)
+        {
+            return enmrs.SelectMany(i => i);
         }
 
         #region Debug dump suppport
@@ -182,10 +221,5 @@ namespace NYurik.FastBinTimeseries.Test
         }
 
         #endregion
-
-        protected static IEnumerable<T> Join<T>(params IEnumerable<T>[] enmrs)
-        {
-            return enmrs.SelectMany(i => i);
-        }
     }
 }

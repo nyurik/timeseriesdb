@@ -40,8 +40,8 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
         private static void AfterInitValidation(BinaryFile<byte> f, bool canWrite, string fileName)
         {
             // assignment tests
-            TestUtils.AssertException<InvalidOperationException>(() => { f.Tag = "a"; });
-            TestUtils.AssertException<InvalidOperationException>(() => { f.Serializer = null; });
+            Assert.Throws<InvalidOperationException>(() => { f.Tag = "a"; });
+            Assert.Throws<InvalidOperationException>(() => { f.Serializer = null; });
 
             Assert.AreEqual(0, f.Count);
             Assert.AreEqual(new Version(1, 0), f.Version);
@@ -110,15 +110,17 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 using (var f = new BinIndexedFile<byte>(fileName))
                 {
                     temp = f;
-                    TestUtils.AssertException<InvalidOperationException>(() => f.Count);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.Version);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.HeaderSize);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.IsEmpty);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.ItemSize);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.EnableMemMappedAccessOnRead);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.EnableMemMappedAccessOnWrite);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.Serializer.Version);
-                    TestUtils.AssertException<InvalidOperationException>(() => f.CanWrite);
+#pragma warning disable 168
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.Count; });
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.Version; });
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.HeaderSize; });
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.IsEmpty; });
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.ItemSize; });
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.EnableMemMappedAccessOnRead; });
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.EnableMemMappedAccessOnWrite; });
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.Serializer.Version; });
+                    Assert.Throws<InvalidOperationException>(() => { var v = f.CanWrite; });
+#pragma warning restore 168
 
                     Assert.IsFalse(f.IsInitialized);
                     Assert.IsFalse(f.IsDisposed);
@@ -134,8 +136,8 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                     f.BaseVersion = new Version(1, 0);
                     f.BaseVersion = new Version(1, 1);
                     f.BaseVersion = new Version(1, 2);
-                    TestUtils.AssertException<ArgumentNullException>(() => { f.BaseVersion = null; });
-                    TestUtils.AssertException<IncompatibleVersionException>(
+                    Assert.Throws<ArgumentNullException>(() => { f.BaseVersion = null; });
+                    Assert.Throws<IncompatibleVersionException>(
                         () => { f.BaseVersion = new Version(0, 0); });
                     f.BaseVersion = curBaseVer;
 
@@ -162,8 +164,8 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                     f.EnableMemMappedAccessOnWrite = true;
                     Assert.IsTrue(f.EnableMemMappedAccessOnWrite);
 
-                    TestUtils.AssertException<InvalidOperationException>(() => f.InitializeNewFile());
-                    TestUtils.AssertException<InvalidOperationException>(() => { f.BaseVersion = new Version(1, 1); });
+                    Assert.Throws<InvalidOperationException>(f.InitializeNewFile);
+                    Assert.Throws<InvalidOperationException>(() => { f.BaseVersion = new Version(1, 1); });
 
                     AfterInitValidation(f, true, fileName);
                 }
@@ -171,14 +173,16 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 temp.Close(); // allowed after disposing
                 ((IDisposable) temp).Dispose(); // disposing multiple times is ok
 
-                TestUtils.AssertException<InvalidOperationException>(() => temp.Tag);
-                TestUtils.AssertException<InvalidOperationException>(() => temp.EnableMemMappedAccessOnRead);
-                TestUtils.AssertException<InvalidOperationException>(() => temp.EnableMemMappedAccessOnWrite);
-                TestUtils.AssertException<InvalidOperationException>(() => temp.Count);
-                TestUtils.AssertException<InvalidOperationException>(() => temp.IsEmpty);
-                TestUtils.AssertException<InvalidOperationException>(() => temp.ItemSize);
-                TestUtils.AssertException<InvalidOperationException>(() => temp.NonGenericSerializer);
-                TestUtils.AssertException<InvalidOperationException>(() => temp.Serializer);
+#pragma warning disable 168
+                Assert.Throws<ObjectDisposedException>(() => { var v = temp.Tag; });
+                Assert.Throws<ObjectDisposedException>(() => { var v = temp.EnableMemMappedAccessOnRead; });
+                Assert.Throws<ObjectDisposedException>(() => { var v = temp.EnableMemMappedAccessOnWrite; });
+                Assert.Throws<ObjectDisposedException>(() => { var v = temp.Count; });
+                Assert.Throws<ObjectDisposedException>(() => { var v = temp.IsEmpty; });
+                Assert.Throws<ObjectDisposedException>(() => { var v = temp.ItemSize; });
+                Assert.Throws<ObjectDisposedException>(() => { var v = temp.NonGenericSerializer; });
+                Assert.Throws<ObjectDisposedException>(() => { var v = temp.Serializer; });
+#pragma warning restore 168
 
                 Assert.IsTrue(temp.IsInitialized);
                 Assert.IsTrue(temp.IsDisposed);
@@ -193,7 +197,9 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 {
                     AfterInitValidation(f, true, fileName);
                     f.Close();
-                    TestUtils.AssertException<InvalidOperationException>(() => f.Tag);
+#pragma warning disable 168
+                    Assert.Throws<ObjectDisposedException>(() => { var v = f.Tag; });
+#pragma warning restore 168
 
                     Assert.IsTrue(f.IsInitialized);
                     Assert.IsTrue(f.IsDisposed);
@@ -206,12 +212,14 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
             {
                 AfterInitValidation(f, false, fileName);
                 ((IDisposable) f).Dispose();
-                TestUtils.AssertException<InvalidOperationException>(() => f.Tag);
+#pragma warning disable 168
+                Assert.Throws<ObjectDisposedException>(() => { var v = f.Tag; });
+#pragma warning restore 168
             }
 
             using (var f = new BinIndexedFile<byte>(fileName))
             {
-                TestUtils.AssertException<IOException>(() => f.InitializeNewFile());
+                Assert.Throws<IOException>(f.InitializeNewFile);
 
                 if (RunMode == Mode.OneTime)
                 {
@@ -243,10 +251,11 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 tn =>
                 TypeUtils.ParseAndResolve(
                     tn,
-                    ts2=>TypeSpec.DefaultFullTypeResolver(ts2,
-                    (ts, an) =>
-                    an != null && an.Name == oldAn && ts.Name == oldT.FullName ? typeof (_LongByte_SeqPk1) : null,
-                    LegacySupport.TypeResolver, TypeUtils.ResolverFromAnyAssemblyVersion))))
+                    ts2 => TypeSpec.DefaultFullTypeResolver(
+                        ts2,
+                        (ts, an) =>
+                        an != null && an.Name == oldAn && ts.Name == oldT.FullName ? typeof (_LongByte_SeqPk1) : null,
+                        LegacySupport.TypeResolver, TypeUtils.ResolverFromAnyAssemblyVersion))))
             {
                 var p = (BinIndexedFile<_LongByte_SeqPk1>) f;
 

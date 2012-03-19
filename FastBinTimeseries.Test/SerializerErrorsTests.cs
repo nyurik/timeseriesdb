@@ -67,22 +67,22 @@ namespace NYurik.FastBinTimeseries.Test
         [Test]
         public void CreateSerializer()
         {
-            TestUtils.AssertException<SerializerException>(
+            Assert.Throws<SerializerException>(
                 () => DynamicCodeFactory.Instance.Value.CreateSerializer<DateTime>());
 
-            TestUtils.AssertException<SerializerException>(
+            Assert.Throws<SerializerException>(
                 () => DynamicCodeFactory.Instance.Value.CreateSerializer<RefType>());
 
-            TestUtils.AssertException<SerializerException>(
+            Assert.Throws<SerializerException>(
                 () => DynamicCodeFactory.Instance.Value.CreateSerializer<GenType<int>>());
 
-            TestUtils.AssertException<SerializerException>(
+            Assert.Throws<SerializerException>(
                 () => DynamicCodeFactory.Instance.Value.CreateSerializer<GenType<int>.GenSubType>());
 
-            TestUtils.AssertException<SerializerException>(
+            Assert.Throws<SerializerException>(
                 () => DynamicCodeFactory.Instance.Value.CreateSerializer<ValTypeWithRef>());
 
-            TestUtils.AssertException<SerializerException>(
+            Assert.Throws<SerializerException>(
                 () => DynamicCodeFactory.Instance.Value.CreateSerializer<ValTypeWithGen>());
         }
     }

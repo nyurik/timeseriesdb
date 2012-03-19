@@ -57,14 +57,13 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 (x, y) => Math.Abs(x - y) < 0.01);
 
             // Very large numbers cannot be stored as double
-            TestUtils.AssertException<OverflowException>(
-                () =>
-                Run(
+            Assert.Throws<OverflowException>(
+                () => Run(
                     Range(-Math.Pow(10, maxDigits + 3), -Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
                     "*10 Large Neg", i => ((ScaledDeltaField) i).Multiplier = 10,
                     (x, y) => Math.Abs(x - y) < 0.1));
 
-            TestUtils.AssertException<OverflowException>(
+            Assert.Throws<OverflowException>(
                 () =>
                 Run(
                     Range(Math.Pow(10, maxDigits + 3), Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
@@ -91,7 +90,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                 (x, y) => Math.Abs(x - y) < 0.01);
 
             // Very large numbers cannot be stored as float
-            TestUtils.AssertException<OverflowException>(
+            Assert.Throws<OverflowException>(
                 () =>
                 Run(
                     Range(
@@ -100,7 +99,7 @@ namespace NYurik.FastBinTimeseries.Test.BlockSerializer
                     "*10 Large Neg", i => ((ScaledDeltaField) i).Multiplier = 10,
                     (x, y) => Math.Abs(x - y) < 0.1));
 
-            TestUtils.AssertException<OverflowException>(
+            Assert.Throws<OverflowException>(
                 () =>
                 Run(
                     Range(

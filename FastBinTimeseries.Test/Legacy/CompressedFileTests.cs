@@ -192,13 +192,13 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 if (halfItemCnt > 2)
                 {
                     // ReSharper disable AccessToDisposedClosure
-                    TestUtils.AssertException<BinaryFileException>(
+                    Assert.Throws<BinaryFileException>(
                         () => f.AppendData(data(segSize, halfItemCnt - 1, halfItemCnt)));
-                    TestUtils.AssertException<BinaryFileException>(
+                    Assert.Throws<BinaryFileException>(
                         () => f.AppendData(data(segSize, halfItemCnt - 1, halfItemCnt + 1)));
-                    TestUtils.AssertException<BinaryFileException>(
+                    Assert.Throws<BinaryFileException>(
                         () => f.AppendData(data(segSize, halfItemCnt - 2, halfItemCnt - 1)));
-                    TestUtils.AssertException<BinaryFileException>(
+                    Assert.Throws<BinaryFileException>(
                         () => f.AppendData(data(segSize, halfItemCnt - 2, halfItemCnt + 1)));
                     // ReSharper restore AccessToDisposedClosure
                 }
@@ -208,7 +208,7 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
         private IEnumerable<T> DuplicatesEvery<T>(long start, long until, long duplEvery)
         {
             int cnt = 0;
-            var newObj = TestUtils.GetObjFactory<T>();
+            var newObj = TestUtils.GetObjInfo<T>().Item1;
             for (long i = start; i < until; i++)
             {
                 T v = newObj(i);
@@ -311,13 +311,16 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 segSize,
                 fileName =>
                     {
-                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = false};
+                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName)
+                                     {UniqueIndexes = false};
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         return bf;
                     },
-                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f =>
+                ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize =
+                enableCache ? 0 : -1,
                 f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).InitializeNewFile());
         }
 
@@ -342,13 +345,16 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 segSize, itemCount, data,
                 fileName =>
                     {
-                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = uniqueIndexes};
+                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName)
+                                     {UniqueIndexes = uniqueIndexes};
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         return bf;
                     },
-                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f =>
+                ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize =
+                enableCache ? 0 : -1,
                 f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).InitializeNewFile());
         }
 
@@ -364,14 +370,17 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 itemCount,
                 fileName =>
                     {
-                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = true};
+                        var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName)
+                                     {UniqueIndexes = true};
 
                         bf.BlockSize = bf.FieldSerializer.RootField.GetMaxByteSize() + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         bf.ValidateOnRead = true;
                         return bf;
                     },
-                f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize = enableCache ? 0 : -1,
+                f =>
+                ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).BinarySearchCacheSize =
+                enableCache ? 0 : -1,
                 f => ((BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>) f).InitializeNewFile());
         }
 

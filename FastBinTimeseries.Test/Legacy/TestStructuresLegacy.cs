@@ -31,6 +31,7 @@ using NYurik.FastBinTimeseries.CommonCode;
 // ReSharper disable NonReadonlyFieldInGetHashCode
 
 // ReSharper disable CheckNamespace
+
 namespace NYurik.FastBinTimeseries.Test
 // ReSharper restore CheckNamespace
 {
@@ -69,6 +70,9 @@ namespace NYurik.FastBinTimeseries.Test
         {
             return string.Format("{0:u}, {1}", a, b);
         }
+
+        [UsedImplicitly] public static _DatetimeBool_SeqPk1 MaxValue
+            = new _DatetimeBool_SeqPk1 {a = UtcDateTime.MaxValue, b = true};
 
         [UsedImplicitly]
         public static _DatetimeBool_SeqPk1 New(long i)
@@ -119,6 +123,10 @@ namespace NYurik.FastBinTimeseries.Test
             return string.Format("{0:u}, {1}", a, b);
         }
 
+        [UsedImplicitly] public static _DatetimeByte_SeqPk1 MaxValue
+            = new _DatetimeByte_SeqPk1 {a = UtcDateTime.MaxValue, b = byte.MaxValue};
+
+        [UsedImplicitly]
         public static _DatetimeByte_SeqPk1 New(long i)
         {
             return new _DatetimeByte_SeqPk1
