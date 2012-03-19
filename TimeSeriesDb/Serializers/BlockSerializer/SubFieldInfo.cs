@@ -54,8 +54,8 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             Type type = reader.ReadType(typeResolver, out typeName, out fixedBufferSize);
 
             string name = reader.ReadString();
-            MemberInfo mmbr = type.GetProperty(name, TypeExtensions.AllInstanceMembers) ??
-                              (MemberInfo) type.GetField(name, TypeExtensions.AllInstanceMembers);
+            MemberInfo mmbr = type.GetProperty(name, TypeUtils.AllInstanceMembers) ??
+                              (MemberInfo) type.GetField(name, TypeUtils.AllInstanceMembers);
             if (mmbr == null)
                 throw new SerializerException(
                     "Unable to locate the field or property {0} on type {1}", name, type.AssemblyQualifiedName);

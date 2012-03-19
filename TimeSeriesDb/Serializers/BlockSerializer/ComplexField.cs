@@ -51,7 +51,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             if (valueType.IsArray || valueType.IsPrimitive)
                 throw new SerializerException("Unsupported type {0}", valueType);
 
-            FieldInfo[] fis = valueType.GetFields(TypeExtensions.AllInstanceMembers);
+            FieldInfo[] fis = valueType.GetFields(TypeUtils.AllInstanceMembers);
             _fields = new List<SubFieldInfo>(fis.Length);
             foreach (FieldInfo fi in fis)
             {

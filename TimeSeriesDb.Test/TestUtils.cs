@@ -25,9 +25,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
 using JetBrains.Annotations;
 using NUnit.Framework;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Test
 {
@@ -112,8 +112,9 @@ namespace NYurik.TimeSeriesDb.Test
             return rNew;
         }
 
-        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(int segSize, int minValue, int maxValue,
-                                                                         int step = 1)
+        public static IEnumerable<ArraySegment<T>> GenerateDataStream<T>(
+            int segSize, int minValue, int maxValue,
+            int step = 1)
         {
             if (segSize <= 0)
                 yield break;
@@ -230,20 +231,21 @@ namespace NYurik.TimeSeriesDb.Test
                 else
                 {
                     ParameterExpression param = Expression.Parameter(typeof (long));
+
+                    // ReSharper disable PossibleNullReferenceException
                     val =
                         Tuple.Create(
                             (Delegate) Expression.Lambda<Func<long, T>>(
                                 Expression.Call(
                                     type.GetMethod(
-                                        "New", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic),
+                                        "New", TypeUtils.AllStaticMembers),
                                     param),
                                 param).Compile(),
-// ReSharper disable PossibleNullReferenceException
                             type
                                 .GetField(
-                                    "MaxValue", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-// ReSharper restore PossibleNullReferenceException
+                                    "MaxValue", TypeUtils.AllStaticMembers)
                                 .GetValue(null));
+                    // ReSharper restore PossibleNullReferenceException
                 }
 
                 FuncCache.Add(type, val);

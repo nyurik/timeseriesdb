@@ -143,7 +143,6 @@
     <Compile Include="Common\FormattedException.cs" />
     <Compile Include="Common\ILGeneratorExtensions.cs" />
     <Compile Include="Common\JetBrains.cs" />
-    <Compile Include="Common\TypeExtensions.cs" />
     <Compile Include="Common\TypeSpec.cs" />
     <Compile Include="Common\TypeUtils.cs" />
     <Compile Include="Common\Utils.cs" />

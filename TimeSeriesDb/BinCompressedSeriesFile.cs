@@ -176,7 +176,7 @@ namespace NYurik.TimeSeriesDb
             UniqueIndexes = reader.ReadBoolean();
             string fieldName = reader.ReadString();
 
-            FieldInfo fieldInfo = typeof (TVal).GetField(fieldName, TypeExtensions.AllInstanceMembers);
+            FieldInfo fieldInfo = typeof (TVal).GetField(fieldName, TypeUtils.AllInstanceMembers);
             if (fieldInfo == null)
                 throw new BinaryFileException(
                     "Index field {0} was not found in type {1}", fieldName, typeof (TVal).FullName);

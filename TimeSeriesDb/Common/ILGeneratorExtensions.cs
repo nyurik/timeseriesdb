@@ -4177,7 +4177,7 @@ namespace NYurik.TimeSeriesDb.Common
             if (actualType == null) throw new ArgumentNullException("actualType");
 
             return
-                TypeExtensions.IsSameOrParent(expectedType, actualType)
+                TypeUtils.IsSameOrParent(expectedType, actualType)
                     ? il
                     : actualType.IsValueType
                           ? il.unbox_any(expectedType)

@@ -127,9 +127,9 @@ namespace NYurik.TimeSeriesDb
                 writer.Write(_typeSize);
 
                 // in the next version - will record the type signature and compare it with T
-                List<TypeExtensions.TypeInfo> sig = typeof (T).GenerateTypeSignature();
+                List<TypeUtils.TypeInfo> sig = typeof (T).GenerateTypeSignature();
                 writer.Write(sig.Count);
-                foreach (TypeExtensions.TypeInfo s in sig)
+                foreach (TypeUtils.TypeInfo s in sig)
                 {
                     writer.Write(s.Level);
                     if (s.Type == null)
@@ -159,7 +159,7 @@ namespace NYurik.TimeSeriesDb
 
                 int fileSigCount = reader.ReadInt32();
 
-                var fileSig = new TypeExtensions.TypeInfo[fileSigCount];
+                var fileSig = new TypeUtils.TypeInfo[fileSigCount];
                 for (int i = 0; i < fileSigCount; i++)
                 {
                     int level = reader.ReadInt32();
@@ -170,14 +170,14 @@ namespace NYurik.TimeSeriesDb
 
                     fileSig[i] =
                         type != null
-                            ? new TypeExtensions.TypeInfo(level, type)
-                            : new TypeExtensions.TypeInfo(level, fixedBufferSize);
+                            ? new TypeUtils.TypeInfo(level, type)
+                            : new TypeUtils.TypeInfo(level, fixedBufferSize);
                 }
 
                 if (typeResolver == null)
                 {
                     // For now only verify without the typemap, as it might become much more complex
-                    List<TypeExtensions.TypeInfo> sig = typeof (T).GenerateTypeSignature();
+                    List<TypeUtils.TypeInfo> sig = typeof (T).GenerateTypeSignature();
                     if (sig.Count != fileSig.Length)
                         throw new SerializerException(
                             "Signature subtype count mismatch: expected={0}, found={1}",

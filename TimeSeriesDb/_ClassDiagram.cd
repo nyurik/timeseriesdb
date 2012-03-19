@@ -390,13 +390,6 @@
       <FileName>EmitExtensions\ILGeneratorExtensions.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.Common.TypeExtensions" Collapsed="true">
-    <Position X="32.25" Y="7.75" Width="2" />
-    <TypeIdentifier>
-      <HashCode>AAABIAAgAAAAAAAAAAAAgAACAAQAAAAAAAAAAAABIgA=</HashCode>
-      <FileName>EmitExtensions\TypeExtensions.cs</FileName>
-    </TypeIdentifier>
-  </Class>
   <Class Name="NYurik.TimeSeriesDb.Common.TypeBuilderExtensions" Collapsed="true">
     <Position X="32.25" Y="6.25" Width="2" />
     <TypeIdentifier>

@@ -54,7 +54,7 @@ namespace NYurik.TimeSeriesDb.Serializers
 
         private static MethodInfo GetMethodInfo(Type baseType, string methodName)
         {
-            MethodInfo methodToCall = baseType.GetMethod(methodName, TypeExtensions.AllInstanceMembers);
+            MethodInfo methodToCall = baseType.GetMethod(methodName, TypeUtils.AllInstanceMembers);
             if (methodToCall == null)
                 throw new SerializerException(
                     "Method {0} not found in the base type {1}", methodName, baseType.FullName);
@@ -106,7 +106,7 @@ namespace NYurik.TimeSeriesDb.Serializers
             {
                 typesStack.Push(type);
 
-                FieldInfo[] fields = type.GetFields(TypeExtensions.AllInstanceMembers);
+                FieldInfo[] fields = type.GetFields(TypeUtils.AllInstanceMembers);
 
                 foreach (FieldInfo f in fields)
                     if (!typesStack.Contains(f.FieldType))
@@ -314,7 +314,7 @@ namespace NYurik.TimeSeriesDb.Serializers
                 type,
                 t =>
                     {
-                        FieldInfo[] fieldInfo = t.GetFields(TypeExtensions.AllInstanceMembers);
+                        FieldInfo[] fieldInfo = t.GetFields(TypeUtils.AllInstanceMembers);
                         if (fieldInfo.Length < 1)
                             throw new SerializerException("No fields found in type " + t.FullName);
 
