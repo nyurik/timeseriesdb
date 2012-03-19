@@ -27,7 +27,7 @@ using System;
 namespace NYurik.FastBinTimeseries.Test.Legacy
 {
     [Obsolete]
-    public class LegacyTestsBase:TestsBase
+    public class LegacyTestsBase : TestsBase
     {
     }
 }

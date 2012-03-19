@@ -196,31 +196,27 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 throw;
             }
         }
-        
-        private void PageBorderOperations<T>(bool enableMemoryMappedAccess, bool enableLargePages)
+
+        private void PageBorderOperations<T>(bool enableMma, bool enableLargePages)
             where T : IEquatable<T>
         {
-            string testName = "PageBorderOperations_" + (enableMemoryMappedAccess ? "MMF" : "Stream");
+            string testName = "PageBorderOperations_" + (enableMma ? "MMF" : "Stream");
             try
             {
                 Stopwatch sw = TestStart();
 
                 for (int i = 1; i < 5; i++)
-                    PageBorderOperations<T>(enableMemoryMappedAccess, BinaryFile.MinPageSize*i);
+                    PageBorderOperations<T>(enableMma, BinaryFile.MinPageSize*i);
 
-                PageBorderOperations<T>(enableMemoryMappedAccess,
-                    BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
-                PageBorderOperations<T>(enableMemoryMappedAccess, BinaryFile.MaxLargePageSize);
-                PageBorderOperations<T>(enableMemoryMappedAccess,
-                    BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
+                PageBorderOperations<T>(enableMma, BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
+                PageBorderOperations<T>(enableMma, BinaryFile.MaxLargePageSize);
+                PageBorderOperations<T>(enableMma, BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
 
                 if (enableLargePages)
                 {
-                    PageBorderOperations<T>(enableMemoryMappedAccess,
-                        2*BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
-                    PageBorderOperations<T>(enableMemoryMappedAccess, 2*BinaryFile.MaxLargePageSize);
-                    PageBorderOperations<T>(enableMemoryMappedAccess,
-                        2*BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
+                    PageBorderOperations<T>(enableMma, 2*BinaryFile.MaxLargePageSize - BinaryFile.MinPageSize);
+                    PageBorderOperations<T>(enableMma, 2*BinaryFile.MaxLargePageSize);
+                    PageBorderOperations<T>(enableMma, 2*BinaryFile.MaxLargePageSize + BinaryFile.MinPageSize);
                 }
 
                 TestStop<T>(testName, sw);
@@ -232,7 +228,7 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
             }
         }
 
-        private void PageBorderOperations<T>(bool enableMemoryMappedAccess, int pageSize)
+        private void PageBorderOperations<T>(bool enableMma, int pageSize)
             where T : IEquatable<T>
         {
             DeleteTempFiles();
@@ -247,8 +243,8 @@ namespace NYurik.FastBinTimeseries.Test.Legacy
                 if (AllowCreate)
                 {
                     f.InitializeNewFile();
-                    f.EnableMemMappedAccessOnRead = enableMemoryMappedAccess;
-                    f.EnableMemMappedAccessOnWrite = enableMemoryMappedAccess;
+                    f.EnableMemMappedAccessOnRead = enableMma;
+                    f.EnableMemMappedAccessOnWrite = enableMma;
                 }
 
                 int itemsPerPage = pageSize/Marshal.SizeOf(typeof (T));
