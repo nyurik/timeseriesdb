@@ -30,7 +30,7 @@ namespace NYurik.TimeSeriesDb.Properties
 {
     internal static class AssemblyVersion
     {
-        public const string Ver = "1.113"; // The second number should match the SVN revision
+        public const string Ver = "1.119"; // The second number should match the SVN revision
 
 #if SIGN
 
