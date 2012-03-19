@@ -32,11 +32,19 @@ namespace NYurik.TimeSeriesDb
 {
     public static class LegacySupport
     {
-        private static readonly Assembly MainAssembly = typeof (BinaryFile).Assembly;
+        private const string OldMainName = "NYurik.FastBinTimeseries";
+        private const string OldLegacyName = "NYurik.FastBinTimeseries.Legacy";
 
+        private static readonly Type LegacyObj = typeof(LegacySupport);
+        private static readonly Assembly LegacyAssembly = LegacyObj.Assembly;
+
+        private static readonly Type MainObj = typeof(BinaryFile);
+        private static readonly Assembly MainAssembly = MainObj.Assembly;
         private static readonly AssemblyName MainAssemblyName = MainAssembly.GetName();
 
-        private static readonly Dictionary<string, Type> LegacyTypes;
+        private static readonly Dictionary<string, Type> MovedToLegacyTypes;
+        private static readonly Dictionary<string, Type> RenamedLegacyTypes;
+        private static readonly Dictionary<string, Type> RenamedMainTypes;
 
         private static readonly Lazy<Func<string, Type>> DefaultLegacyResolver =
             new Lazy<Func<string, Type>>(
@@ -46,10 +54,24 @@ namespace NYurik.TimeSeriesDb
         static LegacySupport()
         {
             // public, non-abstract, non-static class
-            LegacyTypes =
-                (from type in typeof (LegacySupport).Assembly.GetTypes()
+            MovedToLegacyTypes =
+                (from type in LegacyAssembly.GetTypes()
                  where type.IsPublic && !type.IsAbstract
                  select type).ToDictionary(i => i.FullName);
+
+            // ReSharper disable PossibleNullReferenceException
+            RenamedMainTypes =
+                (from type in MainAssembly.GetTypes()
+                 where type.IsPublic && !type.IsAbstract
+                 select type)
+                    .ToDictionary(i => i.FullName.Replace(MainObj.Namespace + ".", OldMainName + "."));
+
+            RenamedLegacyTypes =
+                (from type in LegacyAssembly.GetTypes()
+                 where type.IsPublic && !type.IsAbstract
+                 select type)
+                    .ToDictionary(i => i.FullName.Replace(MainObj.Namespace + ".", OldMainName + "."));
+            // ReSharper restore PossibleNullReferenceException
         }
 
         public static Type TypeResolver(string typeName)
@@ -59,10 +81,16 @@ namespace NYurik.TimeSeriesDb
 
         public static Type TypeResolver(TypeSpec spec, AssemblyName assemblyName)
         {
-            Type type;
-            if (assemblyName != null && assemblyName.Name == MainAssemblyName.Name &&
-                LegacyTypes.TryGetValue(spec.Name, out type))
-                return type;
+            if (assemblyName != null)
+            {
+                Type type;
+                if (assemblyName.Name == MainAssemblyName.Name && MovedToLegacyTypes.TryGetValue(spec.Name, out type))
+                    return type;
+                if (assemblyName.Name == OldMainName && RenamedMainTypes.TryGetValue(spec.Name, out type))
+                    return type;
+                if (assemblyName.Name == OldLegacyName && RenamedLegacyTypes.TryGetValue(spec.Name, out type))
+                    return type;
+            }
 
             return null;
         }

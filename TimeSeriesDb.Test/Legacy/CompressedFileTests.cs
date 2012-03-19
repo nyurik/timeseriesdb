@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.CommonCode;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
 namespace NYurik.TimeSeriesDb.Test.Legacy
@@ -39,10 +39,11 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
     {
         private readonly _DatetimeByte_SeqPk1[] _empty = new _DatetimeByte_SeqPk1[0];
 
-        private void Run(string name, int itemCount,
-                         Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
-                         Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
-                         Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
+        private void Run(
+            string name, int itemCount,
+            Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
+            Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
+            Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
         {
             string fileName = GetBinFileName();
 
@@ -54,7 +55,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
             IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>
                 f = !AllowCreate
                         ? (IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
-                          BinaryFile.Open(fileName, false, LegacySupport.TypeResolver)
+                          BinaryFile.Open(fileName, false, LegacyResolver)
                         : newFile(fileName);
             try
             {
@@ -68,7 +69,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                     f.Dispose();
                     f =
                         (IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>)
-                        BinaryFile.Open(fileName, false, LegacySupport.TypeResolver);
+                        BinaryFile.Open(fileName, false, LegacyResolver);
                 }
 
                 TestUtils.CollectionAssertEqual(
@@ -141,11 +142,12 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
             }
         }
 
-        private void AppendTest(string name, int segSize, int itemCount,
-                                Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data,
-                                Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
-                                Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
-                                Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
+        private void AppendTest(
+            string name, int segSize, int itemCount,
+            Func<int, int, int, IEnumerable<ArraySegment<_DatetimeByte_SeqPk1>>> data,
+            Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
+            Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
+            Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
         {
             if (RunMode != Mode.OneTime)
                 Assert.Inconclusive("RunMode={0} is not supported", RunMode);
@@ -251,10 +253,11 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
             }
         }
 
-        private void AppendDuplTest(string name, int segSize,
-                                    Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
-                                    Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
-                                    Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
+        private void AppendDuplTest(
+            string name, int segSize,
+            Func<string, IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> newFile,
+            Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> update,
+            Action<IWritableFeed<UtcDateTime, _DatetimeByte_SeqPk1>> init)
         {
             if (RunMode != Mode.OneTime)
                 Assert.Inconclusive("RunMode={0} is not supported", RunMode);

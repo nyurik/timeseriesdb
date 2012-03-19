@@ -23,7 +23,7 @@
 #endregion
 
 using System.Reflection;
-using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb
 {

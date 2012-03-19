@@ -89,7 +89,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                     hdrSize = 0;
                 }
 
-                using (BinaryFile file = BinaryFile.Open(fileName, false, LegacySupport.TypeResolver))
+                using (BinaryFile file = BinaryFile.Open(fileName, false, LegacyResolver))
                 {
                     Assert.IsInstanceOf<BinIndexedFile<T>>(file);
                     Assert.AreEqual(typeof (T), file.ItemType);
@@ -159,7 +159,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                     }
                 }
 
-                using (BinaryFile file = BinaryFile.Open(fileName, AllowCreate, LegacySupport.TypeResolver))
+                using (BinaryFile file = BinaryFile.Open(fileName, AllowCreate, LegacyResolver))
                 {
                     Assert.IsInstanceOf<BinIndexedFile<T>>(file);
                     var f = (BinIndexedFile<T>) file;
@@ -238,7 +238,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                 BinIndexedFile<T> f = AllowCreate
                                           ? new BinIndexedFile<T>(fileName)
                                           : (BinIndexedFile<T>)
-                                            BinaryFile.Open(fileName, false, LegacySupport.TypeResolver))
+                                            BinaryFile.Open(fileName, false, LegacyResolver))
             {
                 if (AllowCreate)
                 {
@@ -337,6 +337,12 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
             PageBorderOperations<_BoolLongBool_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
             PageBorderOperations<_ByteLongByte_SeqPk1>(enableMemoryMappedAccess, EnableLongerTests);
             PageBorderOperations<_FixedByteBuff7>(enableMemoryMappedAccess, EnableLongerTests);
+        }
+
+        [Test]
+        public void BrokenFixedByteBuff()
+        {
+            PageBorderOperations<_FixedByteBuff7>(true, EnableLongerTests);
         }
 
         [Test]

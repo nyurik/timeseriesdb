@@ -25,7 +25,7 @@
 using System;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
-using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.CommonCode;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable NonReadonlyFieldInGetHashCode

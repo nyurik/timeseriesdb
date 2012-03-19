@@ -34,7 +34,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
         private BinSeriesFile<long, _LongByte_SeqPk1> OpenFile(string fileName)
         {
             if (!AllowCreate)
-                return (BinSeriesFile<long, _LongByte_SeqPk1>) BinaryFile.Open(fileName, false);
+                return (BinSeriesFile<long, _LongByte_SeqPk1>) BinaryFile.Open(fileName, false, LegacyResolver);
 
             var r = new BinSeriesFile<long, _LongByte_SeqPk1>(fileName) {UniqueIndexes = false};
             r.InitializeNewFile();

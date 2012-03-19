@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb.Test.Legacy
 {
@@ -41,7 +41,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                 AllowCreate
                     ? new BinTimeseriesFile<_DatetimeByte_SeqPk1>(fileName) {UniqueTimestamps = uniqueTimestamps}
                     : (BinTimeseriesFile<_DatetimeByte_SeqPk1>)
-                      BinaryFile.Open(fileName, false, LegacySupport.TypeResolver))
+                      BinaryFile.Open(fileName, false, LegacyResolver))
             {
                 f.BinarySearchCacheSize = enableCache ? 0 : -1;
 
@@ -97,7 +97,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                 AllowCreate
                     ? new BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName) {UniqueIndexes = false}
                     : (BinSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>)
-                      BinaryFile.Open(fileName, false, LegacySupport.TypeResolver))
+                      BinaryFile.Open(fileName, false, LegacyResolver))
             {
                 if (AllowCreate)
                 {

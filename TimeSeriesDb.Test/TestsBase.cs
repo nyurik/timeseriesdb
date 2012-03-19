@@ -31,17 +31,51 @@ using System.Reflection;
 using System.Text;
 using JetBrains.Annotations;
 using NUnit.Framework;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Test
 {
     public class TestsBase
     {
-        private const Mode InitRunMode = Mode.OneTime;
-        private const string StoreDir = "Stored1";
+        private const Mode InitRunMode = Mode.Verify;
+        private const string StoreDir = "StoredOldNs2";
         private const string TestFileSuffix = ".testbsd";
+
+        private const string RenamedNamespace = "NYurik.FastBinTimeseries.Test";
+        private static readonly Assembly TestAssembly = typeof (TestsBase).Assembly;
+        private static readonly Dictionary<string, Type> RenamedNsTypes;
+
+        public static readonly Func<string, Type> LegacyResolver =
+            TypeUtils.CreateCachingResolver(
+                TypeResolver, LegacySupport.TypeResolver, TypeUtils.ResolverFromAnyAssemblyVersion);
+
+        static TestsBase()
+        {
+            var newNs = typeof (TestsBase).Namespace + ".";
+
+            // ReSharper disable PossibleNullReferenceException
+            RenamedNsTypes =
+                (from type in TestAssembly.GetTypes()
+                 where type.IsPublic && !type.IsAbstract
+                 select type).ToDictionary(i => i.FullName.Replace(newNs, RenamedNamespace + "."));
+            // ReSharper restore PossibleNullReferenceException
+        }
+
+        protected static Type TypeResolver(TypeSpec spec, AssemblyName assemblyName)
+        {
+            if (assemblyName != null)
+            {
+                Type type;
+                if (assemblyName.Name == RenamedNamespace && RenamedNsTypes.TryGetValue(spec.Name, out type))
+                    return type;
+            }
+
+            return null;
+        }
 
         private readonly Dictionary<string, int> _files = new Dictionary<string, int>();
         private readonly Stopwatch _stopwatch = new Stopwatch();
+
 
         protected static Mode RunMode
         {

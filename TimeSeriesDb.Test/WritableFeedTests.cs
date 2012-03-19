@@ -64,7 +64,7 @@ namespace NYurik.TimeSeriesDb.Test
         {
             return AllowCreate
                        ? newFile(GetBinFileName())
-                       : (IWritableFeed<TInd, T>) BinaryFile.Open(GetBinFileName(), false);
+                       : (IWritableFeed<TInd, T>) BinaryFile.Open(GetBinFileName(), false, LegacyResolver);
         }
 
         private void TwoValueTest<TInd, T>(IWritableFeed<TInd, T> f, T itm1, T itm2)

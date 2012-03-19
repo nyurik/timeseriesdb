@@ -49,14 +49,14 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
 
             byte[] bytes = File.ReadAllBytes(fileName);
 
-            using (var b = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false, LegacySupport.TypeResolver))
+            using (var b = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false, LegacyResolver))
             {
                 var ms = new MemoryStream(bytes);
                 var cs = new ConfigurableStream(ms);
                 var data2 = new byte[data.Length/2];
 
                 cs.AllowSeek = cs.AllowWrite = false;
-                var b2 = (BinIndexedFile<byte>) BinaryFile.Open(cs, null);
+                var b2 = (BinIndexedFile<byte>) BinaryFile.Open(cs, LegacyResolver);
                 Assert.IsTrue(b2.IsOpen);
                 Assert.AreEqual(b.ItemSize, b2.ItemSize);
 

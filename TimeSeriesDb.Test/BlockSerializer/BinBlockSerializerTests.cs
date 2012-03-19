@@ -25,7 +25,7 @@
 using System;
 using System.Runtime.InteropServices;
 using NUnit.Framework;
-using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.CommonCode;
 using NYurik.TimeSeriesDb.Serializers;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
@@ -82,7 +82,7 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
                 }
             }
 
-            using (var bf = (BinIndexedFile<TradesBlock>) BinaryFile.Open(fileName, false, LegacySupport.TypeResolver))
+            using (var bf = (BinIndexedFile<TradesBlock>) BinaryFile.Open(fileName, false, LegacyResolver))
             {
                 VerifyData(bf, data);
             }

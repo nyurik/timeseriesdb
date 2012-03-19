@@ -193,7 +193,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
 
                 using (
                     var f =
-                        (BinIndexedFile<byte>) BinaryFile.Open(fileName, AllowCreate, LegacySupport.TypeResolver))
+                        (BinIndexedFile<byte>) BinaryFile.Open(fileName, AllowCreate, LegacyResolver))
                 {
                     AfterInitValidation(f, true, fileName);
                     f.Close();
@@ -208,7 +208,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                 }
             }
 
-            using (var f = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false, LegacySupport.TypeResolver))
+            using (var f = (BinIndexedFile<byte>) BinaryFile.Open(fileName, false, LegacyResolver))
             {
                 AfterInitValidation(f, false, fileName);
                 ((IDisposable) f).Dispose();
@@ -255,7 +255,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                         ts2,
                         (ts, an) =>
                         an != null && an.Name == oldAn && ts.Name == oldT.FullName ? typeof (_LongByte_SeqPk1) : null,
-                        LegacySupport.TypeResolver, TypeUtils.ResolverFromAnyAssemblyVersion))))
+                        TypeResolver, LegacySupport.TypeResolver, TypeUtils.ResolverFromAnyAssemblyVersion))))
             {
                 var p = (BinIndexedFile<_LongByte_SeqPk1>) f;
 

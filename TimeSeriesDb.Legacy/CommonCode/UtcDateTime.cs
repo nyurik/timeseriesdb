@@ -28,7 +28,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
-namespace NYurik.TimeSeriesDb.Common
+namespace NYurik.TimeSeriesDb.CommonCode
 {
     /// <summary>
     /// This is a replacement of the <see cref="DateTime"/> object that ensures type safety
