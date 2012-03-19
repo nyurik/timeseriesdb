@@ -25,7 +25,7 @@
 using System;
 using System.IO;
 using NUnit.Framework;
-using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Test.Legacy
 {

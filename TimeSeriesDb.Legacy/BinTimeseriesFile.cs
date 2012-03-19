@@ -26,7 +26,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using JetBrains.Annotations;
-using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb
 {

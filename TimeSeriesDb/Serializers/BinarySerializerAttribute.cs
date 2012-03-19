@@ -23,7 +23,7 @@
 #endregion
 
 using System;
-using NYurik.TimeSeriesDb.EmitExtensions;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers
 {

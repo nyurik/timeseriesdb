@@ -29,7 +29,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using JetBrains.Annotations;
 
-namespace NYurik.TimeSeriesDb.CommonCode
+namespace NYurik.TimeSeriesDb.Common
 {
     /// <summary>
     /// Generic exception capable of delayed message formatting.
@@ -64,29 +64,29 @@ namespace NYurik.TimeSeriesDb.CommonCode
             }
         }
 
-        public FormattedException()
+        protected FormattedException()
             : this(false, null, null, null)
         {
         }
 
-        public FormattedException(string message)
+        protected FormattedException(string message)
             : this(false, null, message, null)
         {
         }
 
         [StringFormatMethod("message")]
-        public FormattedException(string message, params object[] args)
+        protected FormattedException(string message, params object[] args)
             : this(true, null, message, args)
         {
         }
 
-        public FormattedException(Exception inner, string message)
+        protected FormattedException(Exception inner, string message)
             : this(false, inner, message, null)
         {
         }
 
         [StringFormatMethod("message")]
-        public FormattedException(Exception inner, string message, params object[] args)
+        protected FormattedException(Exception inner, string message, params object[] args)
             : this(true, inner, message, args)
         {
         }

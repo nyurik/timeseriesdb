@@ -29,7 +29,7 @@ using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using NYurik.TimeSeriesDb.Serializers;
 
-namespace NYurik.TimeSeriesDb.CommonCode
+namespace NYurik.TimeSeriesDb.Common
 {
     public static class Utils
     {

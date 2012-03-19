@@ -1,40 +1,38 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1" GroupingSetting="Access">
   <Class Name="NYurik.TimeSeriesDb.BinaryFile&lt;T&gt;">
-    <Position X="3.75" Y="2.25" Width="2" />
+    <Position X="16" Y="3.5" Width="2" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>AAAAAAAkAAAAmCAAADABAAAAACQACAQQIQAEAAAAAgA=</HashCode>
+      <HashCode>AAAAAAAkAAAAmCAAADABAAAAACAACAQAIQAEAAQAAgA=</HashCode>
       <FileName>BinaryFile.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="NYurik.TimeSeriesDb.BinaryFile">
-    <Position X="0.75" Y="2.25" Width="2.25" />
+    <Position X="12.25" Y="0.75" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
       <Compartment Name="Protected" Collapsed="true" />
       <Compartment Name="ProtectedInternal" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>KgTBAEFYQCCgIAZMECBJJxTgkHBAAAQlAAAXRADBAhA=</HashCode>
+      <HashCode>KATBAEFYQCCgIAZMECBJJxTgkHBAAAQlAAAXRADBAhA=</HashCode>
       <FileName>BinaryFileBase.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="NYurik.TimeSeriesDb.BinIndexedFile&lt;T&gt;">
-    <Position X="6.75" Y="7" Width="2.25" />
+    <Position X="15.75" Y="9.25" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
-    <InheritanceLine Type="NYurik.TimeSeriesDb.BinaryFile&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true">
+    <InheritanceLine Type="NYurik.TimeSeriesDb.BinaryFile&lt;T&gt;" ManuallyRouted="true" FixedToPoint="true">
       <Path>
-        <Point X="5.688" Y="5.647" />
-        <Point X="5.688" Y="6.592" />
-        <Point X="7.875" Y="6.592" />
-        <Point X="7.875" Y="7" />
+        <Point X="17" Y="6.897" />
+        <Point X="17" Y="9.25" />
       </Path>
     </InheritanceLine>
     <TypeIdentifier>
@@ -42,19 +40,8 @@
       <FileName>BinIndexedFile.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.BinUniformTimeseriesFile&lt;T&gt;">
-    <Position X="7.25" Y="2.75" Width="2.75" />
-    <Compartments>
-      <Compartment Name="Private" Collapsed="true" />
-    </Compartments>
-    <TypeIdentifier>
-      <HashCode>AACAQEAAAAgBAIAGEAAAAAAAAIAgABAAAAACABAACAA=</HashCode>
-      <FileName>BinUniformTimeseriesFile.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Orientation="Right" Position="0.263" />
-  </Class>
   <Class Name="NYurik.TimeSeriesDb.DefaultTypeSerializer&lt;T&gt;" BaseTypeListCollapsed="true">
-    <Position X="15.5" Y="11.25" Width="2.25" />
+    <Position X="8.75" Y="18.25" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -64,25 +51,8 @@
     </TypeIdentifier>
     <Lollipop Position="1.324" />
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.BinTimeseriesFile&lt;T&gt;">
-    <Position X="12" Y="7.25" Width="2.5" />
-    <Compartments>
-      <Compartment Name="Private" Collapsed="true" />
-    </Compartments>
-    <InheritanceLine Type="NYurik.TimeSeriesDb.BinSeriesFile&lt;TInd, TVal&gt;" FixedToPoint="true">
-      <Path>
-        <Point X="13.25" Y="6.002" />
-        <Point X="13.25" Y="7.25" />
-      </Path>
-    </InheritanceLine>
-    <TypeIdentifier>
-      <HashCode>AEAAACAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAgA=</HashCode>
-      <FileName>BinTimeseriesFile.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="1.498" />
-  </Class>
   <Class Name="NYurik.TimeSeriesDb.Initializable">
-    <Position X="16.75" Y="8.5" Width="2.25" />
+    <Position X="10" Y="15.5" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -91,18 +61,8 @@
       <FileName>Initializable.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.UtcDateTimeField">
-    <Position X="18.5" Y="16.75" Width="1.5" />
-    <Compartments>
-      <Compartment Name="Private" Collapsed="true" />
-    </Compartments>
-    <TypeIdentifier>
-      <HashCode>AAACAAAZAAAAAAEAAAAAAEAAAAgAAAAEAAAAAAAAAAE=</HashCode>
-      <FileName>Serializers\BlockSerializer\UtcDateTimeField.cs</FileName>
-    </TypeIdentifier>
-  </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.BaseField">
-    <Position X="21.75" Y="11" Width="2" />
+    <Position X="15" Y="18" Width="2" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -112,7 +72,7 @@
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.BinBlockSerializer&lt;TObject, THeader, TItem&gt;">
-    <Position X="18.5" Y="11.25" Width="2.25" />
+    <Position X="11.75" Y="18.25" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -123,7 +83,7 @@
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.CodecBase">
-    <Position X="9.75" Y="10.25" Width="1.5" />
+    <Position X="3" Y="17.25" Width="1.5" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -134,27 +94,27 @@
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.CodecReader">
-    <Position X="8.5" Y="14" Width="1.5" />
+    <Position X="1.75" Y="21" Width="1.5" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>AEEAQBAgAACAAAAAAAAIAAAAABAAAEAAAAgAAAAARAA=</HashCode>
+      <HashCode>AEEAQBAgAACAAAAAAAAIAAAAABAAAEAAAAgAAAAABAA=</HashCode>
       <FileName>Serializers\BlockSerializer\CodecReader.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.CodecWriter">
-    <Position X="10.75" Y="14" Width="1.5" />
+    <Position X="4" Y="21" Width="1.5" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>AAEAAAIAAAAAAAAACAAAAEQACAAAAAAgAACAAAhAQCA=</HashCode>
+      <HashCode>AAEAAAIAEAAAAAAACAAAAAQACAAAAAAgAACAAAhAQCA=</HashCode>
       <FileName>Serializers\BlockSerializer\CodecWriter.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.ComplexField">
-    <Position X="25.25" Y="16.75" Width="1.5" />
+    <Position X="18.5" Y="23.75" Width="1.5" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -164,7 +124,7 @@
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.DynamicSerializer">
-    <Position X="13" Y="11.75" Width="1.75" />
+    <Position X="6.25" Y="18.75" Width="1.75" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -175,7 +135,7 @@
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.DynamicSerializer&lt;T&gt;">
-    <Position X="13" Y="14.25" Width="1.75" />
+    <Position X="6.25" Y="21.25" Width="1.75" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -185,14 +145,14 @@
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.FieldAttribute" Collapsed="true">
-    <Position X="27.75" Y="7" Width="1.5" />
+    <Position X="23.25" Y="0.5" Width="2.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Serializers\BlockSerializer\FieldAttribute.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.ScaledDeltaField">
-    <Position X="20.75" Y="16.75" Width="1.5" />
+    <Position X="14" Y="23.75" Width="1.5" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
@@ -202,337 +162,413 @@
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.SimpleField">
-    <Position X="23" Y="16.75" Width="1.5" />
+    <Position X="16.25" Y="23.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAEAAAABAAAAAAEAAAAAAAAAAAgAAAAEAAAAAAAAAAE=</HashCode>
       <FileName>Serializers\BlockSerializer\SimpleField.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.SubFieldInfo" Collapsed="true">
-    <Position X="29.5" Y="7" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.SubFieldInfo">
+    <Position X="28.5" Y="7.25" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAEAAAAIAAAAAAAAAABAAQAAAAAgAA=</HashCode>
       <FileName>Serializers\BlockSerializer\SubFieldInfo.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.SerializerException" Collapsed="true">
-    <Position X="27.75" Y="10.25" Width="1.5" />
+    <Position X="20.25" Y="0.5" Width="1.75" />
+    <InheritanceLine Type="NYurik.TimeSeriesDb.Common.FormattedException" FixedFromPoint="true">
+      <Path>
+        <Point X="19.5" Y="1.562" />
+        <Point X="19.875" Y="1.562" />
+        <Point X="19.875" Y="0.815" />
+        <Point X="20.25" Y="0.815" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Serializers\SerializerException.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.Serializers.BinarySerializerAttribute" Collapsed="true">
-    <Position X="27.75" Y="9.25" Width="1.5" />
+    <Position X="23.25" Y="2.5" Width="2.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAgQAAAAIAAAAAAAAgA=</HashCode>
       <FileName>Serializers\BinarySerializerAttribute.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.Serializers.DynamicCodeFactory" Collapsed="true">
-    <Position X="29.5" Y="9.25" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.Serializers.DynamicCodeFactory">
+    <Position X="26.75" Y="4.75" Width="2.25" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <NestedTypes>
+      <Class Name="NYurik.TimeSeriesDb.Serializers.DynamicCodeFactory.BinSerializerInfo" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Serializers\DynamicCodeFactory.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Class>
+    </NestedTypes>
     <TypeIdentifier>
-      <HashCode>AABAAAAAAAEAAACAICBEAAAAAAAACABAQAIAQAAAIAA=</HashCode>
+      <HashCode>AABAAAAAAAEAAACAAABEAAAQAAAAGABAQAIAQAAAIAA=</HashCode>
       <FileName>Serializers\DynamicCodeFactory.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.TimestampAttribute" Collapsed="true">
-    <Position X="41.25" Y="16" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>TimestampAttribute.cs</FileName>
-    </TypeIdentifier>
-  </Class>
   <Class Name="NYurik.TimeSeriesDb.BinaryFileException" Collapsed="true">
-    <Position X="39.5" Y="13" Width="1.5" />
+    <Position X="20.25" Y="2" Width="1.75" />
+    <InheritanceLine Type="NYurik.TimeSeriesDb.Common.FormattedException" FixedFromPoint="true">
+      <Path>
+        <Point X="19.5" Y="1.562" />
+        <Point X="19.875" Y="1.562" />
+        <Point X="19.875" Y="2.315" />
+        <Point X="20.25" Y="2.315" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>BinaryFileException.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.BinCompressedSeriesFile" Collapsed="true">
-    <Position X="41.25" Y="13" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.BinCompressedSeriesFile">
+    <Position X="12.25" Y="7.25" Width="2.75" />
     <TypeIdentifier>
       <HashCode>AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>BinCompressedSeriesFile.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.BinCompressedSeriesFile&lt;TInd, TVal&gt;">
-    <Position X="3.25" Y="6.75" Width="3" />
+    <Position X="12.25" Y="9.25" Width="2.75" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
-    <InheritanceLine Type="NYurik.TimeSeriesDb.BinaryFile&lt;T&gt;" FixedToPoint="true">
+    <InheritanceLine Type="NYurik.TimeSeriesDb.BinaryFile&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true">
       <Path>
-        <Point X="4.75" Y="5.647" />
-        <Point X="4.75" Y="6.75" />
+        <Point X="17" Y="6.897" />
+        <Point X="17" Y="8.875" />
+        <Point X="13.625" Y="8.875" />
+        <Point X="13.625" Y="9.25" />
       </Path>
     </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AACECEBAgAAQDAAkCsAJAEQBAAABCAAMEDACZCggACA=</HashCode>
+      <HashCode>AADECEBAgAAQSAA0CoAJgEwBAAADCABMGBAiZCgABAA=</HashCode>
       <FileName>BinCompressedSeriesFile.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.BinSeriesFile" Collapsed="true">
-    <Position X="43" Y="13" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.BinSeriesFile">
+    <Position X="18.5" Y="7.25" Width="2.25" />
     <TypeIdentifier>
       <HashCode>AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>BinSeriesFile.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.BinSeriesFile&lt;TInd, TVal&gt;">
-    <Position X="12" Y="2" Width="2.5" />
+    <Position X="18.5" Y="9.25" Width="2.25" />
     <Compartments>
       <Compartment Name="Private" Collapsed="true" />
     </Compartments>
+    <InheritanceLine Type="NYurik.TimeSeriesDb.BinaryFile&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true">
+      <Path>
+        <Point X="17" Y="6.897" />
+        <Point X="17" Y="8.875" />
+        <Point X="19.625" Y="8.875" />
+        <Point X="19.625" Y="9.25" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AACASEBAAAARDAAkgkAIAEABAIAAAAAEEAACQAAACCA=</HashCode>
+      <HashCode>AADECEBAAAAQSAAkAkAIgEkBAIACAABEGAACQAAADAA=</HashCode>
       <FileName>BinSeriesFile.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="1.92" />
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.BinTimeseriesFile" Collapsed="true">
-    <Position X="44.75" Y="13" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.Buffer&lt;T&gt;">
+    <Position X="24.25" Y="6.5" Width="2.25" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
     <TypeIdentifier>
-      <HashCode>AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>BinTimeseriesFile.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="NYurik.TimeSeriesDb.BinUniformTimeseriesFile" Collapsed="true">
-    <Position X="46.5" Y="13" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>BinUniformTimeseriesFile.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="NYurik.TimeSeriesDb.Buffer&lt;T&gt;" Collapsed="true">
-    <Position X="39.5" Y="14" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAIAAAAgAAAACAAAAAAAAAQCAAAAAACAAACBAAAAAAA=</HashCode>
+      <HashCode>AAIAAAAgEAAAGAAAAAAAAAQCAAAAAACAAACAAAAAAAA=</HashCode>
       <FileName>Buffer.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.BufferProvider&lt;T&gt;" Collapsed="true">
-    <Position X="41.25" Y="14" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.BufferProvider&lt;T&gt;">
+    <Position X="24.25" Y="9" Width="2.25" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
     <TypeIdentifier>
-      <HashCode>AAAAIAAgAAAgAAAAAAAIAAAAAAAAAAgAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAIAAgAAAAAAAAAAAIAAAAAAAAAAgAAAAAIAAAAAA=</HashCode>
       <FileName>BufferProvider.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.CombinedException" Collapsed="true">
-    <Position X="43" Y="14" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.EnumerableFeedExtensions">
+    <Position X="24.25" Y="11.75" Width="2.75" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAgAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>CombinedException.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="NYurik.TimeSeriesDb.EnumerableFeedExtensions" Collapsed="true">
-    <Position X="44.75" Y="14" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAQAAAAAAAABAAAIAAAAIAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAAAAQAAAAAAAABAAAIAAAAAAAAAAAAAAA=</HashCode>
       <FileName>EnumerableFeedExtensions.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.FastBinFileUtils" Collapsed="true">
-    <Position X="46.5" Y="14" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAgAAAAAAAEAAAIAgAACAAAAAAKAAAAACIAAAAAAE=</HashCode>
-      <FileName>FastBinFileUtils.cs</FileName>
-    </TypeIdentifier>
-  </Class>
   <Class Name="NYurik.TimeSeriesDb.IncompatibleVersionException" Collapsed="true">
-    <Position X="39.5" Y="15" Width="1.5" />
+    <Position X="20.25" Y="1.25" Width="1.75" />
+    <InheritanceLine Type="NYurik.TimeSeriesDb.Common.FormattedException" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="19.5" Y="1.562" />
+        <Point X="20.25" Y="1.562" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>IncompatibleVersionException.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.NativeWinApis" Collapsed="true">
-    <Position X="41.25" Y="15" Width="1.5" />
+    <Position X="32.5" Y="15.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AEAAgAAAAAAAQAAAAAABQCgGAAACAAAAAAAACAAAAAA=</HashCode>
       <FileName>NativeWinApis.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.SafeMapViewHandle" Collapsed="true">
-    <Position X="46.5" Y="15" Width="1.5" />
+    <Position X="32.5" Y="16.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAACAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
       <FileName>NativeWinApis.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="NYurik.TimeSeriesDb.SafeMapHandle" Collapsed="true">
-    <Position X="44.75" Y="15" Width="1.5" />
+    <Position X="32.5" Y="16" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>NativeWinApis.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.ObsoleteExtensions" Collapsed="true">
-    <Position X="43" Y="15" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.CachedIndex&lt;TInd&gt;">
+    <Position X="24.25" Y="4.75" Width="2.25" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAABAAAEAAAAAAAQAAAgAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>ObsoleteExtensions.cs</FileName>
+      <HashCode>AAAAAAAAAIAAAJAAQACAAAQAAAAAABAAAgAAAAAAABA=</HashCode>
+      <FileName>CachedIndex.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="NYurik.TimeSeriesDb.StoredSeriesExtensions" Collapsed="true">
-    <Position X="39.5" Y="16" Width="1.5" />
+  <Class Name="NYurik.TimeSeriesDb.FeedConverter&lt;TIndex, TOld, TNew&gt;" BaseTypeListCollapsed="true">
+    <Position X="27.5" Y="11.75" Width="3" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
     <TypeIdentifier>
-      <HashCode>AQAAAAAAAAAIAAAAAAAAAAAAAEAAAAAAAAAAAAAAAgA=</HashCode>
-      <FileName>StoredSeriesExtensions.cs</FileName>
+      <HashCode>AAAAAgAAACAgAAAABAAAAAgBAAAAAIAEAAAAAQAAAgI=</HashCode>
+      <FileName>FeedConverter.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.IndexAttribute" Collapsed="true">
+    <Position X="23.25" Y="1.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IndexAttribute.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.Common.FormattedException" Collapsed="true">
+    <Position X="18" Y="1.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAEAAAAAAAAAAAAAAAIgAAAAAIAAQAAAoAAAAAA=</HashCode>
+      <FileName>Common\FormattedException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.Common.ILGeneratorExtensions" Collapsed="true">
+    <Position X="32.25" Y="7" Width="2" />
+    <TypeIdentifier>
+      <HashCode>1eVgDKDBO+RHbrMlcg9tf7aJ2ObGm+y/v0yPvEPyxZA=</HashCode>
+      <FileName>EmitExtensions\ILGeneratorExtensions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.Common.TypeExtensions" Collapsed="true">
+    <Position X="32.25" Y="7.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAABIAAgAAAAAAAAAAAAgAACAAQAAAAAAAAAAAABIgA=</HashCode>
+      <FileName>EmitExtensions\TypeExtensions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.Common.TypeBuilderExtensions" Collapsed="true">
+    <Position X="32.25" Y="6.25" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AQAACAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAA=</HashCode>
+      <FileName>EmitExtensions\TypeBuilderExtensions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.Common.Utils">
+    <Position X="34" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAgQAAAAAAEAAAIAgAACAAAIAAKAAAAACIAAAAAAE=</HashCode>
+      <FileName>Common\Utils.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.Common.TypeSpec">
+    <Position X="30" Y="0.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Private" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAkAAAAACCIAAAFAAACAAQCAAgAABAAAAAAAhAEAAA=</HashCode>
+      <FileName>Common\TypeSpec.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.Common.ArraySpec">
+    <Position X="28.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAACAAAAEAAAAAAIAAAAAAAAAAAAAAAAAAgA=</HashCode>
+      <FileName>Common\TypeSpec.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NYurik.TimeSeriesDb.Common.TypeUtils">
+    <Position X="31.75" Y="0.5" Width="1.5" />
+    <NestedTypes>
+      <Class Name="NYurik.TimeSeriesDb.Common.TypeUtils.CachingTypeResolver" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Common\TypeUtils.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Class>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>EAAAIAAAAAAIAAgAAAAAAAAAAAACAAAAAAAAgAAAAAA=</HashCode>
+      <FileName>Common\TypeUtils.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Interface Name="NYurik.TimeSeriesDb.IBinSerializer&lt;T&gt;">
-    <Position X="20.75" Y="5" Width="2" />
+    <Position X="23.75" Y="18.75" Width="2" />
     <TypeIdentifier>
       <HashCode>RAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAA=</HashCode>
       <FileName>IBinSerializer.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="NYurik.TimeSeriesDb.IBinaryFile">
-    <Position X="3.75" Y="12.5" Width="1.5" />
+    <Position X="7" Y="1.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>KAAAAAAAAACAAAAIEABAAAAAAGAAAAAAAAAABADAAAA=</HashCode>
-      <FileName>IBinaryFile.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IBinaryFile&lt;T&gt;">
-    <Position X="2" Y="16" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAABACAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>KABAAAAAAACgAAAIEABAABAAAWAAAAAAAAAABADAAgA=</HashCode>
       <FileName>IBinaryFile.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="NYurik.TimeSeriesDb.IBinSerializer">
-    <Position X="21.75" Y="2.5" Width="2" />
+    <Position X="24.75" Y="16.25" Width="2" />
     <TypeIdentifier>
-      <HashCode>IQAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAABAAAggA=</HashCode>
+      <HashCode>IQAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAggA=</HashCode>
       <FileName>IBinSerializer.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IBinTimeseriesFile">
-    <Position X="3.75" Y="16" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AEAAACAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAACgA=</HashCode>
-      <FileName>IBinTimeseriesFile.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IBinUniformTimeseriesFile">
-    <Position X="5.75" Y="16.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAACAA=</HashCode>
-      <FileName>IBinUniformTimeseriesFile.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IStoredSeries">
-    <Position X="6.5" Y="10" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AABAAAAAAAAgAAAAAAAAABAAAQAAAAAAAAAAAAAQAgA=</HashCode>
-      <FileName>IStoredSeries.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IStoredUniformTimeseries">
-    <Position X="6.5" Y="12.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAEAAAAAAAAIAAAAAAAAAAABAQAAA=</HashCode>
-      <FileName>IStoredSeries.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
   <Interface Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.IBinBlockSerializer">
-    <Position X="23" Y="5" Width="1.5" />
-    <InheritanceLine Type="NYurik.TimeSeriesDb.IBinSerializer" FixedToPoint="true">
-      <Path>
-        <Point X="22.75" Y="4.467" />
-        <Point X="22.75" Y="4.7" />
-        <Point X="23.875" Y="4.7" />
-        <Point X="23.875" Y="5" />
-      </Path>
-    </InheritanceLine>
+    <Position X="26" Y="18.75" Width="1.75" />
     <TypeIdentifier>
       <HashCode>AAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Serializers\BlockSerializer\BinBlockSerializer.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.IStateStore" Collapsed="true">
-    <Position X="29.5" Y="8.25" Width="1.5" />
+  <Interface Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.IStateStore">
+    <Position X="26.75" Y="7.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAABAAAAAAAAAAAAAACAAAAAAAAAAAA=</HashCode>
       <FileName>Serializers\BlockSerializer\DynamicSerializer.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.IBinBlock&lt;THeader, TItem&gt;" Collapsed="true">
-    <Position X="27.75" Y="8.25" Width="1.5" />
+  <Interface Name="NYurik.TimeSeriesDb.Serializers.BlockSerializer.IBinBlock&lt;THeader, TItem&gt;">
+    <Position X="26" Y="20.25" Width="2.25" />
     <TypeIdentifier>
       <HashCode>BAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Serializers\BlockSerializer\IBinBlock.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IEnumerableFeed" Collapsed="true">
-    <Position X="28.75" Y="15" Width="1.5" />
+  <Interface Name="NYurik.TimeSeriesDb.IEnumerableFeed">
+    <Position X="4.75" Y="4" Width="1.5" />
+    <InheritanceLine Type="NYurik.TimeSeriesDb.IGenericInvoker2" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="5.438" Y="3.601" />
+        <Point X="5.438" Y="4" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgA=</HashCode>
       <FileName>IEnumerableFeed.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IEnumerableFeed&lt;TInd, TVal&gt;" Collapsed="true">
-    <Position X="28.75" Y="16.5" Width="1.5" />
+  <Interface Name="NYurik.TimeSeriesDb.IEnumerableFeed&lt;TInd, TVal&gt;">
+    <Position X="3.75" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAABAAEAgAAAEABAAAAAAAEAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAABAAAAAAAEAAAAAAAAAAA=</HashCode>
       <FileName>IEnumerableFeed.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IEnumerableFeed&lt;T&gt;" Collapsed="true">
-    <Position X="28.75" Y="17.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>IEnumerableFeed.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IGenericInvoker" Collapsed="true">
-    <Position X="28.75" Y="13.75" Width="1.5" />
+  <Interface Name="NYurik.TimeSeriesDb.IGenericInvoker">
+    <Position X="4.75" Y="1.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>IGenericInvoker.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="NYurik.TimeSeriesDb.IGenericCallable&lt;TDst, TArg&gt;" Collapsed="true">
-    <Position X="39.5" Y="17.25" Width="1.5" />
+    <Position X="1.75" Y="1.25" Width="2.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=</HashCode>
       <FileName>IGenericInvoker.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="NYurik.TimeSeriesDb.IWrapperFactory" Collapsed="true">
-    <Position X="41.25" Y="17.25" Width="1.5" />
+  <Interface Name="NYurik.TimeSeriesDb.IWritableFeed">
+    <Position X="5.75" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAA=</HashCode>
-      <FileName>IWrapperFactory.cs</FileName>
+      <HashCode>AABAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IEnumerableFeed.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.TimeSeriesDb.IWritableFeed&lt;TInd, TVal&gt;" Collapsed="true">
+    <Position X="4.25" Y="8.25" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAQAAEAgAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IEnumerableFeed.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.TimeSeriesDb.IGenericInvoker2">
+    <Position X="4.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IGenericInvoker.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="NYurik.TimeSeriesDb.IGenericCallable2&lt;TDst, TArg&gt;">
+    <Position X="1.75" Y="2.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=</HashCode>
+      <FileName>IGenericInvoker.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Enum Name="NYurik.TimeSeriesDb.FileMapProtection" Collapsed="true">
-    <Position X="41.25" Y="18.25" Width="1.5" />
+    <Position X="32.5" Y="18.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAgAAAAAAAAAAAAACAAAAAAAAAAAAAAAAgAAAEAAAA=</HashCode>
       <FileName>NativeWinApis.cs</FileName>
     </TypeIdentifier>
   </Enum>
   <Enum Name="NYurik.TimeSeriesDb.FileMapAccess" Collapsed="true">
-    <Position X="39.5" Y="18.25" Width="1.5" />
+    <Position X="32.5" Y="17.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAgAiAAAAAAAAAAAAEAAAA=</HashCode>
       <FileName>NativeWinApis.cs</FileName>
     </TypeIdentifier>
   </Enum>
   <Delegate Name="NYurik.TimeSeriesDb.Serializers.UnsafeActionDelegate&lt;TStorage, TItem&gt;" Collapsed="true">
-    <Position X="27.75" Y="11.5" Width="1.5" />
+    <Position X="28.5" Y="15.25" Width="3" />
     <TypeIdentifier>
       <HashCode>AAAAAAABwAAAIAAAAAAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Serializers\DefaultTypeSerializer.cs</FileName>
     </TypeIdentifier>
   </Delegate>
   <Delegate Name="NYurik.TimeSeriesDb.Serializers.UnsafeMemCompareDelegate&lt;TItem&gt;" Collapsed="true">
-    <Position X="29.5" Y="11.5" Width="1.5" />
+    <Position X="28.5" Y="16" Width="3" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAQAAAAAAAAAAAAAAAAAgAAAAACAQAAAAAAAA=</HashCode>
       <FileName>Serializers\DefaultTypeSerializer.cs</FileName>

@@ -27,7 +27,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using JetBrains.Annotations;
 
-namespace NYurik.TimeSeriesDb.CommonCode
+namespace NYurik.TimeSeriesDb.Common
 {
     public static class TypeUtils
     {

@@ -24,7 +24,7 @@
 
 using System;
 using System.Collections.Generic;
-using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb
 {

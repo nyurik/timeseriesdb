@@ -25,7 +25,7 @@
 using System;
 using System.Runtime.InteropServices;
 using NUnit.Framework;
-using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Common;
 using NYurik.TimeSeriesDb.Serializers;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 

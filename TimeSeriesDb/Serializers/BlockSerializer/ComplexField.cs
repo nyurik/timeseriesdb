@@ -32,7 +32,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using JetBrains.Annotations;
-using NYurik.TimeSeriesDb.EmitExtensions;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {

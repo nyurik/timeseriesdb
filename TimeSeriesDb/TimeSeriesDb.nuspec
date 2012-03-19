@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <licenseUrl>http://www.gnu.org/licenses/gpl.html</licenseUrl>
+    <projectUrl>http://code.google.com/p/timeseriesdb/</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>$description$</summary>
+    <description>Please see project homepage for additional info</description>
+    <releaseNotes></releaseNotes>
+    <copyright>2009-2012 Yuri Astrakhan  (&lt;Firstname&gt;&lt;Lastname&gt;@gmail.com)</copyright>
+    <tags>timeseries database storage flatfile serialization</tags>
+  </metadata>
+  <files>
+    <file src="..\license.txt" target="license.txt" />
+  </files>
+</package>

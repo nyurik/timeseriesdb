@@ -25,8 +25,7 @@
 using System;
 using System.IO;
 using System.Reflection;
-using NYurik.TimeSeriesDb.CommonCode;
-using NYurik.TimeSeriesDb.EmitExtensions;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {

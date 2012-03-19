@@ -25,7 +25,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Common;
 using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb
@@ -620,7 +620,7 @@ namespace NYurik.TimeSeriesDb
                 }
                 catch (Exception ex2)
                 {
-                    throw new CombinedException("Failed to clean up after failed header writing", ex, ex2);
+                    throw new AggregateException("Failed to clean up after failed header writing", ex, ex2);
                 }
 
                 throw;

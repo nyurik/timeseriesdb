@@ -30,8 +30,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using NYurik.TimeSeriesDb.CommonCode;
-using NYurik.TimeSeriesDb.EmitExtensions;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers
 {

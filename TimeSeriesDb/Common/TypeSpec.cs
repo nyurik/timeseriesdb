@@ -39,7 +39,7 @@ using System.Reflection;
 using System.Text;
 using JetBrains.Annotations;
 
-namespace NYurik.TimeSeriesDb.CommonCode
+namespace NYurik.TimeSeriesDb.Common
 {
     public class TypeSpec
     {

@@ -135,21 +135,25 @@
     </Compile>
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
+    <None Include="TimeSeriesDb.nuspec" />
     <None Include="_ClassDiagram.cd" />
     <Compile Include="BinCompressedSeriesFile.cs" />
     <Compile Include="BufferProvider.cs" />
     <Compile Include="CachedIndex.cs" />
-    <Compile Include="CommonCode\TypeSpec.cs" />
+    <Compile Include="Common\FormattedException.cs" />
+    <Compile Include="Common\ILGeneratorExtensions.cs" />
+    <Compile Include="Common\JetBrains.cs" />
+    <Compile Include="Common\TypeExtensions.cs" />
+    <Compile Include="Common\TypeSpec.cs" />
+    <Compile Include="Common\TypeUtils.cs" />
+    <Compile Include="Common\Utils.cs" />
     <Compile Include="FeedConverter.cs" />
     <Compile Include="IEnumerableFeed.cs" />
     <Compile Include="BinSeriesFile.cs" />
-    <Compile Include="CommonCode\JetBrains.cs" />
     <Compile Include="EnumerableFeedExtensions.cs" />
     <Compile Include="IGenericInvoker.cs" />
     <Compile Include="Serializers\BinarySerializerAttribute.cs" />
     <Compile Include="BinIndexedFile.cs" />
-    <Compile Include="CombinedException.cs" />
-    <Compile Include="CommonCode\FormattedException.cs" />
     <Compile Include="BinaryFileException.cs" />
     <Compile Include="IncompatibleVersionException.cs" />
     <Compile Include="Initializable.cs" />
@@ -167,17 +171,12 @@
     <Compile Include="Serializers\BlockSerializer\SimpleField.cs" />
     <Compile Include="Serializers\BlockSerializer\CodecWriter.cs" />
     <Compile Include="Serializers\SerializerException.cs" />
-    <Compile Include="CommonCode\Utils.cs" />
     <Compile Include="IBinaryFile.cs" />
     <Compile Include="NativeWinApis.cs" />
     <Compile Include="Serializers\DefaultTypeSerializer.cs" />
-    <Compile Include="EmitExtensions\ILGeneratorExtensions.cs" />
-    <Compile Include="EmitExtensions\TypeBuilderExtensions.cs" />
-    <Compile Include="EmitExtensions\TypeExtensions.cs" />
     <Compile Include="Serializers\DynamicCodeFactory.cs" />
     <Compile Include="IBinSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CommonCode\TypeUtils.cs" />
     <Compile Include="IndexAttribute.cs" />
   </ItemGroup>
   <ItemGroup>

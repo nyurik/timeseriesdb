@@ -24,7 +24,7 @@
 
 using System;
 using JetBrains.Annotations;
-using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
