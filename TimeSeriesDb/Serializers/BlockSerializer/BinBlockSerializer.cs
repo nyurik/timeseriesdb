@@ -24,6 +24,7 @@
 
 using System;
 using System.IO;
+using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
@@ -139,7 +140,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             _itemTypeSize = reader.ReadInt32();
             if (CalculateTypeSize() != _itemTypeSize)
-                throw FastBinFileUtils.GetItemSizeChangedException(this, null, _itemTypeSize);
+                throw Utils.GetItemSizeChangedException(this, null, _itemTypeSize);
 
             IsInitialized = true;
         }
@@ -212,8 +213,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return _headerSerializer.TypeSize + _dataSerializer.TypeSize*ItemCount;
         }
 
-        private int Process(FileStream fileStream, IntPtr memPtr, ArraySegment<TObject> buffer,
-                            bool isWriting)
+        private int Process(
+            FileStream fileStream, IntPtr memPtr, ArraySegment<TObject> buffer,
+            bool isWriting)
         {
             bool useMmf = fileStream == null;
             var hdrArray = new THeader[1];

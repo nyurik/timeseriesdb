@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using JetBrains.Annotations;
+using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb
 {
@@ -67,9 +68,10 @@ namespace NYurik.TimeSeriesDb
         /// <param name="enumerateInReverse">Set to true to enumerate in reverse, false otherwise</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount"></param>
-        public IEnumerable<ArraySegment<T>> StreamSegments(long firstItemIdx, bool enumerateInReverse,
-                                                           IEnumerable<Buffer<T>> bufferProvider = null,
-                                                           long maxItemCount = long.MaxValue)
+        public IEnumerable<ArraySegment<T>> StreamSegments(
+            long firstItemIdx, bool enumerateInReverse,
+            IEnumerable<Buffer<T>> bufferProvider = null,
+            long maxItemCount = long.MaxValue)
         {
             return PerformStreaming(firstItemIdx, enumerateInReverse, bufferProvider, maxItemCount);
         }

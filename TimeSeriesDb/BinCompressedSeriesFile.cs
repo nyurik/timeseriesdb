@@ -28,6 +28,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
+using NYurik.TimeSeriesDb.CommonCode;
 using NYurik.TimeSeriesDb.EmitExtensions;
 using NYurik.TimeSeriesDb.Serializers;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
@@ -300,7 +301,7 @@ namespace NYurik.TimeSeriesDb
                                     lastInd);
 
                             // Round down so that if we have incomplete block, it will be appended.
-                            firstBufferBlock = FastBinFileUtils.RoundDownToMultiple(count, BlockSize)/BlockSize;
+                            firstBufferBlock = Utils.RoundDownToMultiple(count, BlockSize)/BlockSize;
                         }
                         else
                         {
@@ -405,10 +406,10 @@ namespace NYurik.TimeSeriesDb
                 firstBlockInd = fileCountInBlocks - 1;
             }
 
-            bool getFullBlock = FastBinFileUtils.IsDefault(firstInd);
+            bool getFullBlock = Utils.IsDefault(firstInd);
             int firstBlockSize = GetBlockSize(firstBlockInd, cachedFileCount);
-            int smallSize = FastBinFileUtils.RoundUpToMultiple(MinPageSize, BlockSize);
-            int largeSize = FastBinFileUtils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize);
+            int smallSize = Utils.RoundUpToMultiple(MinPageSize, BlockSize);
+            int largeSize = Utils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize);
 
             IEnumerable<Buffer<byte>> byteBuffs = _bufferByteProvider.YieldFixed(
                 firstBlockSize, BlockSize, smallSize, 4, largeSize);
@@ -451,7 +452,7 @@ namespace NYurik.TimeSeriesDb
                         int offset =
                             getFullBlock
                                 ? ~0
-                                : (int) FastBinFileUtils.BinarySearch(
+                                : (int) Utils.BinarySearch(
                                     firstInd, res.Offset, res.Count, UniqueIndexes, inReverse,
                                     p => IndexAccessor(res.Array[p]));
 
@@ -543,7 +544,7 @@ namespace NYurik.TimeSeriesDb
             if (blockCount == 0)
                 return -1;
 
-            if (FastBinFileUtils.IsDefault(index))
+            if (Utils.IsDefault(index))
             {
                 if (inReverse) // Start from the last block
                     return blockCount - 1;
@@ -552,7 +553,7 @@ namespace NYurik.TimeSeriesDb
                 return 0;
             }
 
-            long block = FastBinFileUtils.BinarySearch(
+            long block = Utils.BinarySearch(
                 index, 0, blockCount, UniqueIndexes, false, SearchCache.GetValueAt);
 
             if (block < 0)
@@ -682,7 +683,7 @@ namespace NYurik.TimeSeriesDb
 
         private long CalcBlockCount(long byteSize)
         {
-            return FastBinFileUtils.RoundUpToMultiple(byteSize, BlockSize)/BlockSize;
+            return Utils.RoundUpToMultiple(byteSize, BlockSize)/BlockSize;
         }
     }
 }

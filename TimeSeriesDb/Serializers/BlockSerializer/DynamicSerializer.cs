@@ -254,8 +254,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         ///     return moveNext;
         /// }]]>
         /// </remarks>
-        private IEnumerable<Expression> GenerateSerializer(out ParameterExpression[] parameters,
-                                                           out ParameterExpression[] localVars)
+        private IEnumerable<Expression> GenerateSerializer(
+            out ParameterExpression[] parameters,
+            out ParameterExpression[] localVars)
         {
             // param: codec
             ParameterExpression codecParam = Expression.Parameter(typeof (CodecWriter), "codec");
@@ -377,8 +378,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         ///     }
         /// }]]>
         /// </remarks>
-        private IEnumerable<Expression> GenerateDeSerializer(out ParameterExpression[] parameters,
-                                                             out ParameterExpression[] localVars)
+        private IEnumerable<Expression> GenerateDeSerializer(
+            out ParameterExpression[] parameters,
+            out ParameterExpression[] localVars)
         {
             // param: codec
             ParameterExpression codecParam = Expression.Parameter(typeof (CodecReader), "codec");

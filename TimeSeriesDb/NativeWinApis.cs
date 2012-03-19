@@ -79,8 +79,9 @@ namespace NYurik.TimeSeriesDb
         [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
         public static extern void GetNativeSystemInfo([MarshalAs(UnmanagedType.Struct)] out SYSTEM_INFO lpSystemInfo);
 
-        internal static SafeMapHandle CreateFileMapping(FileStream fileStream, long fileSize,
-                                                        FileMapProtection protection)
+        internal static SafeMapHandle CreateFileMapping(
+            FileStream fileStream, long fileSize,
+            FileMapProtection protection)
         {
             return
                 ThrowOnError(
@@ -102,8 +103,9 @@ namespace NYurik.TimeSeriesDb
             uint dwMaximumSizeLow,
             [MarshalAs(UnmanagedType.LPTStr)] string lpName);
 
-        internal static SafeMapViewHandle MapViewOfFile(SafeMapHandle hMap, long fileOffset, long mapViewSize,
-                                                        FileMapAccess desiredAccess)
+        internal static SafeMapViewHandle MapViewOfFile(
+            SafeMapHandle hMap, long fileOffset, long mapViewSize,
+            FileMapAccess desiredAccess)
         {
             if (hMap == null || hMap.IsInvalid)
                 throw new ArgumentNullException("hMap");

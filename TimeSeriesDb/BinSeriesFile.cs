@@ -25,12 +25,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using JetBrains.Annotations;
+using NYurik.TimeSeriesDb.CommonCode;
 using NYurik.TimeSeriesDb.EmitExtensions;
 using NYurik.TimeSeriesDb.Serializers;
-using System.Linq;
 
 namespace NYurik.TimeSeriesDb
 {
@@ -227,7 +228,7 @@ namespace NYurik.TimeSeriesDb
             long maxItemCount = Int64.MaxValue)
         {
             long start;
-            if (!FastBinFileUtils.IsDefault(fromInd))
+            if (!Utils.IsDefault(fromInd))
             {
                 start = BinarySearch(fromInd);
                 if (start < 0)
@@ -306,7 +307,7 @@ namespace NYurik.TimeSeriesDb
             if (value.CompareTo(GetLastIndex(count)) > 0)
                 return ~count;
 
-            return FastBinFileUtils.BinarySearch(value, 0L, count, UniqueIndexes, false, SearchCache.GetValueAt);
+            return Utils.BinarySearch(value, 0L, count, UniqueIndexes, false, SearchCache.GetValueAt);
         }
 
         /// <summary>

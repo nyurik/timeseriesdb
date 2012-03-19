@@ -24,6 +24,7 @@
 
 using System;
 using JetBrains.Annotations;
+using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
@@ -529,7 +530,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         public void Validate(int blockSize)
         {
-            int pos = FastBinFileUtils.RoundDownToMultiple(_bufferPos, blockSize);
+            int pos = Utils.RoundDownToMultiple(_bufferPos, blockSize);
             if (pos == _bufferPos)
                 throw new SerializerException("Cannot validate when BlockPos={0}, blockSize={1}", _bufferPos, blockSize);
             int dataSize = _bufferPos - pos;

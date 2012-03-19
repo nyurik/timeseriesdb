@@ -64,9 +64,10 @@ namespace NYurik.TimeSeriesDb
         /// <param name="inReverse">Set to true if you want to enumerate backwards, from last to first</param>
         /// <param name="bufferProvider">Provides buffers (or re-yields the same buffer) for each new result. Could be null for automatic</param>
         /// <param name="maxItemCount">Maximum number of items to return</param>
-        IEnumerable<ArraySegment<TVal>> StreamSegments(TInd fromInd = default(TInd), bool inReverse = false,
-                                                       IEnumerable<Buffer<TVal>> bufferProvider = null,
-                                                       long maxItemCount = long.MaxValue);
+        IEnumerable<ArraySegment<TVal>> StreamSegments(
+            TInd fromInd = default(TInd), bool inReverse = false,
+            IEnumerable<Buffer<TVal>> bufferProvider = null,
+            long maxItemCount = long.MaxValue);
     }
 
     /// <summary>

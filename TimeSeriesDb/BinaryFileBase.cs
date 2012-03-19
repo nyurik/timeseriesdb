@@ -369,7 +369,7 @@ namespace NYurik.TimeSeriesDb
 
             // Header size must be dividable by the item size
             var headerSize =
-                (int) FastBinFileUtils.RoundUpToMultiple(memWriter.BaseStream.Position, srlzr.TypeSize);
+                (int) Utils.RoundUpToMultiple(memWriter.BaseStream.Position, srlzr.TypeSize);
             if (memStream.Capacity < headerSize)
                 memStream.Capacity = headerSize;
 
@@ -383,8 +383,9 @@ namespace NYurik.TimeSeriesDb
             return new ArraySegment<byte>(memStream.GetBuffer(), 0, headerSize);
         }
 
-        private static BinaryFile ReadHeaderV10(Version baseVersion, Stream stream, BinaryReader reader,
-                                                int hdrSize, Func<string, Type> typeResolver)
+        private static BinaryFile ReadHeaderV10(
+            Version baseVersion, Stream stream, BinaryReader reader,
+            int hdrSize, Func<string, Type> typeResolver)
         {
             var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeResolver, true);
 
@@ -411,7 +412,7 @@ namespace NYurik.TimeSeriesDb
 
             // Make sure the item size has not changed
             if (itemSize != serializer.TypeSize)
-                throw FastBinFileUtils.GetItemSizeChangedException(serializer, tag, itemSize);
+                throw Utils.GetItemSizeChangedException(serializer, tag, itemSize);
 
             return inst;
         }
@@ -446,8 +447,9 @@ namespace NYurik.TimeSeriesDb
             NonGenericSerializer.InitNew(writer);
         }
 
-        private static BinaryFile ReadHeaderV12(Version baseVersion, Stream stream, BinaryReader reader,
-                                                int hdrSize, Func<string, Type> typeResolver)
+        private static BinaryFile ReadHeaderV12(
+            Version baseVersion, Stream stream, BinaryReader reader,
+            int hdrSize, Func<string, Type> typeResolver)
         {
             // Tag
             string tag = reader.ReadString();
@@ -459,7 +461,7 @@ namespace NYurik.TimeSeriesDb
             // Make sure the item size has not changed
             int itemSize = reader.ReadInt32();
             if (itemSize != serializer.TypeSize)
-                throw FastBinFileUtils.GetItemSizeChangedException(serializer, tag, itemSize);
+                throw Utils.GetItemSizeChangedException(serializer, tag, itemSize);
 
             // BinaryFile
             var inst = reader.ReadTypeAndInstantiate<BinaryFile>(typeResolver, true);
@@ -537,8 +539,9 @@ namespace NYurik.TimeSeriesDb
         /// <param name="typeResolver">Optional Type resolver to override the default</param>
         /// <param name="bufferSize">Buffer size as used in <see cref="FileStream"/> constructor</param>
         /// <param name="fileOptions">Options as used in <see cref="FileStream"/> constructor</param>
-        public static BinaryFile Open(string fileName, bool canWrite, Func<string, Type> typeResolver = null,
-                                      int bufferSize = 0x1000, FileOptions fileOptions = FileOptions.None)
+        public static BinaryFile Open(
+            string fileName, bool canWrite, Func<string, Type> typeResolver = null,
+            int bufferSize = 0x1000, FileOptions fileOptions = FileOptions.None)
         {
             FileStream stream = null;
             try

@@ -112,7 +112,8 @@ namespace NYurik.TimeSeriesDb.CommonCode
             return new CachingTypeResolver(tn => ParseAndResolve(tn, fullTypeResolvers)).Resolve;
         }
 
-        public static Func<string, Type> CreateCachingResolver(params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
+        public static Func<string, Type> CreateCachingResolver(
+            params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
         {
             if (typeResolvers == null || typeResolvers.Length == 0)
                 throw new ArgumentNullException("typeResolvers");

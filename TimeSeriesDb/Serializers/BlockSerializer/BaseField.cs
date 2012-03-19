@@ -27,6 +27,7 @@ using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
+using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
@@ -44,8 +45,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         /// <param name="stateStore"></param>
         /// <param name="valueType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
-        protected BaseField(Version version, [NotNull] IStateStore stateStore, [NotNull] Type valueType,
-                            string stateName = null)
+        protected BaseField(
+            Version version, [NotNull] IStateStore stateStore, [NotNull] Type valueType,
+            string stateName = null)
         {
             if (stateStore == null) throw new ArgumentNullException("stateStore");
             if (valueType == null) throw new ArgumentNullException("valueType");
@@ -97,8 +99,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         }
 
         [Pure]
-        public static BaseField FieldFromReader(IStateStore stateStore, BinaryReader reader,
-                                                Func<string, Type> typeResolver)
+        public static BaseField FieldFromReader(
+            IStateStore stateStore, BinaryReader reader,
+            Func<string, Type> typeResolver)
         {
             var fld = reader.ReadTypeAndInstantiate<BaseField>(typeResolver, true);
 
@@ -177,7 +180,8 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     throw new ArgumentOutOfRangeException("value", value.Type, "Unknown type");
             }
 
-            Expression posExp = Expression.PropertyOrField(codec, codec.Type == typeof (CodecWriter) ? "Count" : "BufferPos");
+            Expression posExp = Expression.PropertyOrField(
+                codec, codec.Type == typeof (CodecWriter) ? "Count" : "BufferPos");
 
             var prm = value as ParameterExpression;
             return Expression.Call(

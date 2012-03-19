@@ -26,6 +26,7 @@ using System;
 using System.IO;
 using JetBrains.Annotations;
 using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb
 {
@@ -130,13 +131,13 @@ namespace NYurik.TimeSeriesDb
                 fromInclusive = FirstTimestamp;
             else
                 fromInclusive = new UtcDateTime(
-                    FastBinFileUtils.RoundUpToMultiple(fromInclusive.Ticks, ItemTimeSpan.Ticks));
+                    Utils.RoundUpToMultiple(fromInclusive.Ticks, ItemTimeSpan.Ticks));
 
             if (toExclusive > FirstUnavailableTimestamp)
                 toExclusive = FirstUnavailableTimestamp;
             else
                 toExclusive = new UtcDateTime(
-                    FastBinFileUtils.RoundUpToMultiple(toExclusive.Ticks, ItemTimeSpan.Ticks));
+                    Utils.RoundUpToMultiple(toExclusive.Ticks, ItemTimeSpan.Ticks));
 
             if (fromInclusive >= FirstUnavailableTimestamp)
                 fromInclusive = toExclusive = FirstUnavailableTimestamp;

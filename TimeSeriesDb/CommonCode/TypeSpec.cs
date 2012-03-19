@@ -172,7 +172,8 @@ namespace NYurik.TimeSeriesDb.CommonCode
         /// </summary>
         /// <param name="spec">Type info with all generics already resolved</param>
         /// <param name="typeResolvers">Resolver to convert a specific type without generic parameters and without subtypes</param>
-        public static Type DefaultFullTypeResolver(TypeSpec spec, params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
+        public static Type DefaultFullTypeResolver(
+            TypeSpec spec, params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
         {
             AssemblyName assemblyName = spec.AssemblyName == null ? null : new AssemblyName(spec.AssemblyName);
             Type type = null;
@@ -248,6 +249,7 @@ namespace NYurik.TimeSeriesDb.CommonCode
                 tmp.ArraySpecs = new ReadOnlyCollection<ArraySpec>(tmp.ArraySpecs);
             return tmp;
         }
+
         private static TypeSpec Parse(string typeName, ref int p, bool isRecurse, bool allowAqn)
         {
             int pos = p;

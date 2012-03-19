@@ -39,8 +39,9 @@ namespace NYurik.TimeSeriesDb
         private readonly Action<long> _onCountChange;
         private long _cachedCount;
 
-        public CachedIndex(int defaultMaxCacheSize, [NotNull] Func<int> getMaxCacheSize, [NotNull] Func<long> getCount,
-                           [NotNull] Func<long, long, TInd> getValueAt, [NotNull] Action<long> onCountChange)
+        public CachedIndex(
+            int defaultMaxCacheSize, [NotNull] Func<int> getMaxCacheSize, [NotNull] Func<long> getCount,
+            [NotNull] Func<long, long, TInd> getValueAt, [NotNull] Action<long> onCountChange)
         {
             if (getCount == null) throw new ArgumentNullException("getCount");
             if (getValueAt == null) throw new ArgumentNullException("getValueAt");

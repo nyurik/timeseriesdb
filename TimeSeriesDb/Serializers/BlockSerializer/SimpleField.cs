@@ -46,10 +46,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             switch (ValueTypeCode)
             {
                 case TypeCode.Boolean:
-                    valueExp = Expression.Condition(valueExp, Expression.Constant((byte)1), Expression.Constant((byte)0));
+                    valueExp = Expression.Condition(
+                        valueExp, Expression.Constant((byte) 1), Expression.Constant((byte) 0));
                     break;
                 case TypeCode.SByte:
-                    valueExp = Expression.Convert(valueExp, typeof(byte));                    
+                    valueExp = Expression.Convert(valueExp, typeof (byte));
                     break;
                 case TypeCode.Byte:
                     break;
@@ -73,7 +74,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         Expression.Constant(false), Expression.Constant(true));
                     break;
                 case TypeCode.SByte:
-                    readMethod = Expression.Convert(readMethod, typeof(sbyte));
+                    readMethod = Expression.Convert(readMethod, typeof (sbyte));
                     break;
                 case TypeCode.Byte:
                     break;

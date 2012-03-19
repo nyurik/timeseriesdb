@@ -167,7 +167,7 @@
     <Compile Include="Serializers\BlockSerializer\SimpleField.cs" />
     <Compile Include="Serializers\BlockSerializer\CodecWriter.cs" />
     <Compile Include="Serializers\SerializerException.cs" />
-    <Compile Include="FastBinFileUtils.cs" />
+    <Compile Include="CommonCode\Utils.cs" />
     <Compile Include="IBinaryFile.cs" />
     <Compile Include="NativeWinApis.cs" />
     <Compile Include="Serializers\DefaultTypeSerializer.cs" />

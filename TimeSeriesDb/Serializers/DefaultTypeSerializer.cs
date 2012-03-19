@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using JetBrains.Annotations;
+using NYurik.TimeSeriesDb.CommonCode;
 using NYurik.TimeSeriesDb.EmitExtensions;
 using NYurik.TimeSeriesDb.Serializers;
 
@@ -155,7 +156,7 @@ namespace NYurik.TimeSeriesDb
                 // Make sure the item size has not changed
                 int itemSize = reader.ReadInt32();
                 if (_typeSize != itemSize)
-                    throw FastBinFileUtils.GetItemSizeChangedException(this, null, itemSize);
+                    throw Utils.GetItemSizeChangedException(this, null, itemSize);
 
                 int fileSigCount = reader.ReadInt32();
 
@@ -230,8 +231,9 @@ namespace NYurik.TimeSeriesDb
         }
 
         [UsedImplicitly]
-        private unsafe int ProcessFileStreamPtr(FileStream fileStream, void* bufPtr, int offset, int count,
-                                                bool isWriting)
+        private unsafe int ProcessFileStreamPtr(
+            FileStream fileStream, void* bufPtr, int offset, int count,
+            bool isWriting)
         {
             byte* byteBufPtr = (byte*) bufPtr + offset*_typeSize;
             int byteCount = count*_typeSize;
@@ -261,7 +263,7 @@ namespace NYurik.TimeSeriesDb
             byte* src = isWriting ? byteBufPtr : (byte*) memMapPtr;
             byte* dest = isWriting ? (byte*) memMapPtr : byteBufPtr;
 
-            FastBinFileUtils.CopyMemory(dest, src, (uint) byteCount);
+            Utils.CopyMemory(dest, src, (uint) byteCount);
 
             return count;
         }
@@ -274,7 +276,7 @@ namespace NYurik.TimeSeriesDb
 
             int byteCount = count*_typeSize;
 
-            return FastBinFileUtils.CompareMemory(byteBufPtr1, byteBufPtr2, (uint) byteCount);
+            return Utils.CompareMemory(byteBufPtr1, byteBufPtr2, (uint) byteCount);
         }
     }
 

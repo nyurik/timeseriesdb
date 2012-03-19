@@ -25,6 +25,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using NYurik.TimeSeriesDb.CommonCode;
 using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb
@@ -175,7 +176,7 @@ namespace NYurik.TimeSeriesDb
             int count = buffer.Count;
 
             int itemSize = ItemSize;
-            int tempBufSize = Math.Min(FastBinFileUtils.RoundUpToMultiple(maxBufferSize, itemSize), count*itemSize);
+            int tempBufSize = Math.Min(Utils.RoundUpToMultiple(maxBufferSize, itemSize), count*itemSize);
             var tempBuf = new byte[tempBufSize];
             int tempSize = tempBuf.Length/itemSize;
 
@@ -256,7 +257,7 @@ namespace NYurik.TimeSeriesDb
                     try
                     {
                         long offsetCurrent = ItemIdxToOffset(idxCurrent);
-                        long mapViewFileOffset = FastBinFileUtils.RoundDownToMultiple(offsetCurrent, MinPageSize);
+                        long mapViewFileOffset = Utils.RoundDownToMultiple(offsetCurrent, MinPageSize);
 
                         long mapViewSize = offsetToStopAt - mapViewFileOffset;
                         long itemsToProcessThisRun = idxToStopAt - idxCurrent;
@@ -423,8 +424,9 @@ namespace NYurik.TimeSeriesDb
             }
         }
 
-        protected int PerformUnsafeBlockAccess(long firstItemIdx, bool isWriting, ArraySegment<T> buffer, long fileSize,
-                                               bool useMemMappedAccess)
+        protected int PerformUnsafeBlockAccess(
+            long firstItemIdx, bool isWriting, ArraySegment<T> buffer, long fileSize,
+            bool useMemMappedAccess)
         {
             return useMemMappedAccess
                        ? ProcessMemoryMappedFile(firstItemIdx, buffer, isWriting, fileSize)

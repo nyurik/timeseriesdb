@@ -24,6 +24,7 @@
 
 using System;
 using System.Collections.Generic;
+using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb
 {
@@ -73,7 +74,7 @@ namespace NYurik.TimeSeriesDb
             if (feed == null)
                 throw new ArgumentNullException("feed");
 
-            return FastBinFileUtils.IsDefault(untilInd)
+            return Utils.IsDefault(untilInd)
                        ? feed.StreamSegments(fromInd, inReverse, bufferProvider, maxItemCount)
                        : StreamSegmentsUntil(feed, fromInd, untilInd, inReverse, bufferProvider, maxItemCount);
         }
@@ -99,7 +100,7 @@ namespace NYurik.TimeSeriesDb
                 }
 
                 var pos = (int)
-                          FastBinFileUtils.BinarySearch(
+                          Utils.BinarySearch(
                               untilInd, segm.Offset, segm.Count, false, inReverse, i => tsa(segm.Array[i]));
 
                 if (pos < 0)

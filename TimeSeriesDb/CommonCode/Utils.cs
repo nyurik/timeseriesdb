@@ -27,12 +27,11 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
-using NYurik.TimeSeriesDb.CommonCode;
 using NYurik.TimeSeriesDb.Serializers;
 
-namespace NYurik.TimeSeriesDb
+namespace NYurik.TimeSeriesDb.CommonCode
 {
-    public static class FastBinFileUtils
+    public static class Utils
     {
         public static long RoundDownToMultiple(long value, long multiple)
         {
@@ -180,8 +179,9 @@ namespace NYurik.TimeSeriesDb
         /// <param name="inReverse"> True if the sequence is sorted in decreasing order </param>
         /// <param name="getValueAt"> Function to get value at a given position </param>
         /// <returns> Position of the first found value, or bitwise-NOT of the position it should be at. </returns>
-        public static long BinarySearch<TInd>(TInd value, long start, long count, bool uniqueIndexes, bool inReverse,
-                                              [NotNull] Func<long, TInd> getValueAt)
+        public static long BinarySearch<TInd>(
+            TInd value, long start, long count, bool uniqueIndexes, bool inReverse,
+            [NotNull] Func<long, TInd> getValueAt)
             where TInd : IComparable<TInd>
         {
             if (getValueAt == null) throw new ArgumentNullException("getValueAt");

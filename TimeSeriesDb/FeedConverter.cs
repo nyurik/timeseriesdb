@@ -11,10 +11,11 @@ namespace NYurik.TimeSeriesDb
         private readonly Func<TOld, bool> _predicate;
         private readonly Func<TNew, TIndex> _timestampAccessor;
 
-        public FeedConverter(IEnumerableFeed<TIndex, TOld> feed,
-                             Func<TOld, TNew> converter,
-                             Func<TNew, TIndex> timestampAccessor,
-                             Func<TOld, bool> predicate = null)
+        public FeedConverter(
+            IEnumerableFeed<TIndex, TOld> feed,
+            Func<TOld, TNew> converter,
+            Func<TNew, TIndex> timestampAccessor,
+            Func<TOld, bool> predicate = null)
         {
             if (feed == null) throw new ArgumentNullException("feed");
             if (converter == null) throw new ArgumentNullException("converter");
@@ -58,9 +59,10 @@ namespace NYurik.TimeSeriesDb
             get { return _timestampAccessor; }
         }
 
-        public IEnumerable<ArraySegment<TNew>> StreamSegments(TIndex fromInd, bool inReverse = false,
-                                                              IEnumerable<Buffer<TNew>> bufferProvider = null,
-                                                              long maxItemCount = long.MaxValue)
+        public IEnumerable<ArraySegment<TNew>> StreamSegments(
+            TIndex fromInd, bool inReverse = false,
+            IEnumerable<Buffer<TNew>> bufferProvider = null,
+            long maxItemCount = long.MaxValue)
         {
             Func<TOld, TNew> conv = _converter;
             Func<TOld, bool> filter = _predicate;

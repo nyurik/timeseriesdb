@@ -42,8 +42,9 @@ namespace NYurik.TimeSeriesDb
         /// allocate [initSize] items first, and after growAfter iterations, grow it to the largeSize.
         /// Buffer.Count will always be set to 0
         /// </summary>
-        public IEnumerable<Buffer<T>> YieldMaxGrowingBuffer(long maxItemCount, int initSize, int growAfter,
-                                                            int largeSize)
+        public IEnumerable<Buffer<T>> YieldMaxGrowingBuffer(
+            long maxItemCount, int initSize, int growAfter,
+            int largeSize)
         {
             Buffer<T> buffer = GetBufferRef();
 
@@ -100,7 +101,8 @@ namespace NYurik.TimeSeriesDb
         /// Yields a sequence of buffers with the count set to:
         /// [blockOne, blockTwo, (growAfter * smallSize), largeSize...]
         /// </summary>
-        public IEnumerable<Buffer<T>> YieldFixed(int blockOne, int blockTwo, int smallSize, int growAfter, int largeSize)
+        public IEnumerable<Buffer<T>> YieldFixed(
+            int blockOne, int blockTwo, int smallSize, int growAfter, int largeSize)
         {
             if (smallSize <= 0 || largeSize <= 0)
                 throw new ArgumentException("smallSize and largeSize must not be 0");
