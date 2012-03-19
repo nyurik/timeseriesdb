@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NYurik.FastBinTimeseries
+namespace NYurik.TimeSeriesDb
 {
     public class FeedConverter<TIndex, TOld, TNew> : IEnumerableFeed<TIndex, TNew>
         where TIndex : IComparable<TIndex>

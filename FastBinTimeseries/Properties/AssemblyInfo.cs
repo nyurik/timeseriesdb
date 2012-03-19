@@ -2,32 +2,35 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using NYurik.FastBinTimeseries.Properties;
+using NYurik.TimeSeriesDb.Properties;
 
-[assembly: AssemblyTitle("FastBinTimeseries")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyProduct("FastBinTimeseries")]
+[assembly: AssemblyTitle("TimeSeriesDb")]
+[assembly:
+    AssemblyDescription(
+        "TimeSeriesDb is a flat-file binary data storage library optimized for storing ordered timeseries in a compressed (deltas) and non-compressed forms"
+        )]
+[assembly: AssemblyProduct("TimeSeriesDb")]
 [assembly: ComVisible(false)]
 [assembly: Guid("58958894-a74d-4d50-bb9e-535f5a22527c")]
 [assembly: CLSCompliant(true)]
 
 #if SIGN
 
-[assembly: InternalsVisibleTo("NYurik.FastBinTimeseries.Test" + AssemblyVersion.Key)]
-[assembly: InternalsVisibleTo("NYurik.FastBinTimeseries.Legacy" + AssemblyVersion.Key)]
+[assembly: InternalsVisibleTo("NYurik.TimeSeriesDb.Test" + AssemblyVersion.Key)]
+[assembly: InternalsVisibleTo("NYurik.TimeSeriesDb.Legacy" + AssemblyVersion.Key)]
 
 #else
 
-[assembly: InternalsVisibleTo("NYurik.FastBinTimeseries.Test")]
-[assembly: InternalsVisibleTo("NYurik.FastBinTimeseries.Legacy")]
+[assembly: InternalsVisibleTo("NYurik.TimeSeriesDb.Test")]
+[assembly: InternalsVisibleTo("NYurik.TimeSeriesDb.Legacy")]
 
 #endif
 
-namespace NYurik.FastBinTimeseries.Properties
+namespace NYurik.TimeSeriesDb.Properties
 {
     internal static class AssemblyVersion
     {
-        public const string Ver = "1.105"; // The second number should match the SVN revision
+        public const string Ver = "1.113"; // The second number should match the SVN revision
 
 #if SIGN
 

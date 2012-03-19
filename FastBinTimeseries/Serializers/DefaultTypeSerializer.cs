@@ -3,20 +3,20 @@
 /*
  *     Copyright 2009-2012 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
- *     This file is part of FastBinTimeseries library
+ *     This file is part of TimeSeriesDb library
  * 
- *  FastBinTimeseries is free software: you can redistribute it and/or modify
+ *  TimeSeriesDb is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  * 
- *  FastBinTimeseries is distributed in the hope that it will be useful,
+ *  TimeSeriesDb is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  * 
  *  You should have received a copy of the GNU General Public License
- *  along with FastBinTimeseries.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with TimeSeriesDb.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,10 +26,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using JetBrains.Annotations;
-using NYurik.FastBinTimeseries.EmitExtensions;
-using NYurik.FastBinTimeseries.Serializers;
+using NYurik.TimeSeriesDb.EmitExtensions;
+using NYurik.TimeSeriesDb.Serializers;
 
-namespace NYurik.FastBinTimeseries.Serializers
+namespace NYurik.TimeSeriesDb.Serializers
 {
     internal delegate int UnsafeActionDelegate<in TStorage, in TItem>(
         TStorage storage, TItem[] buffer, int offset, int count, bool isWriting);
@@ -40,7 +40,7 @@ namespace NYurik.FastBinTimeseries.Serializers
 
 // For legacy compatibility, keep DefaultTypeSerializer in the root namespace
 
-namespace NYurik.FastBinTimeseries
+namespace NYurik.TimeSeriesDb
 {
     /// <summary>
     /// Default Serializer operates with the memory representation of the explicit structs

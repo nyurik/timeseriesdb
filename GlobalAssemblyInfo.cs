@@ -1,8 +1,8 @@
 using System.Reflection;
-using NYurik.FastBinTimeseries.Properties;
+using NYurik.TimeSeriesDb.Properties;
 
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Yuri Astrakhan")]
 [assembly: AssemblyCopyright("Copyright © Yuri Astrakhan 2009-2012")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
