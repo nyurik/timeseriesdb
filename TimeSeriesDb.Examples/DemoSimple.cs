@@ -26,44 +26,27 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
 namespace NYurik.TimeSeriesDb.Examples
 {
-    internal static class DemoBinCompressedSeriesFile
+    internal class DemoSimple : IExample
     {
-        public static void Run()
+        #region IExample Members
+
+        public void Run()
         {
-            const string filename = "BinCompressedSeriesFile.bts";
-
-            Console.WriteLine("\n **** BinCompressedSeriesFile<long, ItemLngDbl> example ****\n");
-
-            if (File.Exists(filename))
-                File.Delete(filename);
+            string filename = GetType().Name + ".bts";
+            if (File.Exists(filename)) File.Delete(filename);
 
             // Create new BinSeriesFile file that stores a sequence of ItemLngDbl structs
             // The file is indexed by a long value inside ItemLngDbl marked with the [Index] attribute.
-            using (var bf = new BinCompressedSeriesFile<long, ItemLngDbl>(filename))
+            using (var bf = new BinSeriesFile<long, ItemLngDbl>(filename))
             {
                 //
                 // Initialize new file parameters and create it
                 //
                 bf.UniqueIndexes = true; // enforce index uniqueness
                 bf.Tag = "Sample Data"; // optionally provide a tag to store in the file header
-                
-                //
-                // Configure value storage. This is the only difference with using BinSeriesFile.
-                //
-                // When a new instance of BinCompressedSeriesFile is created,
-                // RootField will be pre-populated with default configuration objects.
-                // Some fields, such as doubles, require additional configuration before the file can be initialized.
-                //
-                var root = (ComplexField) bf.FieldSerializer.RootField;
-                
-                // This double will contain values with no more than 2 digits after the decimal points.
-                // Before serializing, multiply the value by 100 to convert to long.
-                ((ScaledDeltaField) root["Value"].Field).Multiplier = 100;
-
                 bf.InitializeNewFile(); // Finish new file initialization and create an empty file
 
 
@@ -90,7 +73,7 @@ namespace NYurik.TimeSeriesDb.Examples
             }
 
             // Re-open the file, allowing data modifications
-            // IWritableFeed<,> interface is better as it will work with non-compressed files as well
+            // IWritableFeed<,> interface is better as it will work with compressed files as well
             using (var bf = (IWritableFeed<long, ItemLngDbl>) BinaryFile.Open(filename, true))
             {
                 // Append a few more items with different ItemLngDbl.Value to tell them appart
@@ -107,7 +90,7 @@ namespace NYurik.TimeSeriesDb.Examples
             }
 
             // Re-open the file for reading only (file can be opened for reading in parallel, but only one write)
-            // IEnumerableFeed<,> interface is better as it will work with non-compressed files as well
+            // IEnumerableFeed<,> interface is better as it will work with compressed files as well
             using (var bf = (IEnumerableFeed<long, ItemLngDbl>) BinaryFile.Open(filename, true))
             {
                 // Show first item with index >= 5
@@ -134,5 +117,7 @@ namespace NYurik.TimeSeriesDb.Examples
             // cleanup
             File.Delete(filename);
         }
+
+        #endregion
     }
 }

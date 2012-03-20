@@ -28,14 +28,17 @@ using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
 namespace NYurik.TimeSeriesDb.Examples
 {
-    internal static class DemoGenericCopier
+    internal class DemoGenericCopier : IExample
     {
-        public static void Run()
-        {
-            const string srcFile = "GenericCopier1.bts";
-            const string dstFile = "GenericCopier2.bts";
+        #region IExample Members
 
-            Console.WriteLine("\n **** GenericCopier example ****\n");
+        public void Run()
+        {
+            string srcFile = GetType().Name + "1.bts";
+            if (File.Exists(srcFile)) File.Delete(srcFile);
+
+            string dstFile = GetType().Name + "2.bts";
+            if (File.Exists(dstFile)) File.Delete(dstFile);
 
             try
             {
@@ -75,6 +78,8 @@ namespace NYurik.TimeSeriesDb.Examples
                 if (File.Exists(dstFile)) File.Delete(dstFile);
             }
         }
+
+        #endregion
 
         private static void CreateSampleFile(string filename)
         {

@@ -27,15 +27,36 @@ using System.Collections.Generic;
 
 namespace NYurik.TimeSeriesDb.Examples
 {
+    internal interface IExample
+    {
+        void Run();
+    }
+
     internal static class Program
     {
-        private static readonly Dictionary<string, Action> Examples =
-            new Dictionary<string, Action>
-                {
-                    {"binseriesfile", () => DemoBinSeriesFile.Run()},
-                    {"bincompressedseriesfile", () => DemoBinCompressedSeriesFile.Run()},
-                    {"genericcopier", () => DemoGenericCopier.Run()},
-                };
+        private static readonly Dictionary<string, Action> Examples
+            = new Dictionary<string, Action>(StringComparer.InvariantCultureIgnoreCase);
+
+        static Program()
+        {
+            AddExample<DemoSimple>();
+            AddExample<DemoCompressed>();
+            AddExample<DemoSharedStateCompressed>();
+            AddExample<DemoGenericCopier>();
+        }
+
+        private static void AddExample<T>()
+            where T : IExample, new()
+        {
+            Examples.Add(typeof (T).Name.Replace("Demo", ""), RunExample<T>);
+        }
+
+        private static void RunExample<T>()
+            where T : IExample, new()
+        {
+            Console.WriteLine("\n **** Running {0} example ****\n", typeof (T).Name);
+            new T().Run();
+        }
 
         /// <summary>
         /// Runs all examples when no parameters is given,
@@ -45,12 +66,8 @@ namespace NYurik.TimeSeriesDb.Examples
         {
             try
             {
-                string example = null;
-                if (args.Length > 0)
-                    example = args[0].ToLowerInvariant();
-
                 Action run;
-                if (example != null && Examples.TryGetValue(example, out run))
+                if (args.Length > 0 && Examples.TryGetValue(args[0], out run))
                 {
                     run();
                 }

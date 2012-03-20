@@ -44,4 +44,27 @@ namespace NYurik.TimeSeriesDb.Examples
             return string.Format("{0,3}: {1}", SequenceNum, Value);
         }
     }
+
+    internal struct ItemLngDblDbl
+    {
+        // ReSharper disable FieldCanBeMadeReadOnly.Global
+        // ReSharper disable MemberCanBePrivate.Global
+        [Index] public long SequenceNum;
+        public double Value1;
+        public double Value2;
+        // ReSharper restore MemberCanBePrivate.Global
+        // ReSharper restore FieldCanBeMadeReadOnly.Global
+
+        public ItemLngDblDbl(long sequenceNum, double value1, double value2)
+        {
+            SequenceNum = sequenceNum;
+            Value1 = value1;
+            Value2 = value2;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0,3}: {1} {2}", SequenceNum, Value1, Value2);
+        }
+    }
 }

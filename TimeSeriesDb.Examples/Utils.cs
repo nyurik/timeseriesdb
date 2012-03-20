@@ -62,7 +62,7 @@ namespace NYurik.TimeSeriesDb.Examples
                 throw new ArgumentNullException("source");
             if (separator == null)
                 throw new ArgumentNullException("separator");
-            
+
             if (converter == null)
             {
                 // ReSharper disable CompareNonConstrainedGenericWithNull
