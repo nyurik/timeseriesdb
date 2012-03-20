@@ -72,7 +72,7 @@ namespace NYurik.TimeSeriesDb.Examples
                 // Set up data generator to generate items with closely related value1 and value2
                 //
                 IEnumerable<ArraySegment<ItemLngDblDbl>> data =
-                    Utils.GenerateData(1, 10000, i => new ItemLngDblDbl(i, i*10, i*10.3));
+                    Utils.GenerateData(1, 10000, i => new ItemLngDblDbl(i, i*10, i*10 + 1/(1.0 + i%100)));
 
                 //
                 // Append data to the file
