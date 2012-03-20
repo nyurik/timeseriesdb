@@ -83,12 +83,10 @@ namespace NYurik.TimeSeriesDb.Examples
                 //
 
                 bf1.AppendData(data);
-                
-                
-                
+
+
                 //
-                // Initialize the second and third files in an identical fashion without linking the states
-                // and append the same data
+                // Initialize the second in an identical fashion without linking the states and append the same data
                 //
                 var root2 = (ComplexField) bf2.FieldSerializer.RootField;
                 ((ScaledDeltaField) root2["Value1"].Field).Multiplier = 100;
@@ -96,23 +94,19 @@ namespace NYurik.TimeSeriesDb.Examples
                 bf2.InitializeNewFile();
                 bf2.AppendData(data);
 
+                //
+                // Initialize the third uncompressed file and append the same data.
+                //
                 bf3.InitializeNewFile();
                 bf3.AppendData(data);
 
                 //
                 // Print file sizes to see if there was any benefit
                 //
-                Console.WriteLine(
-                    "Shared state:    FirstIndex = {0}, LastIndex = {1}, Size = {2} bytes",
-                    bf1.FirstIndex, bf1.LastIndex, bf1.BaseStream.Length);
-
-                Console.WriteLine(
-                    "NonShared state: FirstIndex = {0}, LastIndex = {1}, Size = {2} bytes",
-                    bf2.FirstIndex, bf2.LastIndex, bf2.BaseStream.Length);
-
-                Console.WriteLine(
-                    "Uncompressed:    FirstIndex = {0}, LastIndex = {1}, Size = {2} bytes",
-                    bf3.FirstIndex, bf3.LastIndex, bf3.BaseStream.Length);
+                Console.WriteLine("      Shared: {0,10:#,#} bytes", bf1.BaseStream.Length);
+                Console.WriteLine("   NonShared: {0,10:#,#} bytes", bf2.BaseStream.Length);
+                Console.WriteLine("Uncompressed: {0,10:#,#} bytes", bf3.BaseStream.Length);
+                Console.WriteLine();
             }
 
             // cleanup
