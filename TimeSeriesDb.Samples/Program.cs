@@ -25,66 +25,13 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-
 namespace NYurik.TimeSeriesDb.Samples
 {
-    internal interface ISample
-    {
-        void Run();
-    }
-
     internal static class Program
     {
-        private static readonly Dictionary<string, Action> Samples
-            = new Dictionary<string, Action>(StringComparer.InvariantCultureIgnoreCase);
-
-        static Program()
-        {
-            Add<DemoSimple>();
-            Add<DemoCompressed>();
-            Add<DemoSharedStateCompressed>();
-            Add<DemoGenericCopier>();
-        }
-
-        private static void Add<T>()
-            where T : ISample, new()
-        {
-            Samples.Add(typeof (T).Name.Replace("Demo", ""), Run<T>);
-        }
-
-        private static void Run<T>()
-            where T : ISample, new()
-        {
-            Console.WriteLine("\n **** Running {0} sample ****\n", typeof (T).Name);
-            new T().Run();
-        }
-
-        /// <summary>
-        /// Runs all samples when no parameters is given,
-        /// or the specific one provided by the first parameter
-        /// </summary>
         private static void Main(string[] args)
         {
-            try
-            {
-                Action run;
-                if (args.Length > 0 && Samples.TryGetValue(args[0], out run))
-                {
-                    run();
-                }
-                else
-                {
-                    Console.WriteLine("Running all samples\n");
-                    foreach (Action r in Samples.Values)
-                        r();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
+            Demo.Run(args.Length > 0 ? args[0] : null);
         }
     }
 }

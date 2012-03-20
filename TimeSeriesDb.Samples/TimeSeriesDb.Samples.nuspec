@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
-    <version>1.124</version>
+    <version>1.125</version>
     <authors>nyurik</authors>
     <owners>nyurik</owners>
     <licenseUrl>http://www.opensource.org/licenses/mit-license.html</licenseUrl>
@@ -12,15 +12,16 @@
     <id>NYurik.TimeSeriesDb.Sample</id>
     <title>TimeSeriesDb Sample</title>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Please see project homepage for additional info</description>
+    <description>In Visual Studio, create new Console Application project and add this package. In the Program.Main() call Demo.Run() from NYurik.TimeSeriesDb.Samples namespace.
+	</description>
     <summary>Several easy to understand samples demonstrating TimeSeriesDb library.</summary>
     <releaseNotes />
     <copyright>2009-2012 Yuri Astrakhan  (&lt;Firstname&gt;&lt;Lastname&gt;@gmail.com)</copyright>
     <tags>sample timeseries database storage flatfile serialization streaming</tags>
   </metadata>
   <files>
-    <file src="**\*.cs" target="Samples\NYurik.TimeSeriesDb" />
-    <file src="packages.config" target="Samples\NYurik.TimeSeriesDb\packages.config" />
-    <file src="TimeSeriesDb.Samples.csproj" target="Samples\NYurik.TimeSeriesDb\TimeSeriesDb.Samples.csproj" />
+    <file src="Demo*.cs" target="content\Samples\NYurik.TimeSeriesDb" />
+    <file src="Utils.cs" target="content\Samples\NYurik.TimeSeriesDb" />
+    <file src="DataStructures.cs" target="content\Samples\NYurik.TimeSeriesDb" />
   </files>
 </package>

@@ -13,8 +13,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B034D3
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeSeriesDb.Samples.ProjRef", "TimeSeriesDb.Samples\TimeSeriesDb.Samples.ProjRef.csproj", "{4B613097-079A-48E7-8E00-1150A06363E7}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeSeriesDb.Samples", "TimeSeriesDb.Samples\TimeSeriesDb.Samples.csproj", "{411BA957-7899-4A46-9106-B361D1BEB7F9}"
 EndProject
 Global
@@ -42,12 +40,6 @@ Global
 		{66263510-4FF2-42CB-BC7E-6FA2722C3889}.Release|Any CPU.Build.0 = Release|Any CPU
 		{66263510-4FF2-42CB-BC7E-6FA2722C3889}.ReleaseSigned|Any CPU.ActiveCfg = ReleaseSigned|Any CPU
 		{66263510-4FF2-42CB-BC7E-6FA2722C3889}.ReleaseSigned|Any CPU.Build.0 = ReleaseSigned|Any CPU
-		{4B613097-079A-48E7-8E00-1150A06363E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4B613097-079A-48E7-8E00-1150A06363E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4B613097-079A-48E7-8E00-1150A06363E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4B613097-079A-48E7-8E00-1150A06363E7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4B613097-079A-48E7-8E00-1150A06363E7}.ReleaseSigned|Any CPU.ActiveCfg = ReleaseSigned|Any CPU
-		{4B613097-079A-48E7-8E00-1150A06363E7}.ReleaseSigned|Any CPU.Build.0 = ReleaseSigned|Any CPU
 		{411BA957-7899-4A46-9106-B361D1BEB7F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{411BA957-7899-4A46-9106-B361D1BEB7F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{411BA957-7899-4A46-9106-B361D1BEB7F9}.Release|Any CPU.ActiveCfg = Release|Any CPU

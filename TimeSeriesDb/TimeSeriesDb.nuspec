@@ -4,13 +4,13 @@
     <id>$id$</id>
     <version>$version$</version>
     <title>$title$</title>
-    <authors>$author$</authors>
-    <owners>$author$</owners>
+    <authors>nyurik</authors>
+    <owners>nyurik</owners>
     <licenseUrl>http://www.gnu.org/licenses/gpl.html</licenseUrl>
     <projectUrl>http://code.google.com/p/timeseriesdb/</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>$description$</summary>
-    <description>Please see project homepage for additional info</description>
+    <description>To get started, download http://nuget.org/packages/NYurik.TimeSeriesDb.Sample</description>
     <releaseNotes></releaseNotes>
     <copyright>2009-2012 Yuri Astrakhan  (&lt;Firstname&gt;&lt;Lastname&gt;@gmail.com)</copyright>
     <tags>timeseries database storage flatfile serialization streaming</tags>
