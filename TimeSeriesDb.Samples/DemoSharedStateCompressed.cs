@@ -1,3 +1,30 @@
+#region COPYRIGHT
+
+/*
+ *     Copyright 2009-2012 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+
+#endregion
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,10 +33,10 @@ using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 // We are storing identical data to two files, disable warning
 // ReSharper disable PossibleMultipleEnumeration
 
-namespace NYurik.TimeSeriesDb.Examples
+namespace NYurik.TimeSeriesDb.Samples
 {
     /// <summary>
-    /// This example demonstrates how to configure a compressed file to share common delta state between two fields.
+    /// This sample demonstrates how to configure a compressed file to share common delta state between two fields.
     /// By default, each field is set-up with its own state variable, so the delta is calculated between 
     /// each subsequent element's given field, but not within one element's different fields. Yet sometimes we need 
     /// to store items with related fields, and a shared state could result in a better compression.
@@ -29,9 +56,9 @@ namespace NYurik.TimeSeriesDb.Examples
     /// We will assume that the Values have at most two significant digits after the decimal point,
     /// and that the numbers tend to be somewhat correlated - like min and max temperature each hour.
     /// </summary>
-    internal class DemoSharedStateCompressed : IExample
+    internal class DemoSharedStateCompressed : ISample
     {
-        #region IExample Members
+        #region ISample Members
 
         public void Run()
         {

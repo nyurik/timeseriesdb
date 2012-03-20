@@ -1,9 +1,9 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("TimeSeriesDb.Examples")]
+[assembly: AssemblyTitle("TimeSeriesDb.Samples")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyProduct("TimeSeriesDb.Examples")]
+[assembly: AssemblyProduct("TimeSeriesDb.Samples")]
 [assembly: ComVisible(false)]
 [assembly: Guid("e9a3c6ad-4bd8-4c65-98d9-66551b4f1ff5")]
 [assembly: AssemblyConfiguration("")]

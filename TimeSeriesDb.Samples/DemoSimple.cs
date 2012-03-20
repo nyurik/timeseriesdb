@@ -3,20 +3,23 @@
 /*
  *     Copyright 2009-2012 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
  *
- *     This file is part of TimeSeriesDb library
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  * 
- *  TimeSeriesDb is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  * 
- *  TimeSeriesDb is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- * 
- *  You should have received a copy of the GNU General Public License
- *  along with TimeSeriesDb.  If not, see <http://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  *
  */
 
@@ -26,42 +29,27 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
-namespace NYurik.TimeSeriesDb.Examples
+namespace NYurik.TimeSeriesDb.Samples
 {
-    internal class DemoCompressed : IExample
+    internal class DemoSimple : ISample
     {
-        #region IExample Members
+        #region ISample Members
 
         public void Run()
         {
             string filename = GetType().Name + ".bts";
             if (File.Exists(filename)) File.Delete(filename);
 
-            // Create new BinCompressedSeriesFile file that stores a sequence of ItemLngDbl structs
+            // Create new BinSeriesFile file that stores a sequence of ItemLngDbl structs
             // The file is indexed by a long value inside ItemLngDbl marked with the [Index] attribute.
-            using (var bf = new BinCompressedSeriesFile<long, ItemLngDbl>(filename))
+            using (var bf = new BinSeriesFile<long, ItemLngDbl>(filename))
             {
                 //
                 // Initialize new file parameters and create it
                 //
                 bf.UniqueIndexes = true; // enforce index uniqueness
                 bf.Tag = "Sample Data"; // optionally provide a tag to store in the file header
-
-                //
-                // Configure value storage. This is the only difference with using BinSeriesFile.
-                //
-                // When a new instance of BinCompressedSeriesFile is created,
-                // RootField will be pre-populated with default configuration objects.
-                // Some fields, such as doubles, require additional configuration before the file can be initialized.
-                //
-                var root = (ComplexField) bf.FieldSerializer.RootField;
-
-                // This double will contain values with no more than 2 digits after the decimal points.
-                // Before serializing, multiply the value by 100 to convert to long.
-                ((ScaledDeltaField) root["Value"].Field).Multiplier = 100;
-
                 bf.InitializeNewFile(); // Finish new file initialization and create an empty file
 
 
@@ -88,7 +76,7 @@ namespace NYurik.TimeSeriesDb.Examples
             }
 
             // Re-open the file, allowing data modifications
-            // IWritableFeed<,> interface is better as it will work with non-compressed files as well
+            // IWritableFeed<,> interface is better as it will work with compressed files as well
             using (var bf = (IWritableFeed<long, ItemLngDbl>) BinaryFile.Open(filename, true))
             {
                 // Append a few more items with different ItemLngDbl.Value to tell them appart
@@ -105,7 +93,7 @@ namespace NYurik.TimeSeriesDb.Examples
             }
 
             // Re-open the file for reading only (file can be opened for reading in parallel, but only one write)
-            // IEnumerableFeed<,> interface is better as it will work with non-compressed files as well
+            // IEnumerableFeed<,> interface is better as it will work with compressed files as well
             using (var bf = (IEnumerableFeed<long, ItemLngDbl>) BinaryFile.Open(filename, true))
             {
                 // Show first item with index >= 5

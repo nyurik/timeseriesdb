@@ -8,8 +8,8 @@
     <ProjectGuid>{4B613097-079A-48E7-8E00-1150A06363E7}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>NYurik.TimeSeriesDb.Examples</RootNamespace>
-    <AssemblyName>NYurik.TimeSeriesDb.Examples</AssemblyName>
+    <RootNamespace>NYurik.TimeSeriesDb.Samples</RootNamespace>
+    <AssemblyName>NYurik.TimeSeriesDb.Samples</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>

@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <version>1.124</version>
+    <authors>nyurik</authors>
+    <owners>nyurik</owners>
+    <licenseUrl>http://www.opensource.org/licenses/mit-license.html</licenseUrl>
+    <projectUrl>http://code.google.com/p/timeseriesdb/</projectUrl>
+    <dependencies>
+      <dependency id="NYurik.TimeSeriesDb" />
+    </dependencies>
+    <id>NYurik.TimeSeriesDb.Sample</id>
+    <title>TimeSeriesDb Sample</title>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Please see project homepage for additional info</description>
+    <summary>Several easy to understand samples demonstrating TimeSeriesDb library.</summary>
+    <releaseNotes />
+    <copyright>2009-2012 Yuri Astrakhan  (&lt;Firstname&gt;&lt;Lastname&gt;@gmail.com)</copyright>
+    <tags>sample timeseries database storage flatfile serialization streaming</tags>
+  </metadata>
+  <files>
+    <file src="**\*.cs" target="Samples\NYurik.TimeSeriesDb" />
+    <file src="packages.config" target="Samples\NYurik.TimeSeriesDb\packages.config" />
+    <file src="TimeSeriesDb.Samples.csproj" target="Samples\NYurik.TimeSeriesDb\TimeSeriesDb.Samples.csproj" />
+  </files>
+</package>
