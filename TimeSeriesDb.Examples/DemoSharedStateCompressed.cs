@@ -39,11 +39,15 @@ namespace NYurik.TimeSeriesDb.Examples
             if (File.Exists(filename1)) File.Delete(filename1);
             string filename2 = GetType().Name + "2.bts";
             if (File.Exists(filename2)) File.Delete(filename2);
+            string filename3 = GetType().Name + "3.bts";
+            if (File.Exists(filename3)) File.Delete(filename3);
 
             // Create new BinCompressedSeriesFile file that stores a sequence of ItemLngDblDbl structs
             // The file is indexed by a long value inside ItemLngDblDbl marked with the [Index] attribute.
+            // For comparison sake, also create identical but non-state-linked compressed and uncompressed.
             using (var bf1 = new BinCompressedSeriesFile<long, ItemLngDblDbl>(filename1))
             using (var bf2 = new BinCompressedSeriesFile<long, ItemLngDblDbl>(filename2))
+            using (var bf3 = new BinSeriesFile<long, ItemLngDblDbl>(filename3))
             {
                 //
                 // Configure value storage. This is the only difference with using BinSeriesFile.
@@ -82,18 +86,21 @@ namespace NYurik.TimeSeriesDb.Examples
                 
                 
                 
-                // Initialize the second file in an identical fashion without linking the states
+                //
+                // Initialize the second and third files in an identical fashion without linking the states
+                // and append the same data
+                //
                 var root2 = (ComplexField) bf2.FieldSerializer.RootField;
                 ((ScaledDeltaField) root2["Value1"].Field).Multiplier = 100;
                 ((ScaledDeltaField) root2["Value2"].Field).Multiplier = 100;
                 bf2.InitializeNewFile();
-
-                // Append the same data to the second file
                 bf2.AppendData(data);
 
+                bf3.InitializeNewFile();
+                bf3.AppendData(data);
+
                 //
-                // Read all data and print it using Stream() - one value at a time
-                // This method is slower than StreamSegments(), but easier to use for simple one-value iteration
+                // Print file sizes to see if there was any benefit
                 //
                 Console.WriteLine(
                     "Shared state:    FirstIndex = {0}, LastIndex = {1}, Size = {2} bytes",
@@ -102,11 +109,16 @@ namespace NYurik.TimeSeriesDb.Examples
                 Console.WriteLine(
                     "NonShared state: FirstIndex = {0}, LastIndex = {1}, Size = {2} bytes",
                     bf2.FirstIndex, bf2.LastIndex, bf2.BaseStream.Length);
+
+                Console.WriteLine(
+                    "Uncompressed:    FirstIndex = {0}, LastIndex = {1}, Size = {2} bytes",
+                    bf3.FirstIndex, bf3.LastIndex, bf3.BaseStream.Length);
             }
 
             // cleanup
             File.Delete(filename1);
             File.Delete(filename2);
+            File.Delete(filename3);
         }
 
         #endregion
