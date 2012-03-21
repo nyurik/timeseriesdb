@@ -35,10 +35,10 @@ namespace NYurik.TimeSeriesDb
         private const string OldMainName = "NYurik.FastBinTimeseries";
         private const string OldLegacyName = "NYurik.FastBinTimeseries.Legacy";
 
-        private static readonly Type LegacyObj = typeof(LegacySupport);
+        private static readonly Type LegacyObj = typeof (LegacySupport);
         private static readonly Assembly LegacyAssembly = LegacyObj.Assembly;
 
-        private static readonly Type MainObj = typeof(BinaryFile);
+        private static readonly Type MainObj = typeof (BinaryFile);
         private static readonly Assembly MainAssembly = MainObj.Assembly;
         private static readonly AssemblyName MainAssemblyName = MainAssembly.GetName();
 
@@ -84,12 +84,19 @@ namespace NYurik.TimeSeriesDb
             if (assemblyName != null)
             {
                 Type type;
-                if (assemblyName.Name == MainAssemblyName.Name && MovedToLegacyTypes.TryGetValue(spec.Name, out type))
+                var aName = assemblyName.Name;
+                var tName = spec.Name;
+
+                if (aName == MainAssemblyName.Name && MovedToLegacyTypes.TryGetValue(tName, out type))
+                {
                     return type;
-                if (assemblyName.Name == OldMainName && RenamedMainTypes.TryGetValue(spec.Name, out type))
+                }
+
+                if ((aName == OldMainName || aName == OldLegacyName) &&
+                    (RenamedMainTypes.TryGetValue(tName, out type) || RenamedLegacyTypes.TryGetValue(tName, out type)))
+                {
                     return type;
-                if (assemblyName.Name == OldLegacyName && RenamedLegacyTypes.TryGetValue(spec.Name, out type))
-                    return type;
+                }
             }
 
             return null;

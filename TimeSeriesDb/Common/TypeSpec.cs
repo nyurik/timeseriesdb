@@ -43,6 +43,12 @@ namespace NYurik.TimeSeriesDb.Common
 {
     public class TypeSpec
     {
+        private TypeSpec(string originalTypeString)
+        {
+            OriginalTypeString = originalTypeString;
+        }
+
+        public string OriginalTypeString { get; private set; }
         public string Name { get; private set; }
         public string AssemblyName { get; private set; }
         public IList<string> Nested { get; private set; }
@@ -254,7 +260,7 @@ namespace NYurik.TimeSeriesDb.Common
         {
             int pos = p;
             bool inModifiers = false;
-            var data = new TypeSpec();
+            var data = new TypeSpec(typeName);
 
             SkipSpace(typeName, ref pos);
 

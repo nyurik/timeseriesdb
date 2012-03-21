@@ -27,7 +27,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace NYurik.TimeSeriesDb.Samples
 {
@@ -38,28 +37,26 @@ namespace NYurik.TimeSeriesDb.Samples
 
     internal static class Demo
     {
-        private static readonly Dictionary<string, Action> AllSamples
-            = new Dictionary<string, Action>(StringComparer.InvariantCultureIgnoreCase);
+        private static readonly List<Type> AllSamples = new List<Type>();
 
         static Demo()
         {
             Add<DemoSimple>();
             Add<DemoCompressed>();
-            Add<DemoSharedStateCompressed>();
             Add<DemoGenericCopier>();
+            Add<DemoSharedStateCompressed>();
         }
 
         private static void Add<T>()
             where T : ISample, new()
         {
-            AllSamples.Add(typeof (T).Name.Replace("Demo", ""), Run<T>);
+            AllSamples.Add(typeof (T));
         }
 
-        private static void Run<T>()
-            where T : ISample, new()
+        private static void Run(Type type)
         {
-            Console.WriteLine("\n **** Running {0} sample ****\n", typeof (T).Name);
-            new T().Run();
+            Console.WriteLine("\n **** Running {0} sample ****\n", type.Name);
+            ((ISample) Activator.CreateInstance(type)).Run();
         }
 
         /// <summary>
@@ -71,24 +68,29 @@ namespace NYurik.TimeSeriesDb.Samples
         {
             try
             {
-                if (sample != null)
-                    sample = sample.Replace("Demo", "");
+                if (!string.IsNullOrEmpty(sample)
+                    && !sample.StartsWith("Demo", StringComparison.InvariantCultureIgnoreCase))
+                    sample = "Demo" + sample;
 
-                Action run;
-                if (sample != null && AllSamples.TryGetValue(sample, out run))
+                var found = false;
+                if (!string.IsNullOrEmpty(sample))
                 {
-                    run();
+                    foreach (var s in AllSamples)
+                    {
+                        if (string.Equals(s.Name, sample, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            Run(s);
+                            found = true;
+                            break;
+                        }
+                    }
                 }
-                else
+
+                if (!found)
                 {
                     Console.WriteLine("Running all samples\n");
-                    foreach (Action r in
-                        from i in AllSamples
-                        orderby i.Key
-                        select i.Value)
-                    {
-                        r();
-                    }
+                    foreach (Type s in AllSamples)
+                        Run(s);
                 }
             }
             catch (Exception ex)
