@@ -33,6 +33,33 @@ using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
 namespace NYurik.TimeSeriesDb.Samples
 {
+    /// <summary>
+    /// This sample demonstrates how to configure a simple compressed file.
+    /// 
+    /// The compressed file stores a series of Int64 values in a 7bit encoding, where the highest bit is cleared
+    /// if this byte is the last one in sequence, or set if there are more bytes. Thus, the smaller the number stored,
+    /// the less space it takes.
+    /// 
+    /// By default, each field is set-up with a <see cref="BaseField"/>-derrived descriptor fields that generates
+    /// code required to serialize and deserialize the field value from the compressed stream. The goal of each
+    /// field is to work with the smallest possible numbers to reduce overall size.
+    /// 
+    /// For example, market tick data could be described with three values: (Index, double Price, long Size)
+    /// The index (timestamp) is increasing by small increments (milliseconds), and the price tend change very little,
+    /// from the last value. Also, we can specify that the price is measured in to at most two significant digits.
+    /// 
+    /// In other words, given a sequence of ticks 1...N, the stored values can be:
+    /// 
+    ///   Index1, Price1, Size1,
+    ///   (Index2-Index1), (Price2-Price1), (Size2-Size2),
+    ///   ...
+    ///   (IndexN - Index[N-1]), (PriceN - Price[N-1]), (SizeN-SizeN)
+    /// 
+    /// Note that PriceN is actually ((long)(price * 100.0)
+    /// 
+    /// For this demo, we will create a file that stores an item with a long index and a doubles Value.
+    /// We will assume that the Values have at most two significant digits after the decimal point.
+    /// </summary>
     internal class DemoCompressed : ISample
     {
         #region ISample Members

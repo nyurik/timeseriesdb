@@ -37,6 +37,11 @@ namespace NYurik.TimeSeriesDb.Samples
 {
     /// <summary>
     /// This sample demonstrates how to configure a compressed file to share common delta state between two fields.
+    /// 
+    /// The compressed file stores a series of Int64 values in a 7bit encoding, where the highest bit is cleared
+    /// if this byte is the last one in sequence, or set if there are more bytes. Thus, the smaller the number stored,
+    /// the less space it takes.
+    /// 
     /// By default, each field is set-up with its own state variable, so the delta is calculated between 
     /// each subsequent element's given field, but not within one element's different fields. Yet sometimes we need 
     /// to store items with related fields, and a shared state could result in a better compression.
