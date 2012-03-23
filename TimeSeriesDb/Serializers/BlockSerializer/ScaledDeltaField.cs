@@ -79,11 +79,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
-        public override int GetMinByteSize()
-        {
-            return CodecBase.MaxBytesFor8;
-        }
-
         public override int GetMaxByteSize()
         {
             // TODO: optimize to make this number smaller depending on the field type and scaling parameters

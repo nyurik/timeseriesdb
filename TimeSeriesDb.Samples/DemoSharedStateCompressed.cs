@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
 // We are storing identical data to two files, disable warning
@@ -108,7 +109,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 // Set up data generator to generate items with closely related value1 and value2
                 //
                 IEnumerable<ArraySegment<ItemLngDblDbl>> data =
-                    Utils.GenerateData(1, 10000, i => new ItemLngDblDbl(i, i*10, i*10 + 1/(1.0 + i%100)));
+                    Utils.GenerateData(1, 10000, i => new ItemLngDblDbl(i, i*10, i*10 + Math.Round(1/(1.0 + i%100), 2)));
 
                 //
                 // Append data to the file
@@ -139,6 +140,21 @@ namespace NYurik.TimeSeriesDb.Samples
                 Console.WriteLine("   NonShared: {0,10:#,#} bytes", bf2.BaseStream.Length);
                 Console.WriteLine("Uncompressed: {0,10:#,#} bytes", bf3.BaseStream.Length);
                 Console.WriteLine();
+
+                if (!bf1.Stream().SequenceEqual(bf2.Stream()))
+                    throw new BinaryFileException("File #1 != #2");
+                if (!bf1.Stream().SequenceEqual(bf3.Stream()))
+                    throw new BinaryFileException("File #1 != #3");
+            }
+
+            //
+            // Check that the settings are stored ok in the file and can be re-initialized on open
+            //
+            using (var bf1 = (IEnumerableFeed<long, ItemLngDblDbl>)BinaryFile.Open(filename1))
+            using (var bf2 = (IEnumerableFeed<long, ItemLngDblDbl>)BinaryFile.Open(filename2))
+            {
+                if (!bf1.Stream().SequenceEqual(bf2.Stream()))
+                    throw new BinaryFileException("File #1 != #2");
             }
 
             // cleanup

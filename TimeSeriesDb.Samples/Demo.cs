@@ -45,6 +45,7 @@ namespace NYurik.TimeSeriesDb.Samples
             Add<DemoCompressed>();
             Add<DemoGenericCopier>();
             Add<DemoSharedStateCompressed>();
+            Add<DemoIndexWithNoStateCompressed>();
         }
 
         private static void Add<T>()

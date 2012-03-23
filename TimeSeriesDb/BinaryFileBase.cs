@@ -540,7 +540,7 @@ namespace NYurik.TimeSeriesDb
         /// <param name="bufferSize">Buffer size as used in <see cref="FileStream"/> constructor</param>
         /// <param name="fileOptions">Options as used in <see cref="FileStream"/> constructor</param>
         public static BinaryFile Open(
-            string fileName, bool canWrite, Func<string, Type> typeResolver = null,
+            string fileName, bool canWrite = false, Func<string, Type> typeResolver = null,
             int bufferSize = 0x1000, FileOptions fileOptions = FileOptions.None)
         {
             FileStream stream = null;

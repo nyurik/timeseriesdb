@@ -68,11 +68,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return value == TimeSpan.Zero ? 1 : value.Ticks;
         }
 
-        public override int GetMinByteSize()
-        {
-            return _deltaField.GetMinByteSize();
-        }
-
         public override int GetMaxByteSize()
         {
             return _deltaField.GetMaxByteSize();

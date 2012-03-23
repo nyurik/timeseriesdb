@@ -23,8 +23,10 @@
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
 using JetBrains.Annotations;
 using NUnit.Framework;
 using NYurik.TimeSeriesDb.Common;
@@ -207,8 +209,27 @@ namespace NYurik.TimeSeriesDb.Test
             }
         }
 
+        private static readonly ConcurrentDictionary<Tuple<Type, string>, Action> MethodCache =
+            new ConcurrentDictionary<Tuple<Type, string>, Action>();
+
+        public static void Run<T>(string method)
+        {
+            var act = MethodCache.GetOrAdd(
+                Tuple.Create(typeof (T), method),
+                v =>
+                    {
+                        var mi = v.Item1.GetMethod(
+                            v.Item2, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                        return (Action) Expression.Lambda(Expression.Call(mi)).Compile();
+                    });
+
+            act();
+        }
+
         public static Tuple<Func<long, T>, T> GetObjInfo<T>()
         {
+
+
             Type type = typeof (T);
             Tuple<Delegate, object> val;
 

@@ -78,6 +78,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         public BaseField Field { get; private set; }
 
+        public SubFieldInfo Clone(BaseField newField)
+        {
+            return new SubFieldInfo(MemberInfo, newField);
+        }
+
         public void InitNew(BinaryWriter writer)
         {
             if (MemberInfo.DeclaringType == null)

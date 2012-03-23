@@ -135,6 +135,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return true;
         }
 
+        /// <summary>
+        /// Write signed long value in compressed form, returning true if it fits, or false otherwise
+        /// </summary>
         [UsedImplicitly]
         internal bool WriteSignedValue(long value)
         {

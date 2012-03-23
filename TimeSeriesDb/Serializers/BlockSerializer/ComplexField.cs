@@ -75,6 +75,24 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         public SubFieldInfo this[string memberInfoName]
         {
             get { return Fields.FirstOrDefault(i => i.MemberInfo.Name == memberInfoName); }
+            set
+            {
+                ThrowOnInitialized();
+                for (int i = 0; i < Fields.Count; i++)
+                {
+                    if (Fields[i].MemberInfo.Name == memberInfoName)
+                    {
+                        if (value == null)
+                            Fields.RemoveAt(i);
+                        else
+                            Fields[i] = value;
+                        return;
+                    }
+                }
+
+                if (value != null)
+                    Fields.Add(value);
+            }
         }
 
         public IList<SubFieldInfo> Fields
@@ -85,11 +103,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 ThrowOnInitialized();
                 _fields = value.ToList();
             }
-        }
-
-        public override int GetMinByteSize()
-        {
-            return _fields.Sum(fld => fld.Field.GetMinByteSize());
         }
 
         public override int GetMaxByteSize()
