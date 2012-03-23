@@ -74,7 +74,7 @@ namespace NYurik.TimeSeriesDb
             if (feed == null)
                 throw new ArgumentNullException("feed");
 
-            return Utils.IsDefault(untilInd)
+            return FeedUtils.IsDefault(untilInd)
                        ? feed.StreamSegments(fromInd, inReverse, bufferProvider, maxItemCount)
                        : StreamSegmentsUntil(feed, fromInd, untilInd, inReverse, bufferProvider, maxItemCount);
         }

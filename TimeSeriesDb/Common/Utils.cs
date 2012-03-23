@@ -217,20 +217,7 @@ namespace NYurik.TimeSeriesDb.Common
             return ~start;
         }
 
-        #region Internal
-
-        internal static bool IsDefault<TInd>(TInd value)
-            where TInd : IComparable<TInd>
-        {
-            // For value types, it is safe to call IComparable.CompareTo(default) method
-            // For refs or interfaces we should only check for null
-
-            // ReSharper disable CompareNonConstrainedGenericWithNull
-            return typeof (TInd).IsValueType
-                       ? value.CompareTo(default(TInd)) == 0
-                       : value == null;
-            // ReSharper restore CompareNonConstrainedGenericWithNull
-        }
+        #region Internalfeed
 
         /// <summary>
         /// Fast memory copying - copies in blocks of 32 bytes, using either int or long (on 64bit machines)

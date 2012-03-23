@@ -35,9 +35,11 @@ namespace NYurik.TimeSeriesDb
     public interface IEnumerableFeed : IGenericInvoker2, IDisposable
     {
         /// <summary> Type of the items stored in this file </summary>
+        [Obsolete("Will be removed soon. Use IGenericInvoker[2].Run() to execute user method.")]
         Type ItemType { get; }
 
         /// <summary> User string stored in the header </summary>
+        [Obsolete("Will be removed soon. Cast to BinaryFile to continue using this property.")]
         string Tag { get; }
     }
 
@@ -111,9 +113,9 @@ namespace NYurik.TimeSeriesDb
         /// duplicate indexes will be preserved if <paramref name="allowFileTruncation"/> is false,
         /// whereas when true, the file's last item(s) with that index will be deleted.
         /// </summary>
-        /// <param name="bufferStream">Stream of new data to be added.</param>
+        /// <param name="newData">Stream of new data to be added.</param>
         /// <param name="allowFileTruncation">If true, the file will be truncated up to, but not including the first new item's index.
         /// If false, no data will be removed from the file.</param>
-        void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false);
+        void AppendData([NotNull] IEnumerable<ArraySegment<TVal>> newData, bool allowFileTruncation = false);
     }
 }

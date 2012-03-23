@@ -253,6 +253,8 @@ namespace NYurik.TimeSeriesDb
             IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = long.MaxValue)
         {
+            FeedUtils.AssertPositiveIndex(fromInd);
+
             long cachedFileCount = SearchCache.Count;
 
             long block = GetBlockByIndex(fromInd, inReverse, cachedFileCount);
@@ -263,15 +265,15 @@ namespace NYurik.TimeSeriesDb
         /// <summary>
         ///   Add new items at the end of the existing file
         /// </summary>
-        public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
+        public void AppendData(IEnumerable<ArraySegment<TVal>> newData, bool allowFileTruncation = false)
         {
-            if (bufferStream == null)
-                throw new ArgumentNullException("bufferStream");
+            if (newData == null)
+                throw new ArgumentNullException("newData");
 
             long count = SearchCache.Count;
             bool isEmptyFile = count == 0;
 
-            using (IEnumerator<TVal> newValues = VerifyValues(bufferStream).GetEnumerator())
+            using (IEnumerator<TVal> newValues = VerifyValues(newData).GetEnumerator())
             {
                 if (!newValues.MoveNext())
                     return;
@@ -405,7 +407,7 @@ namespace NYurik.TimeSeriesDb
                 firstBlockInd = fileCountInBlocks - 1;
             }
 
-            bool getFullBlock = Utils.IsDefault(firstInd);
+            bool getFullBlock = FeedUtils.IsDefault(firstInd);
             int firstBlockSize = GetBlockSize(firstBlockInd, cachedFileCount);
             int smallSize = Utils.RoundUpToMultiple(MinPageSize, BlockSize);
             int largeSize = Utils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize);
@@ -543,7 +545,7 @@ namespace NYurik.TimeSeriesDb
             if (blockCount == 0)
                 return -1;
 
-            if (Utils.IsDefault(index))
+            if (FeedUtils.IsDefault(index))
             {
                 if (inReverse) // Start from the last block
                     return blockCount - 1;
@@ -652,7 +654,10 @@ namespace NYurik.TimeSeriesDb
                                     segInd, lastInd, i);
                         }
                         else
+                        {
+                            FeedUtils.AssertPositiveIndex(newInd);
                             isFirst = false;
+                        }
 
                         lastInd = newInd;
 

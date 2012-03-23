@@ -140,6 +140,7 @@
     <Compile Include="BinCompressedSeriesFile.cs" />
     <Compile Include="BufferProvider.cs" />
     <Compile Include="CachedIndex.cs" />
+    <Compile Include="Common\FeedUtils.cs" />
     <Compile Include="Common\FormattedException.cs" />
     <Compile Include="Common\ILGeneratorExtensions.cs" />
     <Compile Include="Common\JetBrains.cs" />

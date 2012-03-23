@@ -226,8 +226,10 @@ namespace NYurik.TimeSeriesDb
             IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = Int64.MaxValue)
         {
+            FeedUtils.AssertPositiveIndex(fromInd);
+
             long start;
-            if (!Utils.IsDefault(fromInd))
+            if (!FeedUtils.IsDefault(fromInd))
             {
                 start = BinarySearch(fromInd);
                 if (start < 0)
@@ -252,16 +254,18 @@ namespace NYurik.TimeSeriesDb
                        : stream;
         }
 
-        public void AppendData(IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncation = false)
+        public void AppendData(IEnumerable<ArraySegment<TVal>> newData, bool allowFileTruncation = false)
         {
-            if (bufferStream == null)
-                throw new ArgumentNullException("bufferStream");
+            if (newData == null)
+                throw new ArgumentNullException("newData");
 
-            using (
-                IEnumerator<ArraySegment<TVal>> streamEnmr =
-                    ProcessWriteStream(bufferStream, allowFileTruncation).GetEnumerator())
+            using (IEnumerator<ArraySegment<TVal>> streamEnmr =
+                ProcessWriteStream(newData, allowFileTruncation)
+                    .GetEnumerator())
+            {
                 if (streamEnmr.MoveNext())
                     PerformWriteStreaming(streamEnmr);
+            }
         }
 
         #endregion
@@ -338,7 +342,7 @@ namespace NYurik.TimeSeriesDb
         /// Add new items at the end of the existing file
         /// </summary>
         private IEnumerable<ArraySegment<TVal>> ProcessWriteStream(
-            [NotNull] IEnumerable<ArraySegment<TVal>> bufferStream, bool allowFileTruncations)
+            [NotNull] IEnumerable<ArraySegment<TVal>> newData, bool allowFileTruncations)
         {
             bool isFirstSeg = true;
 
@@ -346,16 +350,15 @@ namespace NYurik.TimeSeriesDb
             TInd prevSegLast = isEmptyFile ? default(TInd) : LastIndex;
             int segInd = 0;
 
-            foreach (var buffer in bufferStream)
+            foreach (var seg in newData)
             {
-                if (buffer.Array == null)
+                if (seg.Array == null)
                     throw new SerializationException("BufferStream may not contain ArraySegments with null Array");
-                if (buffer.Count == 0)
+                if (seg.Count == 0)
                     continue;
 
                 // Validate new data
-                Tuple<TInd, TInd> rng = ValidateSegmentOrder(
-                    buffer, IndexAccessor, UniqueIndexes, segInd);
+                Tuple<TInd, TInd> rng = ValidateSegmentOrder(seg, IndexAccessor, UniqueIndexes, segInd);
 
                 if (!isEmptyFile)
                 {
@@ -379,7 +382,7 @@ namespace NYurik.TimeSeriesDb
                     }
                 }
 
-                yield return buffer;
+                yield return seg;
 
                 if (isEmptyFile)
                     FirstIndex = rng.Item1;
@@ -400,6 +403,8 @@ namespace NYurik.TimeSeriesDb
             TVal[] data = buffer.Array;
             TInd firstInd = indAccessor(data[buffer.Offset]);
             TInd lastInd = firstInd;
+
+            FeedUtils.AssertPositiveIndex(firstInd);
 
             for (int i = buffer.Offset + 1; i < lastOffset; i++)
             {
