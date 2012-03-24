@@ -75,8 +75,8 @@ namespace NYurik.TimeSeriesDb.Samples
                 //
                 // Initialize the second in an identical fashion without linking the states and append the same data
                 //
-                var root2 = (ComplexField)bf2.FieldSerializer.RootField;
-                ((ScaledDeltaField)root2["Value"].Field).Multiplier = 100;
+                var root2 = (ComplexField) bf2.FieldSerializer.RootField;
+                ((ScaledDeltaField) root2["Value"].Field).Multiplier = 100;
                 bf2.InitializeNewFile();
                 bf2.AppendData(data);
 
@@ -94,7 +94,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 Console.WriteLine("Uncompressed: {0,10:#,#} bytes", bf3.BaseStream.Length);
                 Console.WriteLine();
 
-                if(!bf1.Stream().SequenceEqual(bf2.Stream()))
+                if (!bf1.Stream().SequenceEqual(bf2.Stream()))
                     throw new BinaryFileException("File #1 != #2");
                 if (!bf1.Stream().SequenceEqual(bf3.Stream()))
                     throw new BinaryFileException("File #1 != #3");
@@ -103,8 +103,8 @@ namespace NYurik.TimeSeriesDb.Samples
             //
             // Check that the settings are stored ok in the file and can be re-initialized on open
             //
-            using (var bf1 = (IEnumerableFeed<long, ItemLngDbl>)BinaryFile.Open(filename1))
-            using (var bf2 = (IEnumerableFeed<long, ItemLngDbl>)BinaryFile.Open(filename2))
+            using (var bf1 = (IEnumerableFeed<long, ItemLngDbl>) BinaryFile.Open(filename1))
+            using (var bf2 = (IEnumerableFeed<long, ItemLngDbl>) BinaryFile.Open(filename2))
             {
                 if (!bf1.Stream().SequenceEqual(bf2.Stream()))
                     throw new BinaryFileException("File #1 != #2");
@@ -142,6 +142,11 @@ namespace NYurik.TimeSeriesDb.Samples
             public override int GetMaxByteSize()
             {
                 return CodecBase.MaxBytesFor8;
+            }
+
+            protected override bool IsValidVersion(Version ver)
+            {
+                return ver == Version10;
             }
 
             protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
@@ -229,13 +234,6 @@ namespace NYurik.TimeSeriesDb.Samples
                         : deltaExp;
 
                 return new Tuple<Expression, Expression>(initExp, deltaExp);
-            }
-
-            protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
-            {
-                base.InitExistingField(reader, typeResolver);
-                if (Version != Version10)
-                    throw new IncompatibleVersionException(GetType(), Version);
             }
 
             protected override void MakeReadonly()

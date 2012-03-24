@@ -82,8 +82,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
             base.InitExistingField(reader, typeResolver);
-            if (Version != Version10)
-                throw new IncompatibleVersionException(GetType(), Version);
 
             BaseField fld = FieldFromReader(StateStore, reader, typeResolver);
             _deltaField = fld as ScaledDeltaField;
@@ -93,6 +91,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     typeof (ScaledDeltaField).AssemblyQualifiedName);
 
             ValidateDivider(TimeDivider);
+        }
+
+        protected override bool IsValidVersion(Version ver)
+        {
+            return ver == Version10;
         }
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)

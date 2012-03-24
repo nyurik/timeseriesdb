@@ -34,8 +34,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
     public abstract class BaseField : Initializable
     {
         protected static readonly Version Version10 = new Version(1, 0);
+        protected static readonly Version Version11 = new Version(1, 1);
+
         private string _stateName;
         private IStateStore _stateStore;
+        private Version _version;
 
         protected BaseField()
         {
@@ -89,7 +92,17 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
-        public Version Version { get; private set; }
+        public virtual Version Version
+        {
+            get { return _version; }
+            set
+            {
+                ThrowOnInitialized();
+                if (!IsValidVersion(value))
+                    throw new IncompatibleVersionException(GetType(), value);
+                _version = value;
+            }
+        }
 
         public void InitNew(BinaryWriter writer)
         {
@@ -116,6 +129,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected virtual void InitNewField(BinaryWriter writer)
         {
+            if (!IsValidVersion(Version))
+                throw new IncompatibleVersionException(GetType(), Version);
+
             writer.WriteVersion(Version);
             writer.WriteType(ValueType);
             writer.Write(StateName);
@@ -124,6 +140,8 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         protected virtual void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version = reader.ReadVersion();
+            if (!IsValidVersion(Version))
+                throw new IncompatibleVersionException(GetType(), Version);
 
             string typeName;
             int size;
@@ -131,6 +149,8 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             StateName = reader.ReadString();
         }
+
+        protected abstract bool IsValidVersion(Version ver);
 
         protected MethodCallExpression WriteSignedValue(Expression codec, Expression value)
         {

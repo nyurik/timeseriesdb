@@ -23,7 +23,6 @@
 #endregion
 
 using System;
-using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
 
@@ -90,11 +89,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return CodecBase.MaxBytesFor8;
         }
 
-        protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
+        protected override bool IsValidVersion(Version ver)
         {
-            base.InitExistingField(reader, typeResolver);
-            if (Version != Version10)
-                throw new IncompatibleVersionException(GetType(), Version);
+            return ver == Version10;
         }
 
         protected override void MakeReadonly()

@@ -55,7 +55,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             _fields = new List<SubFieldInfo>(fis.Length);
             foreach (FieldInfo fi in fis)
             {
-                var name = stateName + "." + fi.Name;
+                string name = stateName + "." + fi.Name;
 
                 if (fi.FieldType.IsNested)
                 {
@@ -67,7 +67,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     }
                 }
 
-                var fld = stateStore.GetDefaultField(fi.FieldType, name);
+                BaseField fld = stateStore.GetDefaultField(fi.FieldType, name);
                 _fields.Add(new SubFieldInfo(fi, fld));
             }
         }
@@ -122,13 +122,16 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
             base.InitExistingField(reader, typeResolver);
-            if (Version != Version10)
-                throw new IncompatibleVersionException(GetType(), Version);
 
             var fields = new SubFieldInfo[reader.ReadInt32()];
             for (int i = 0; i < fields.Length; i++)
                 fields[i] = new SubFieldInfo(StateStore, reader, typeResolver);
             _fields = fields;
+        }
+
+        protected override bool IsValidVersion(Version ver)
+        {
+            return ver == Version10;
         }
 
         protected override void MakeReadonly()

@@ -31,10 +31,12 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
     public class ScaledDeltaField : BaseField
     {
+        private DeltaType _deltaType;
         private long _divider = 1;
         private ConstantExpression _dividerExp;
         private bool _isInteger;
         private long _multiplier;
+        private double _precision = double.NaN;
 
         [UsedImplicitly]
         protected ScaledDeltaField()
@@ -48,7 +50,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         /// <param name="valueType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
         public ScaledDeltaField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
-            : base(Version10, stateStore, valueType, stateName)
+            : base(Version11, stateStore, valueType, stateName)
         {
             // Floating point numbers must manually initialize Multiplier
             _multiplier =
@@ -65,6 +67,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             {
                 ThrowOnInitialized();
                 _multiplier = value;
+                UpdatePrecision();
             }
         }
 
@@ -76,6 +79,58 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             {
                 ThrowOnInitialized();
                 _divider = value;
+                UpdatePrecision();
+            }
+        }
+
+        /// <summary> If not NaN, the new data will be checked for loss of precision before storing.
+        /// By default, the precision is set to 1/100th of the original value resolution whenever Multiplier or Divider
+        /// are set by the user. If the Divider is 1, and Multiplier is a 100 (storing two decimal places),
+        /// 5.24001 will be stored as 5.24, but 5.2401 will cause an error.
+        /// 
+        /// This error check will be performed when serializing:
+        /// if (Math.Abs(Math.Round(value * Multiplier / Divider, 0) * ((T)Divider / Multiplier) - value) > Precision)
+        ///     throw new SerializerException();
+        /// 
+        /// To override the default, make sure it is set to a other value or NaN after initializing Multiplier and Divider.
+        /// </summary>
+        public double Precision
+        {
+            get { return _precision; }
+            set
+            {
+                ThrowOnInitialized();
+                if (!double.IsNaN(value) && Version < Version11)
+                    throw new ArgumentOutOfRangeException(
+                        "value", value, "value may not be non-NaN when field version is less than 1.1");
+                if (double.IsInfinity(value))
+                    throw new ArgumentOutOfRangeException("value", value, "value may not be infinity");
+                _precision = value;
+            }
+        }
+
+        /// <summary> When the field value can only increase or only decrease, set this value to store deltas as unsigned integer.
+        /// This results in some storage space gains - for instance a delta between 64 and 127 will now need 1 byte instead of 2.
+        /// </summary>
+        public DeltaType DeltaType
+        {
+            get { return _deltaType; }
+            set
+            {
+                ThrowOnInitialized();
+                if (!Enum.IsDefined(typeof (DeltaType), value))
+                    throw new ArgumentOutOfRangeException("value", value, "This value is not defined in DeltaType enum");
+                _deltaType = value;
+            }
+        }
+
+        public override Version Version
+        {
+            get { return base.Version; }
+            set
+            {
+                base.Version = value;
+                UpdatePrecision();
             }
         }
 
@@ -88,27 +143,44 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         protected override void InitNewField(BinaryWriter writer)
         {
             base.InitNewField(writer);
+
             writer.Write(Divider);
             writer.Write(Multiplier);
+
+            if (Version >= Version11)
+            {
+                writer.Write((byte) DeltaType);
+                writer.Write(BitConverter.DoubleToInt64Bits(Precision));
+            }
         }
 
         protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
             base.InitExistingField(reader, typeResolver);
-            if (Version != Version10)
-                throw new IncompatibleVersionException(GetType(), Version);
+
             Divider = reader.ReadInt64();
             Multiplier = reader.ReadInt64();
+
+            if (Version >= Version11)
+            {
+                DeltaType = (DeltaType) reader.ReadByte();
+                Precision = BitConverter.Int64BitsToDouble(reader.ReadInt64());
+            }
+        }
+
+        protected override bool IsValidVersion(Version ver)
+        {
+            return ver == Version10 || ver == Version11;
         }
 
         protected override void MakeReadonly()
         {
-            if (_multiplier < 1)
+            if (Multiplier < 1)
                 throw new SerializerException(
-                    "Multiplier = {0} for value {1} ({2}), but must be >= 1", _multiplier, StateName, ValueType.FullName);
-            if (_divider < 1)
+                    "Multiplier = {0} for value {1} ({2}), but must be >= 1", Multiplier, StateName, ValueType.FullName);
+            if (Divider < 1)
                 throw new SerializerException(
-                    "Divider = {0} for value {1} ({2}), but must be >= 1", _divider, StateName, ValueType.FullName);
+                    "Divider = {0} for value {1} ({2}), but must be >= 1", Divider, StateName, ValueType.FullName);
 
             ulong maxDivider = 0;
             _isInteger = true;
@@ -116,33 +188,33 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             {
                 case TypeCode.Char:
                     maxDivider = char.MaxValue;
-                    _dividerExp = Expression.Constant((char) _divider);
+                    _dividerExp = Expression.Constant((char) Divider);
                     break;
                 case TypeCode.Int16:
                     maxDivider = (ulong) Int16.MaxValue;
-                    _dividerExp = Expression.Constant((short) _divider);
+                    _dividerExp = Expression.Constant((short) Divider);
                     break;
                 case TypeCode.UInt16:
                     maxDivider = UInt16.MaxValue;
-                    _dividerExp = Expression.Constant((ushort) _divider);
+                    _dividerExp = Expression.Constant((ushort) Divider);
                     break;
                 case TypeCode.Int32:
                     maxDivider = Int32.MaxValue;
-                    _dividerExp = Expression.Constant((int) _divider);
+                    _dividerExp = Expression.Constant((int) Divider);
                     break;
                 case TypeCode.UInt32:
                     maxDivider = UInt32.MaxValue;
-                    _dividerExp = Expression.Constant((uint) _divider);
+                    _dividerExp = Expression.Constant((uint) Divider);
                     break;
                 case TypeCode.Int64:
                     maxDivider = Int64.MaxValue;
                     // ReSharper disable RedundantCast
-                    _dividerExp = Expression.Constant((long) _divider);
+                    _dividerExp = Expression.Constant((long) Divider);
                     // ReSharper restore RedundantCast
                     break;
                 case TypeCode.UInt64:
                     maxDivider = UInt64.MaxValue;
-                    _dividerExp = Expression.Constant((ulong) _divider);
+                    _dividerExp = Expression.Constant((ulong) Divider);
                     break;
                 case TypeCode.Single:
                 case TypeCode.Double:
@@ -155,13 +227,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             if (_isInteger)
             {
-                if (_multiplier != 1)
+                if (Multiplier != 1)
                     throw new SerializerException(
                         "Integer types must have multiplier == 1, but {0} was given instead for value {1} ({2})",
-                        _multiplier, StateName, ValueType.FullName);
-                if ((ulong) _divider > maxDivider)
+                        Multiplier, StateName, ValueType.FullName);
+                if ((ulong) Divider > maxDivider)
                     throw new SerializerException(
-                        "Divider = {0} for value {1} ({2}), but must be < {3}", _divider, StateName, ValueType.FullName,
+                        "Divider = {0} for value {1} ({2}), but must be < {3}", Divider, StateName, ValueType.FullName,
                         maxDivider);
             }
 
@@ -184,7 +256,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             Expression getValExp = valueExp;
 
-            if (_multiplier != 1 || _divider != 1)
+            if (Multiplier != 1 || Divider != 1)
             {
                 if (!_isInteger)
                 {
@@ -193,7 +265,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         case TypeCode.Single:
                             {
                                 // floats support 7 significant digits
-                                float dvdr = (float) _multiplier/_divider;
+                                float dvdr = (float) Multiplier/Divider;
                                 float maxValue = (float) Math.Pow(10, 7)/dvdr;
 
                                 getValExp = FloatingGetValExp(getValExp, codec, dvdr, -maxValue, maxValue);
@@ -203,7 +275,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         case TypeCode.Double:
                             {
                                 // doubles support at least 15 significant digits
-                                double dvdr = (double) _multiplier/_divider;
+                                double dvdr = (double) Multiplier/Divider;
                                 double maxValue = Math.Pow(10, 15)/dvdr;
 
                                 getValExp = FloatingGetValExp(getValExp, codec, dvdr, -maxValue, maxValue);
@@ -216,7 +288,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 }
                 else
                 {
-                    if (_multiplier != 1) throw new InvalidOperationException();
+                    if (Multiplier != 1) throw new InvalidOperationException();
                     getValExp = Expression.Divide(getValExp, _dividerExp);
                 }
             }
@@ -280,7 +352,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                             Expression.LessThan(value, Expression.Constant(minValue)),
                             Expression.LessThan(Expression.Constant(maxValue), value)),
                         ThrowOverflow(codec, value)),
-                    // Math.Round(value*_multiplier/_divider)
+                    // Math.Round(value*Multiplier/Divider)
                     Expression.Call(typeof (Math), "Round", null, multExp));
         }
 
@@ -294,13 +366,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             //
             // valueGetter():
-            //    if non-integer: (decimal)value * ((decimal)Divider / Multiplier)
-            //    if integer:     (type)value * divider
+            //    if non-integer: (T)value * ((T)Divider / Multiplier)
+            //    if integer:     (T)value * divider
             //
 
             Expression getValExp = stateVarExp;
 
-            if (_multiplier != 1 || _divider != 1)
+            if (Multiplier != 1 || Divider != 1)
             {
                 if (!_isInteger)
                 {
@@ -309,13 +381,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         case TypeCode.Single:
                             getValExp = Expression.Divide(
                                 Expression.Convert(getValExp, typeof (float)),
-                                Expression.Constant((float) _multiplier/_divider));
+                                Expression.Constant((float) Multiplier/Divider));
                             break;
 
                         case TypeCode.Double:
                             getValExp = Expression.Divide(
                                 Expression.Convert(getValExp, typeof (double)),
-                                Expression.Constant((double) _multiplier/_divider));
+                                Expression.Constant((double) Multiplier/Divider));
                             break;
 
                         default:
@@ -324,7 +396,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 }
                 else
                 {
-                    if (_multiplier != 1) throw new InvalidOperationException();
+                    if (Multiplier != 1) throw new InvalidOperationException();
                     if (getValExp.Type != ValueType)
                         getValExp = Expression.Convert(getValExp, ValueType);
                     getValExp = Expression.Multiply(getValExp, _dividerExp);
@@ -360,5 +432,19 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             return new Tuple<Expression, Expression>(initExp, deltaExp);
         }
+
+        private void UpdatePrecision()
+        {
+            Precision = Version > Version10 && Multiplier != 0 && Divider != 0
+                            ? (double) Divider/Multiplier/100.0
+                            : Double.NaN;
+        }
+    }
+
+    public enum DeltaType : byte
+    {
+        Signed,
+        Positive,
+        Negative,
     }
 }
