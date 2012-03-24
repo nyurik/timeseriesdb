@@ -38,17 +38,6 @@ namespace NYurik.TimeSeriesDb
     }
 
     /// <summary>
-    /// The implementor of this interface can execute <see cref="IGenericCallable2{TDst,TArg}.Run{T1,T2}"/> method.
-    /// </summary>
-    public interface IGenericInvoker2 : IGenericInvoker
-    {
-        /// <summary>
-        /// Calls a factory method without explicitly specifying the two types of the sub-items.
-        /// </summary>
-        TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg);
-    }
-
-    /// <summary>
     /// This interface is used to run a generic method without referencing the generic subtype
     /// </summary>
     public interface IGenericCallable<out TDst, in TArg>
@@ -57,11 +46,22 @@ namespace NYurik.TimeSeriesDb
     }
 
     /// <summary>
+    /// The implementor of this interface can execute <see cref="IGenericCallable2{TDst,TArg}.Run{T1,T2}"/> method.
+    /// </summary>
+    public interface IGenericInvoker2
+    {
+        /// <summary>
+        /// Calls a factory method without explicitly specifying the two types of the sub-items.
+        /// </summary>
+        TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg);
+    }
+
+    /// <summary>
     /// This interface is used to run a generic method without referencing two generic subtypes
     /// </summary>
     public interface IGenericCallable2<out TDst, in TArg>
     {
-        TDst Run<TInd, TVal>(IGenericInvoker source, TArg arg)
+        TDst Run<TInd, TVal>(IGenericInvoker2 source, TArg arg)
             where TInd : IComparable<TInd>;
     }
 }

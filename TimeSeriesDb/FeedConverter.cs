@@ -35,11 +35,6 @@ namespace NYurik.TimeSeriesDb
             _feed.Dispose();
         }
 
-        TDst IGenericInvoker.RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg)
-        {
-            return callable.Run<TNew>(this, arg);
-        }
-
         TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
             return callable.Run<TInd, TNew>(this, arg);

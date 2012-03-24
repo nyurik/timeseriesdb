@@ -226,7 +226,7 @@ namespace NYurik.TimeSeriesDb.Test
         {
             #region IGenericCallable2<string,object> Members
 
-            public string Run<TInd, TVal>(IGenericInvoker source, object arg)
+            public string Run<TInd, TVal>(IGenericInvoker2 source, object arg)
                 where TInd : IComparable<TInd>
             {
                 var f = (IEnumerableFeed<TInd, TVal>) source;

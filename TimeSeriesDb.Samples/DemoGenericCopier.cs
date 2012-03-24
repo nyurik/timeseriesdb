@@ -49,7 +49,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 CreateSampleFile(srcFile);
 
                 // Open sample file in a generic way without specifying the item and index types
-                using (var bf = BinaryFile.Open(srcFile, false))
+                using (var bf = BinaryFile.Open(srcFile))
                 {
                     var src = bf as IEnumerableFeed;
                     if (src == null)
@@ -109,7 +109,7 @@ namespace NYurik.TimeSeriesDb.Samples
             /// <summary>
             ///   This method will be called with TInd and TVal properly set to what they are in a file
             /// </summary>
-            public long Run<TInd, TVal>(IGenericInvoker source, string destinationFile)
+            public long Run<TInd, TVal>(IGenericInvoker2 source, string destinationFile)
                 where TInd : IComparable<TInd>
             {
                 // Any object that implements IEnumerableFeed will also implement IEnumerableFeed<,>
