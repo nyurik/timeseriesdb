@@ -25,20 +25,38 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using NYurik.TimeSeriesDb.Serializers;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
+
+// ReSharper disable PossibleMultipleEnumeration
 
 namespace NYurik.TimeSeriesDb.Test.BlockSerializer
 {
     public class SerializtionTestsBase : TestsBase
     {
+        /// <summary>
+        /// Yields values T based on the TestValuesGenerator within a range
+        /// </summary>
         protected IEnumerable<T> Values<T>(Func<long, T> converter, long min = long.MinValue, long max = long.MaxValue)
         {
-            foreach (long i in StreamCodecTests.TestValuesGenerator())
+            IEnumerable<ulong> values = StreamCodecTests.TestValuesGenerator();
+            return min != long.MinValue || max != long.MaxValue
+                       ? YieldLimited(converter, min, max, values)
+                       : values.Select(i => converter((long) i));
+        }
+
+        private static IEnumerable<T> YieldLimited<T>(Func<long, T> converter, long min, long max,
+                                                      IEnumerable<ulong> valGenerator)
+        {
+            foreach (long i in valGenerator)
                 if (i >= min && i <= max)
                     yield return converter(i);
         }
 
+        /// <summary>
+        /// Yields values T starting at min, and ending with max (inclusive), using the incrementing method
+        /// </summary>
         protected IEnumerable<T> Range<T>(T min, T max, Func<T, T> inc)
             where T : IComparable<T>
         {
@@ -52,7 +70,9 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
             }
         }
 
-
+        /// <summary>
+        /// Perform a round trip encoding/decoding test for the given sequence of values.
+        /// </summary>
         protected void Run<T>(IEnumerable<T> values, string name = null,
                               Action<BaseField> updateSrlzr = null, Func<T, T, bool> comparer = null)
         {
@@ -68,7 +88,6 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
                     ds.MakeReadonly();
 
                     TestUtils.CollectionAssertEqual(
-                        // ReSharper disable PossibleMultipleEnumeration
                         values, RoundTrip(ds, codec, values), comparer, "{0} {1}", typeof (T).Name, name);
                 }
                 catch (Exception x)
@@ -87,6 +106,9 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
             }
         }
 
+        /// <summary>
+        /// Encode all values using the given serializer, and than decode them back.
+        /// </summary>
         private static IEnumerable<T> RoundTrip<T>(DynamicSerializer<T> ds, CodecWriter codec, IEnumerable<T> values)
         {
             using (IEnumerator<T> enmr = values.GetEnumerator())

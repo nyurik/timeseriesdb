@@ -23,6 +23,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
@@ -267,8 +268,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                                 // floats support 7 significant digits
                                 float dvdr = (float) Multiplier/Divider;
                                 float maxValue = (float) Math.Pow(10, 7)/dvdr;
-
-                                getValExp = FloatingGetValExp(getValExp, codec, dvdr, -maxValue, maxValue);
+                                getValExp = FloatingGetValExp(getValExp, dvdr, -maxValue, maxValue);
                             }
                             break;
 
@@ -277,8 +277,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                                 // doubles support at least 15 significant digits
                                 double dvdr = (double) Multiplier/Divider;
                                 double maxValue = Math.Pow(10, 15)/dvdr;
-
-                                getValExp = FloatingGetValExp(getValExp, codec, dvdr, -maxValue, maxValue);
+                                getValExp = FloatingGetValExp(getValExp, dvdr, -maxValue, maxValue);
                             }
                             break;
 
@@ -307,19 +306,62 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             //
             // stateVar2 = valueGetter();
             // delta = stateVar2 - stateVar
-            // stateVar = stateVar2;
-            // return codec.WriteSignedValue(delta);
             //
-            Expression deltaExp =
-                Expression.Block(
-                    typeof (bool),
-                    new[] {varState2Exp, varDeltaExp},
-                    Expression.Assign(varState2Exp, getValExp),
-                    Expression.Assign(varDeltaExp, Expression.Subtract(varState2Exp, stateVarExp)),
-                    Expression.Assign(stateVarExp, varState2Exp),
-                    DebugValueExp(codec, stateVarExp, "MultFld WriteDelta"),
-                    WriteSignedValue(codec, varDeltaExp)
-                    );
+            var exprs =
+                new List<Expression>
+                    {
+                        Expression.Assign(varState2Exp, getValExp),
+                        Expression.Assign(varDeltaExp, Expression.Subtract(varState2Exp, stateVarExp))
+                    };
+
+            //
+            // DeltaType.Positive: if (delta < 0) throw SerializerException();
+            // DeltaType.Negative: if (delta > 0) throw SerializerException();
+            //
+            if (DeltaType == DeltaType.Positive)
+                exprs.Add(
+                    Expression.IfThen(
+                        Expression.LessThan(varDeltaExp, Expression.Constant((long) 0)),
+                        ThrowSerializer(
+                            Expression.Constant("Value {0} is smaller than previous value in a positive delta field"),
+                            varState2Exp)));
+            else if (DeltaType == DeltaType.Negative)
+                exprs.Add(
+                    Expression.IfThen(
+                        Expression.IsFalse(Expression.LessThanOrEqual(varDeltaExp, Expression.Constant((long) 0))),
+                        ThrowSerializer(
+                            Expression.Constant("Value {0} is larger than previous value in a negative delta field"),
+                            varState2Exp)));
+
+            //
+            // stateVar = stateVar2;
+            // DEBUG: DebugValue(stateVar);
+            //
+            exprs.Add(Expression.Assign(stateVarExp, varState2Exp));
+            exprs.Add(DebugValueExp(codec, stateVarExp, "MultFld WriteDelta"));
+
+            //
+            // DeltaType.Signed: return codec.WriteSignedValue(delta);
+            // DeltaType.Positive: return codec.WriteUnsignedValue(delta);
+            // DeltaType.Negative: return codec.WriteUnsignedValue(-delta);
+            //
+            switch (DeltaType)
+            {
+                case DeltaType.Signed:
+                    exprs.Add(WriteSignedValue(codec, varDeltaExp));
+                    break;
+                case DeltaType.Positive:
+                    exprs.Add(WriteUnsignedValue(codec, Expression.Convert(varDeltaExp, typeof (ulong))));
+                    break;
+                case DeltaType.Negative:
+                    exprs.Add(
+                        WriteUnsignedValue(codec, Expression.Convert(Expression.Negate(varDeltaExp), typeof (ulong))));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            Expression deltaExp = Expression.Block(typeof (bool), new[] {varState2Exp, varDeltaExp}, exprs);
 
             //
             // stateVar = valueGetter();
@@ -330,6 +372,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     ? Expression.Block(
                         Expression.Assign(stateVarExp, getValExp),
                         DebugValueExp(codec, stateVarExp, "MultFld WriteInit"),
+                        // The first item is always stored as a signed long
                         WriteSignedValue(codec, stateVarExp))
                     : deltaExp;
 
@@ -337,7 +380,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         }
 
         private Expression FloatingGetValExp<T>(
-            Expression value, Expression codec, T divider, T minValue, T maxValue)
+            Expression value, T divider, T minValue, T maxValue)
         {
             Expression multExp = Expression.Multiply(value, Expression.Constant(divider));
             if (value.Type == typeof (float))
@@ -351,7 +394,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         Expression.Or(
                             Expression.LessThan(value, Expression.Constant(minValue)),
                             Expression.LessThan(Expression.Constant(maxValue), value)),
-                        ThrowOverflow(codec, value)),
+                        ThrowOverflow(value)),
                     // Math.Round(value*Multiplier/Divider)
                     Expression.Call(typeof (Math), "Round", null, multExp));
         }
@@ -405,8 +448,22 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             else if (getValExp.Type != ValueType)
                 getValExp = Expression.Convert(getValExp, ValueType);
 
-
-            MethodCallExpression readValExp = ReadSignedValue(codec);
+            // How to read value - depending on delta type
+            Expression readValExp;
+            switch (DeltaType)
+            {
+                case DeltaType.Signed:
+                    readValExp = ReadSignedValue(codec);
+                    break;
+                case DeltaType.Positive:
+                    readValExp = Expression.Convert(ReadUnsignedValue(codec), typeof (long));
+                    break;
+                case DeltaType.Negative:
+                    readValExp = Expression.Negate(Expression.Convert(ReadUnsignedValue(codec), typeof (long)));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
 
             //
             // stateVar += codec.ReadSignedValue();

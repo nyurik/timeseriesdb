@@ -27,15 +27,28 @@ using NUnit.Framework;
 using NYurik.TimeSeriesDb.CommonCode;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
+// ReSharper disable RedundantTypeArgumentsOfMethod
+
 namespace NYurik.TimeSeriesDb.Test.BlockSerializer
 {
     [TestFixture]
     public class PrimitiveTypeTests : SerializtionTestsBase
     {
+        private static void Set(BaseField i, int mult = 0, int div = 0, double prec = Double.NaN)
+        {
+            var dlt = ((ScaledDeltaField) i);
+            if (mult != 0)
+                dlt.Multiplier = mult;
+            if (div != 0)
+                dlt.Divider = div;
+            if (!double.IsNaN(prec))
+                dlt.Precision = prec;
+        }
+
         [Test]
         public void TypeByte()
         {
-            Run(Range(byte.MinValue, byte.MaxValue, i => (byte) (i + 1)));
+            Run(Range<byte>(byte.MinValue, byte.MaxValue, i => (byte) (i + 1)));
         }
 
         [Test, Explicit, Category("Long test")]
@@ -45,29 +58,29 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
 
             const int maxDigits = 15;
 
-            var min = (int) (-Math.Pow(10, maxDigits));
-            var max = (int) (Math.Pow(10, maxDigits));
+            var min = (long) (-Math.Pow(10, maxDigits));
+            var max = (long) (Math.Pow(10, maxDigits));
 
-            Run(Values(i => (double) i, min, max), "*1", i => ((ScaledDeltaField) i).Multiplier = 1);
+            Run(Values(i => (double) i, min, max), "*1", i => Set(i, 1, prec: 0.00001));
             Run(
-                Values(i => (double) i/10, min, max), "*10", i => ((ScaledDeltaField) i).Multiplier = 10,
+                Values(i => (double) i/10, min, max), "*10", i => Set(i, 10, prec: 0.1),
                 (x, y) => Math.Abs(x - y) < 0.1);
             Run(
-                Values(i => (double) i/100, min, max), "*100", i => ((ScaledDeltaField) i).Multiplier = 100,
+                Values(i => (double) i/100, min, max), "*100", i => Set(i, 100, prec: 0.01),
                 (x, y) => Math.Abs(x - y) < 0.01);
 
             // Very large numbers cannot be stored as double
             Assert.Throws<OverflowException>(
                 () => Run(
-                    Range(-Math.Pow(10, maxDigits + 3), -Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
-                    "*10 Large Neg", i => ((ScaledDeltaField) i).Multiplier = 10,
+                    Range<double>(-Math.Pow(10, maxDigits + 3), -Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
+                    "*10 Large Neg", i => Set(i, 10),
                     (x, y) => Math.Abs(x - y) < 0.1));
 
             Assert.Throws<OverflowException>(
                 () =>
                 Run(
-                    Range(Math.Pow(10, maxDigits + 3), Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
-                    "*10 Large Pos", i => ((ScaledDeltaField) i).Multiplier = 10,
+                    Range<double>(Math.Pow(10, maxDigits + 3), Math.Pow(10, maxDigits + 3) + 10, i => i + 0.1),
+                    "*10 Large Pos", i => Set(i, 10),
                     (x, y) => Math.Abs(x - y) < 0.1));
         }
 
@@ -81,30 +94,30 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
             var min = (int) (-Math.Pow(10, maxDigits));
             var max = (int) (Math.Pow(10, maxDigits));
 
-            Run(Values(i => (float) i, min, max), "*1", i => ((ScaledDeltaField) i).Multiplier = 1);
+            Run(Values(i => (float) i, min, max), "*1", i => Set(i, 1));
             Run(
-                Values(i => (float) i/10, min, max), "*10", i => ((ScaledDeltaField) i).Multiplier = 10,
+                Values(i => (float) i/10, min, max), "*10", i => Set(i, 10),
                 (x, y) => Math.Abs(x - y) < 0.1);
             Run(
-                Values(i => (float) i/100, min, max), "*100", i => ((ScaledDeltaField) i).Multiplier = 100,
+                Values(i => (float) i/100, min, max), "*100", i => Set(i, 100),
                 (x, y) => Math.Abs(x - y) < 0.01);
 
             // Very large numbers cannot be stored as float
             Assert.Throws<OverflowException>(
                 () =>
                 Run(
-                    Range(
+                    Range<float>(
                         (float) -Math.Pow(10, maxDigits + 3), (float) -Math.Pow(10, maxDigits + 3) + 10,
                         i => (float) (i + 0.1)),
-                    "*10 Large Neg", i => ((ScaledDeltaField) i).Multiplier = 10,
+                    "*10 Large Neg", i => Set(i, 10),
                     (x, y) => Math.Abs(x - y) < 0.1));
 
             Assert.Throws<OverflowException>(
                 () =>
                 Run(
-                    Range(
+                    Range<float>(
                         (float) Math.Pow(10, maxDigits + 3), (float) Math.Pow(10, maxDigits + 3) + 10,
-                        i => (float) (i + 0.1)), "*10 Large Pos", i => ((ScaledDeltaField) i).Multiplier = 10,
+                        i => (float) (i + 0.1)), "*10 Large Pos", i => Set(i, 10),
                     (x, y) => Math.Abs(x - y) < 0.1));
         }
 
@@ -113,7 +126,7 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         {
             Run(Values(i => (int) i));
             Run(
-                Values(i => (int) i), "/10", i => ((ScaledDeltaField) i).Divider = 10,
+                Values(i => (int) i), "/10", i => Set(i, div: 10),
                 (x, y) => x/10*10 == y/10*10);
         }
 
@@ -121,22 +134,22 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         public void TypeLong()
         {
             Run(Values(i => i));
-            Run(Values(i => i), "/10", i => ((ScaledDeltaField) i).Divider = 10, (x, y) => x/10*10 == y/10*10);
+            Run(Values(i => i), "/10", i => Set(i, div: 10), (x, y) => x/10*10 == y/10*10);
         }
 
         [Test]
         public void TypeSbyte()
         {
-            Run(Range(sbyte.MinValue, sbyte.MaxValue, i => (sbyte) (i + 1)));
+            Run(Range<sbyte>(sbyte.MinValue, sbyte.MaxValue, i => (sbyte) (i + 1)));
         }
 
         [Test]
         public void TypeShort()
         {
-            Run(Range(short.MinValue, short.MaxValue, i => (short) (i + 1)));
+            Run(Range<short>(short.MinValue, short.MaxValue, i => (short) (i + 1)));
             Run(
-                Range(short.MinValue, short.MaxValue, i => (short) (i + 1)), "/10",
-                i => ((ScaledDeltaField) i).Divider = 10,
+                Range<short>(short.MinValue, short.MaxValue, i => (short) (i + 1)), "/10",
+                i => Set(i, div: 10),
                 (x, y) => x/10*10 == y/10*10);
         }
 
@@ -145,7 +158,7 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         {
             Run(Values(i => (uint) i));
             Run(
-                Values(i => (uint) i), "/10", i => ((ScaledDeltaField) i).Divider = 10,
+                Values(i => (uint) i), "/10", i => Set(i, div: 10),
                 (x, y) => x/10*10 == y/10*10);
         }
 
@@ -154,26 +167,27 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         {
             Run(Values(i => (ulong) i));
             Run(
-                Values(i => (ulong) i), "/10", i => ((ScaledDeltaField) i).Divider = 10,
+                Values(i => (ulong) i), "/10", i => Set(i, div: 10),
                 (x, y) => x/10*10 == y/10*10);
         }
 
         [Test]
         public void TypeUshort()
         {
-            Run(Range(ushort.MinValue, ushort.MaxValue, i => (ushort) (i + 1)));
+            Run(Range<ushort>(ushort.MinValue, ushort.MaxValue, i => (ushort) (i + 1)));
             Run(
-                Range(short.MinValue, short.MaxValue, i => (short) (i + 1)),
-                "/10", i => ((ScaledDeltaField) i).Divider = 10, (x, y) => x/10*10 == y/10*10);
+                Range<short>(short.MinValue, short.MaxValue, i => (short) (i + 1)),
+                "/10", i => Set(i, div: 10), (x, y) => x/10*10 == y/10*10);
         }
 
-        [Test]
+        [Test, Explicit, Category("Long test")]
         public void TypeUtcDateTime()
         {
-            Run(Range(UtcDateTime.MinValue, UtcDateTime.MinValue.AddSeconds(.5), i => i.AddTicks(1)));
-            Run(Range(UtcDateTime.MaxValue.AddSeconds(-.5), UtcDateTime.MaxValue, i => i.AddTicks(1)));
+            Run(Range<UtcDateTime>(UtcDateTime.MinValue, UtcDateTime.MinValue.AddSeconds(.5), i => i.AddTicks(1)));
+            Run(Range<UtcDateTime>(UtcDateTime.MaxValue.AddSeconds(-.5), UtcDateTime.MaxValue, i => i.AddTicks(1)));
             Run(
-                Range(new UtcDateTime(2011, 1, 1), new UtcDateTime(2011, 2, 1), i => i.AddHours(1)), "Each hour",
+                Range<UtcDateTime>(new UtcDateTime(2011, 1, 1), new UtcDateTime(2011, 2, 1), i => i.AddHours(1)),
+                "Each hour",
                 i => ((UtcDateTimeField) i).TimeDivider = TimeSpan.FromHours(1));
         }
     }

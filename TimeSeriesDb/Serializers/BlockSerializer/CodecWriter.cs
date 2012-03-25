@@ -35,6 +35,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         public readonly byte[] Buffer;
         public readonly int BufferSize;
         private int _count;
+        private int _failedCount;
 
         /// <summary> Create writing codec. The internal buffer is padded with extra space. </summary>
         public CodecWriter(int bufferSize)
@@ -70,8 +71,12 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             // shift array right and copy to the value to the beginning.
             ValidateCount(count);
 
+            // Can be read by 64bit unsigned reader
+            // Writing will always put new bytes into the buffer because it has extra padding
+            // but it might be beyond the max size, in which case we use _failedCount instead of _count.
             int tmp = _count;
-            WriteUnsignedValue((uint) count); // Can be read by 64bit unsigned reader
+            if (!WriteUnsignedValue((uint) count))
+                _count = _failedCount;
             tmp = _count - tmp;
 
             Array.Copy(Buffer, 0, Buffer, tmp, _count);
@@ -97,41 +102,63 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         #region Writing values
 
         [UsedImplicitly]
-        internal void WriteUnsignedValue(ulong value)
+        internal bool WriteUnsignedValue(ulong value)
         {
             ThrowIfNotEnoughSpace(MaxBytesFor64);
-            int count = _count;
+            int pos = _count;
             while (value > 127)
             {
-                Buffer[count++] = (byte) (value & 0x7F | 0x80);
+                Buffer[pos++] = (byte) (value & 0x7F | 0x80);
                 value >>= 7;
             }
-            Buffer[count++] = (byte) value;
-            _count = count;
+            Buffer[pos++] = (byte) value;
+
+            if (pos > BufferSize - ReservedSpace)
+            {
+                _failedCount = pos;
+                return false;
+            }
+
+            _count = pos;
+            return true;
         }
 
         [UsedImplicitly]
-        internal void WriteUnsignedValue(uint value)
+        internal bool WriteUnsignedValue(uint value)
         {
             ThrowIfNotEnoughSpace(MaxBytesFor32);
-            int count = _count;
+            int pos = _count;
             while (value > 127)
             {
-                Buffer[count++] = (byte) (value & 0x7F | 0x80);
+                Buffer[pos++] = (byte) (value & 0x7F | 0x80);
                 value >>= 7;
             }
-            Buffer[count++] = (byte) value;
-            _count = count;
+            Buffer[pos++] = (byte) value;
+
+            if (pos > BufferSize - ReservedSpace)
+            {
+                _failedCount = pos;
+                return false;
+            }
+
+            _count = pos;
+            return true;
         }
 
         [UsedImplicitly]
         internal bool WriteByte(byte value)
         {
             ThrowIfNotEnoughSpace(MaxBytesFor8);
-            if (_count >= BufferSize - ReservedSpace)
-                return false;
 
-            Buffer[_count++] = value;
+            int pos = _count;
+            Buffer[pos] = value;
+            if (pos >= BufferSize - ReservedSpace)
+            {
+                _failedCount = pos + 1;
+                return false;
+            }
+
+            _count = pos + 1;
             return true;
         }
 
@@ -179,7 +206,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
 
             if (pos > BufferSize - ReservedSpace)
+            {
+                _failedCount = pos;
                 return false;
+            }
 
             _count = pos;
             return true;
@@ -190,11 +220,21 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         #region Exceptions
 
         [UsedImplicitly]
-        internal void ThrowOverflow<T>(T value)
+        internal static void ThrowOverflow<T>(T value)
         {
             throw new OverflowException(string.Format("Value {0} cannot be stored", value));
         }
 
+        [UsedImplicitly]
+        internal static void ThrowSerializer<T>(string format, T value)
+        {
+            throw new SerializerException(format, value);
+        }
+
+        /// <summary>
+        /// TODO: Make this method Debug only!
+        /// </summary>
+        /// <param name="neededSpace"></param>
         private void ThrowIfNotEnoughSpace(byte neededSpace)
         {
             if (_count + neededSpace >= Buffer.Length)

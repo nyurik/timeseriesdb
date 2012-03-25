@@ -37,7 +37,7 @@ namespace NYurik.TimeSeriesDb.Test
 {
     public class TestsBase
     {
-        private const Mode InitRunMode = Mode.Verify;
+        private const Mode InitRunMode = Mode.OneTime;
         private const string StoreDir = "StoredOldNs2";
         private const string TestFileSuffix = ".testbsd";
 

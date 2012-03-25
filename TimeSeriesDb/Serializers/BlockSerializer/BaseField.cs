@@ -55,7 +55,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             if (stateStore == null) throw new ArgumentNullException("stateStore");
             if (valueType == null) throw new ArgumentNullException("valueType");
 
-            Version = version;
+            _version = version;
             ValueType = valueType;
             _stateStore = stateStore;
             _stateName = stateName;
@@ -157,14 +157,29 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return Expression.Call(codec, "WriteSignedValue", null, value);
         }
 
+        protected MethodCallExpression WriteUnsignedValue(Expression codec, Expression value)
+        {
+            return Expression.Call(codec, "WriteUnsignedValue", null, value);
+        }
+
         protected MethodCallExpression ReadSignedValue(Expression codec)
         {
             return Expression.Call(codec, "ReadSignedValue", null);
         }
 
-        protected MethodCallExpression ThrowOverflow(Expression codec, Expression value)
+        protected MethodCallExpression ReadUnsignedValue(Expression codec)
         {
-            return Expression.Call(codec, "ThrowOverflow", new[] {value.Type}, value);
+            return Expression.Call(codec, "ReadUnsignedValue", null);
+        }
+
+        protected MethodCallExpression ThrowOverflow(Expression value)
+        {
+            return Expression.Call(typeof (CodecWriter), "ThrowOverflow", new[] {value.Type}, value);
+        }
+
+        protected MethodCallExpression ThrowSerializer(Expression format, Expression value)
+        {
+            return Expression.Call(typeof (CodecWriter), "ThrowSerializer", new[] {value.Type}, format, value);
         }
 
         protected internal static Expression DebugValueExp(Expression codec, Expression value, string name)
