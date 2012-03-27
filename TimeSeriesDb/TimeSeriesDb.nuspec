@@ -10,7 +10,7 @@
     <projectUrl>http://code.google.com/p/timeseriesdb/</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>$description$</summary>
-    <description>To get started, download http://nuget.org/packages/NYurik.TimeSeriesDb.Sample</description>
+    <description>To get started, download NYurik.TimeSeriesDb.Sample package</description>
     <releaseNotes></releaseNotes>
     <copyright>2009-2012 Yuri Astrakhan  (&lt;Firstname&gt;&lt;Lastname&gt;@gmail.com)</copyright>
     <tags>timeseries database storage flatfile serialization streaming</tags>
