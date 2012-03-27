@@ -93,7 +93,8 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
                 catch (Exception x)
                 {
                     string msg = string.Format(
-                        "codec.Count={0}, codec.Buffer[pos-1]={1}",
+                        "Name={0}, codec.Count={1}, codec.Buffer[pos-1]={2}",
+                        name,
                         codec.Count,
                         codec.Count > 0
                             ? codec.Buffer[codec.Count - 1].ToString(CultureInfo.InvariantCulture)

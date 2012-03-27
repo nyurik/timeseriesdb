@@ -156,7 +156,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 case DeltaType.Negative:
                     return
                         Expression.IfThen(
-                            Expression.IsFalse(Expression.LessThanOrEqual(deltaExp, Const((long) 0))),
+                            Expression.GreaterThan(deltaExp, Const((long) 0)),
                             ThrowSerializer(
                                 codec,
                                 "Value {0} is larger than previous value in a negative delta field",
@@ -186,7 +186,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
-        protected abstract Expression StateToValue(ParameterExpression stateVarExp);
+        protected abstract Expression StateToValue(Expression stateVar);
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
@@ -260,7 +260,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return null;
         }
 
-        protected abstract Expression ValueToState(Expression codec, Expression valueExp);
+        protected abstract Expression ValueToState(Expression codec, Expression value);
     }
 
     public enum DeltaType : byte

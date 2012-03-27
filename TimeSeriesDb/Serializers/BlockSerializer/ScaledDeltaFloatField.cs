@@ -60,8 +60,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             set
             {
                 ThrowOnInitialized();
+                if (value < 1)
+                    throw new SerializerException(
+                        "Multiplier = {0} for value {1} ({2}), but must be >= 1", value, StateName, ValueType.FullName);
                 _multiplier = value;
-                UpdatePrecision();
             }
         }
 
@@ -72,21 +74,33 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             set
             {
                 ThrowOnInitialized();
+                if (value < 1)
+                    throw new SerializerException(
+                        "Divider = {0} for value {1} ({2}), but must be >= 1", value, StateName, ValueType.FullName);
                 _divider = value;
-                UpdatePrecision();
             }
         }
 
+        public double Scale
+        {
+            get { return (double) Multiplier/Divider; }
+        }
+
         /// <summary> If not NaN, the new data will be checked for loss of precision before storing.
-        /// By default, the precision is set to 1/100th of the original value resolution whenever Multiplier or Divider
-        /// are set by the user. If the Divider is 1, and Multiplier is a 100 (storing two decimal places),
-        /// 5.24001 will be stored as 5.24, but 5.2401 will cause an error.
+        ///  
+        /// If Scale (Multiplier/Divider) is 100 (storing two decimal places), setting Precision to 0.0001
+        /// will cause 5.24001 to be stored as 5.24, but 5.2401 will cause an error.
         /// 
-        /// This error check will be performed when serializing:
+        /// Setting precision reduces the range (-max to +max) of numbers that may be stored.
+        /// Double has 15 significant digits, while Float - only has 7, so depending on the type,
+        ///   float: 10^7 * Precision ==> between -1e3 and +1e3
+        ///   double: 10^15 * Precision ==> between -1e11 and +1e11
+        /// 
+        /// When non NaN, the following data validation will be performed during serialization:
         /// if (Math.Abs(Math.Round(value * Multiplier / Divider, 0) * ((T)Divider / Multiplier) - value) > Precision)
         ///     throw new SerializerException();
         /// 
-        /// To override the default, make sure it is set to a other value or NaN after initializing Multiplier and Divider.
+        /// By default, the precision is set to NaN.
         /// </summary>
         public double Precision
         {
@@ -95,20 +109,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             {
                 ThrowOnInitialized();
                 if (double.IsInfinity(value))
-                    throw new ArgumentOutOfRangeException("value", value, "value may not be infinity");
-                if (value < 0)
-                    throw new ArgumentOutOfRangeException("value", value, "value may not be negative");
+                    throw new ArgumentOutOfRangeException("value", value, "Precision may not be infinity");
+                if (value <= 0)
+                    throw new ArgumentOutOfRangeException("value", value, "Precision must be positive");
                 _precision = value;
-            }
-        }
-
-        public override Version Version
-        {
-            get { return base.Version; }
-            set
-            {
-                base.Version = value;
-                UpdatePrecision();
             }
         }
 
@@ -137,17 +141,19 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override void MakeReadonly()
         {
-            if (Multiplier < 1)
+            double minPrec = 10d/LargestIntegerValue/Scale;
+            double maxPrec = 1d/Scale;
+
+            if (!double.IsNaN(Precision) && (Precision < minPrec || Precision > maxPrec))
                 throw new SerializerException(
-                    "Multiplier = {0} for value {1} ({2}), but must be >= 1", Multiplier, StateName, ValueType.FullName);
-            if (Divider < 1)
-                throw new SerializerException(
-                    "Divider = {0} for value {1} ({2}), but must be >= 1", Divider, StateName, ValueType.FullName);
+                    "Precision = {0} for value {1} ({2}) must be between {3} and {4} (1/Scale)",
+                    Precision, StateName, ValueType.FullName, minPrec, maxPrec);
 
             base.MakeReadonly();
         }
 
-        protected override Expression OnWriteValidation(Expression codec, Expression valueExp, ParameterExpression stateVarExp)
+        protected override Expression OnWriteValidation(
+            Expression codec, Expression valueExp, ParameterExpression stateVarExp)
         {
             // if (Precision < Math.Abs(valueFromState - originalValue))
             //     throw new SerializerException();
@@ -158,7 +164,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         Expression.LessThan(
                             Const(Precision, ValueType),
                             Expression.Call(
-                                typeof(Math), "Abs", null,
+                                typeof (Math), "Abs", null,
                                 Expression.Subtract(
                                     StateToValue(stateVarExp),
                                     valueExp))),
@@ -168,106 +174,65 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                             valueExp));
         }
 
-        protected override Expression ValueToState(Expression codec, Expression valueExp)
+        protected override Expression ValueToState(Expression codec, Expression value)
         {
             //
-            // valueGetter(): (#long) Math.Round(value * Multiplier / Divider, 0)
+            // if (value < -maxValue || value > maxValue)
+            //     ThrowOverflow(value);
+            // return (#long) Math.Round(value * Multiplier / Divider)
             //
-            Expression getValExp;
 
-            if (Multiplier != 1 || Divider != 1)
-            {
-                switch (ValueTypeCode)
-                {
-                    case TypeCode.Single:
-                        {
-                            // floats support 7 significant digits
-                            float scale = (float) Multiplier/Divider;
-                            float maxValue = (float) Math.Pow(10, 7)/scale;
-                            getValExp = FloatingGetValExp(codec, valueExp, scale, -maxValue, maxValue);
-                        }
-                        break;
+            double maxConst = LargestIntegerValue*(double.IsNaN(Precision) ? 1/Scale : Precision);
+            Expression scaledValue =
+                Multiplier != 1 || Divider != 1
+                    ? Expression.Multiply(value, Const(Scale, ValueType))
+                    : value;
 
-                    case TypeCode.Double:
-                        {
-                            // doubles support at least 15 significant digits
-                            double scale = (double) Multiplier/Divider;
-                            double maxValue = Math.Pow(10, 15)/scale;
-                            getValExp = FloatingGetValExp(codec, valueExp, scale, -maxValue, maxValue);
-                        }
-                        break;
-
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
-            else
-            {
-                getValExp = valueExp;
-            }
+            Expression getValExp = Expression.Block(
+                Expression.IfThen(
+                    Expression.Or(
+                        Expression.LessThan(value, Const(-maxConst, ValueType)),
+                        Expression.GreaterThan(value, Const(maxConst, ValueType))),
+                    ThrowOverflow(codec, value)),
+                Expression.Call(
+                    typeof (Math), "Round", null,
+                    ValueType == typeof (float)
+                        ? Expression.Convert(scaledValue, typeof (double)) // Math.Round(float) does not exist
+                        : scaledValue));
 
             return Expression.ConvertChecked(getValExp, typeof (long));
         }
 
-        private Expression FloatingGetValExp<T>(Expression codec, Expression value, T scale, T minValue, T maxValue)
+        private double LargestIntegerValue
         {
-            Expression multExp = Expression.Multiply(value, Const(scale));
-            if (value.Type == typeof (float))
-                multExp = Expression.Convert(multExp, typeof (double));
-
-            return
-                Expression.Block(
-                    // if (value < -maxValue || maxValue < value)
-                    //     ThrowOverflow(value);
-                    Expression.IfThen(
-                        Expression.Or(
-                            Expression.LessThan(value, Const(minValue)),
-                            Expression.LessThan(Const(maxValue), value)),
-                        ThrowOverflow(codec, value)),
-                    // return Math.Round(value*Multiplier/Divider)
-                    Expression.Call(typeof (Math), "Round", null, multExp));
-        }
-
-        /// <summary>
-        /// valueGetter():
-        ///    if non-integer: (T)state * ((T)Divider / Multiplier)
-        ///    if integer:     (T)state * divider
-        /// </summary>
-        protected override Expression StateToValue(ParameterExpression stateVarExp)
-        {
-            Expression getValExp = stateVarExp;
-
-            if (Multiplier != 1 || Divider != 1)
+            get
             {
+                double max;
                 switch (ValueTypeCode)
                 {
                     case TypeCode.Single:
-                        getValExp = Expression.Divide(
-                            Expression.Convert(getValExp, typeof (float)),
-                            Const((float) Multiplier/Divider));
+                        max = 1e7f; // floats support 7 significant digits
                         break;
-
                     case TypeCode.Double:
-                        getValExp = Expression.Divide(
-                            Expression.Convert(getValExp, typeof (double)),
-                            Const((double) Multiplier/Divider));
+                        max = 1e15d; // doubles support at least 15 significant digits
                         break;
-
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
+                return max;
             }
-            else if (getValExp.Type != ValueType)
-                getValExp = Expression.Convert(getValExp, ValueType);
-
-            return getValExp;
         }
 
-        private void UpdatePrecision()
+        /// <summary>
+        /// valueGetter(): (T)state * ((T)Divider / Multiplier)
+        /// </summary>
+        protected override Expression StateToValue(Expression stateVar)
         {
-            Precision = Multiplier != 0 && Divider != 0
-                            ? (double) Divider/Multiplier/1000.0
-                            : Double.NaN;
+            Expression stateAsT = Expression.Convert(stateVar, ValueType);
+
+            return Multiplier != 1 || Divider != 1
+                       ? Expression.Divide(stateAsT, Const(Scale, ValueType))
+                       : stateAsT;
         }
     }
 }

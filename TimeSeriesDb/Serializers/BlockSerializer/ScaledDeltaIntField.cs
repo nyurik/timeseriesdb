@@ -58,6 +58,8 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             set
             {
                 ThrowOnInitialized();
+                if (value < 1)
+                    throw new ArgumentOutOfRangeException("value", value, "Divider cannot less than 1");
                 _divider = value;
             }
         }
@@ -115,15 +117,15 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             base.MakeReadonly();
         }
 
-        protected override Expression ValueToState(Expression codec, Expression valueExp)
+        protected override Expression ValueToState(Expression codec, Expression value)
         {
             //
             // valueGetter(): (#long) (value / divider)
             //
             Expression getValExp =
                 Divider != 1
-                    ? Expression.Divide(valueExp, Const(Divider, ValueType))
-                    : valueExp;
+                    ? Expression.Divide(value, Const(Divider, ValueType))
+                    : value;
 
             // do not convertCheck, ulong would not fit otherwise
             return getValExp.Type != typeof (long)
@@ -132,25 +134,16 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         }
 
         /// <summary>
-        /// valueGetter():
-        ///    if non-integer: (T)state * (T)Divider
-        ///    if integer:     (T)state * divider
+        /// valueGetter: (T)state * divider
         /// </summary>
-        protected override Expression StateToValue(ParameterExpression stateVarExp)
+        protected override Expression StateToValue(Expression stateVar)
         {
-            Expression getValExp = stateVarExp;
-
-            if (Divider != 1)
-            {
-                if (getValExp.Type != ValueType)
-                    getValExp = Expression.Convert(getValExp, ValueType);
-
-                getValExp = Expression.Multiply(getValExp, Const(Divider, ValueType));
-            }
-            else if (getValExp.Type != ValueType)
-                getValExp = Expression.Convert(getValExp, ValueType);
-
-            return getValExp;
+            Expression getValExp = stateVar.Type != ValueType
+                                       ? Expression.Convert(stateVar, ValueType)
+                                       : stateVar;
+            return Divider != 1
+                ? Expression.Multiply(getValExp, Const(Divider, ValueType))
+                : getValExp;
         }
     }
 }
