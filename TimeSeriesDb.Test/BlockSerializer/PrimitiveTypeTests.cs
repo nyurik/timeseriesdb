@@ -200,7 +200,7 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
                 "/10", i => SetInt(i, 10), (x, y) => x/10*10 == y/10*10);
         }
 
-        [Test, Explicit, Category("Long test, Legacy")]
+        [Test, Explicit, Category("Long test legacy")]
         [Obsolete]
         public void TypeUtcDateTime()
         {
