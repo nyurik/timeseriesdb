@@ -102,22 +102,23 @@ namespace NYurik.TimeSeriesDb.Samples
 
                 //
                 // Append the same data to all files, measuring how long it takes
+                // Please note that the timing is not very accurate here, and will give different results depending on the order
                 //
-                sw1.Start();
-                bf1.AppendData(data);
-                sw1.Stop();
-
-                sw2.Start();
-                bf2.AppendData(data);
-                sw2.Stop();
+                sw4.Start();
+                bf4.AppendData(data);
+                sw4.Stop();
 
                 sw3.Start();
                 bf3.AppendData(data);
                 sw3.Stop();
 
-                sw4.Start();
-                bf4.AppendData(data);
-                sw4.Stop();
+                sw2.Start();
+                bf2.AppendData(data);
+                sw2.Stop();
+
+                sw1.Start();
+                bf1.AppendData(data);
+                sw1.Stop();
 
                 //
                 // Verify that the created files are identical (use the default bitwise value type Equals)

@@ -151,7 +151,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         Expression.LessThan(deltaExp, Const((long) 0)),
                         ThrowSerializer(
                             codec,
-                            Const("Value {0} is smaller than previous value in a positive delta field"),
+                            "Value {0} is smaller than previous value in a positive delta field",
                             valueExp));
                 case DeltaType.Negative:
                     return
@@ -159,7 +159,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                             Expression.IsFalse(Expression.LessThanOrEqual(deltaExp, Const((long) 0))),
                             ThrowSerializer(
                                 codec,
-                                Const("Value {0} is larger than previous value in a negative delta field"),
+                                "Value {0} is larger than previous value in a negative delta field",
                                 valueExp));
                 default:
                     return null;

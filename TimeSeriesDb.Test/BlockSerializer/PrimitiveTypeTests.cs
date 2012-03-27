@@ -113,8 +113,9 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         [Test, Explicit, Category("Long test")]
         public void TypeFloat()
         {
-            // float: +/- 1.5 x 10-45 to +/- 3.4 x 1038, 7 digits precision
+            TestPrecision<float>(0.1f, 0.09f, 0.11f, 0.01, 0.1, 10);
 
+            // float: +/- 1.5 x 10-45 to +/- 3.4 x 1038, 7 digits precision
             const int maxDigits = 7;
 
             var min = (int) (-Math.Pow(10, maxDigits));
@@ -150,8 +151,6 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         [Test, Explicit, Category("Long test")]
         public void TypeInt()
         {
-            // 9->0, 
-            TestPrecision<int>(100, 99, 101, 1, 10, div: 10);
             Run(Values(i => (int)i));
             Run(
                 Values(i => (int) i), "/10", i => Set(i, div: 10),
@@ -174,7 +173,7 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         [Test]
         public void TypeShort()
         {
-            //Run(Range<short>(short.MinValue, short.MaxValue, i => (short) (i + 1)));
+            Run(Range<short>(short.MinValue, short.MaxValue, i => (short) (i + 1)));
             Run(
                 Range<short>(short.MinValue + 5, short.MaxValue - 5, i => (short) (i + 1)),
                 "/10", i => Set(i, div: 10, prec:5),

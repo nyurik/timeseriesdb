@@ -226,9 +226,15 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         }
 
         [UsedImplicitly]
-        internal void ThrowSerializer<T>(string format, T value)
+        internal void ThrowSerializer(string format, object value1)
         {
-            throw new SerializerException(format, value);
+            throw new SerializerException(format, value1);
+        }
+
+        [UsedImplicitly]
+        internal void ThrowSerializer(string format, object value1, object value2)
+        {
+            throw new SerializerException(format, value1, value2);
         }
 
         /// <summary>

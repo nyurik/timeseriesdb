@@ -185,9 +185,20 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return Expression.Call(codec, "ThrowOverflow", new[] {value.Type}, value);
         }
 
-        protected MethodCallExpression ThrowSerializer(Expression codec, params Expression[] formatAndValues)
+        protected MethodCallExpression ThrowSerializer(Expression codec, string format, params Expression[] args)
         {
-            return Expression.Call(codec, "ThrowSerializer", new[] {formatAndValues[1].Type}, formatAndValues);
+            return Expression.Call(codec, "ThrowSerializer", null, ToFormatArgs(format, args));
+        }
+
+        protected Expression[] ToFormatArgs(string format, params Expression[] arguments)
+        {
+            var res = new List<Expression> {Const(format)};
+            foreach (var arg in arguments)
+                res.Add(
+                    arg.Type != typeof (object)
+                        ? Expression.Convert(arg, typeof (object))
+                        : arg);
+            return res.ToArray();
         }
 
         protected internal static Expression DebugValueExp(Expression codec, Expression value, string name)

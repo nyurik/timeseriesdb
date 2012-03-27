@@ -63,16 +63,11 @@ namespace NYurik.TimeSeriesDb.Samples
         /// <summary>
         /// Runs all samples when no parameters is given,
         /// or the specific one by the demo class name.
-        /// The "Demo" prefix in the sample name is optional.
         /// </summary>
         public static void Run(string sample = null)
         {
             try
             {
-                if (!string.IsNullOrEmpty(sample)
-                    && !sample.StartsWith("Demo", StringComparison.InvariantCultureIgnoreCase))
-                    sample = "Demo" + sample;
-
                 var found = false;
                 if (!string.IsNullOrEmpty(sample))
                 {
