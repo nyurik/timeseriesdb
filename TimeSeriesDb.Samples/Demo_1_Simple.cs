@@ -30,9 +30,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+// Do not disable these Resharper checks in your code. Demo purposes only.
+// ReSharper disable InconsistentNaming
+
 namespace NYurik.TimeSeriesDb.Samples
 {
-    internal class DemoSimple : ISample
+    internal class Demo_1_Simple : ISample
     {
         #region ISample Members
 

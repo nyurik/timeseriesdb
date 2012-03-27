@@ -220,13 +220,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         #region Exceptions
 
         [UsedImplicitly]
-        internal static void ThrowOverflow<T>(T value)
+        internal void ThrowOverflow<T>(T value)
         {
             throw new OverflowException(string.Format("Value {0} cannot be stored", value));
         }
 
         [UsedImplicitly]
-        internal static void ThrowSerializer<T>(string format, T value)
+        internal void ThrowSerializer<T>(string format, T value)
         {
             throw new SerializerException(format, value);
         }

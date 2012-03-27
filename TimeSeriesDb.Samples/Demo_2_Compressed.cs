@@ -31,6 +31,9 @@ using System.IO;
 using System.Linq;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
+// Do not disable these Resharper checks in your code. Demo purposes only.
+// ReSharper disable InconsistentNaming
+
 namespace NYurik.TimeSeriesDb.Samples
 {
     /// <summary>
@@ -60,7 +63,7 @@ namespace NYurik.TimeSeriesDb.Samples
     /// For this demo, we will create a file that stores an item with a long index and a doubles Value.
     /// We will assume that the Values have at most two significant digits after the decimal point.
     /// </summary>
-    internal class DemoCompressed : ISample
+    internal class Demo_2_Compressed : ISample
     {
         #region ISample Members
 
@@ -90,7 +93,7 @@ namespace NYurik.TimeSeriesDb.Samples
 
                 // This double will contain values with no more than 2 digits after the decimal points.
                 // Before serializing, multiply the value by 100 to convert to long.
-                ((ScaledDeltaField) root["Value"].Field).Multiplier = 100;
+                ((ScaledDeltaFloatField) root["Value"].Field).Multiplier = 100;
 
                 bf.InitializeNewFile(); // Finish new file initialization and create an empty file
 

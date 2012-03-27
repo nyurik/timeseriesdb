@@ -159,10 +159,12 @@
     <Compile Include="Initializable.cs" />
     <Compile Include="Serializers\BlockSerializer\BinBlockSerializer.cs" />
     <Compile Include="Buffer.cs" />
+    <Compile Include="Serializers\BlockSerializer\ScaledDeltaBaseField.cs" />
+    <Compile Include="Serializers\BlockSerializer\ScaledDeltaIntField.cs" />
     <Compile Include="Serializers\BlockSerializer\DynamicSerializer.cs" />
     <Compile Include="Serializers\BlockSerializer\FieldAttribute.cs" />
     <Compile Include="Serializers\BlockSerializer\BaseField.cs" />
-    <Compile Include="Serializers\BlockSerializer\ScaledDeltaField.cs" />
+    <Compile Include="Serializers\BlockSerializer\ScaledDeltaFloatField.cs" />
     <Compile Include="Serializers\BlockSerializer\ComplexField.cs" />
     <Compile Include="Serializers\BlockSerializer\IBinBlock.cs" />
     <Compile Include="Serializers\BlockSerializer\CodecBase.cs" />

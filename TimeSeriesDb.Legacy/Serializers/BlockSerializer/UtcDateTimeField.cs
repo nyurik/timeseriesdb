@@ -31,6 +31,7 @@ using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
+    [Obsolete]
     public class UtcDateTimeField : BaseField
     {
         private ScaledDeltaField _deltaField;

@@ -25,37 +25,63 @@
 using System;
 using NUnit.Framework;
 using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Serializers;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
 // ReSharper disable RedundantTypeArgumentsOfMethod
+// ReSharper disable CompareOfFloatsByEqualityOperator
 
 namespace NYurik.TimeSeriesDb.Test.BlockSerializer
 {
     [TestFixture]
     public class PrimitiveTypeTests : SerializtionTestsBase
     {
-        private static void Set(BaseField i, int mult = 0, int div = 0, double prec = Double.NaN)
+        private static void Set(BaseField i, int mult = 0, int div = 0, double? prec = null)
         {
-            var dlt = ((ScaledDeltaField) i);
-            if (mult != 0)
-                dlt.Multiplier = mult;
-            if (div != 0)
-                dlt.Divider = div;
-            if (!double.IsNaN(prec))
-                dlt.Precision = prec;
+            var dlt = i as ScaledDeltaFloatField;
+            if (dlt != null)
+            {
+                if (mult != 0)
+                    dlt.Multiplier = mult;
+                if (div != 0)
+                    dlt.Divider = div;
+                if (prec != null)
+                    dlt.Precision = prec.Value;
+            }
+            else
+            {
+                var dltI = (ScaledDeltaIntField) i;
+                if (div != 0)
+                    dltI.Divider = div;
+            }
+        }
+
+        private void TestPrecision<T>(T expected, T slightlyUnder, T slightlyOver, double precFail, double precOk, int mult = 0, int div = 0)
+        {
+            Assert.Throws<SerializerException>(
+                () => Run(new[] {slightlyOver}, set: i => Set(i, mult, div, precFail), name: "failOver"));
+            Assert.Throws<SerializerException>(
+                () => Run(new[] {slightlyUnder}, set: i => Set(i, mult, prec: precFail), name: "failUnder"));
+            Run(
+                new[] {slightlyOver}, set: i => Set(i, mult, div, precOk), name: "okOver",
+                comp: (x, y) => y.Equals(expected));
+            Run(
+                new[] {slightlyUnder}, set: i => Set(i, mult, div, precOk), name: "okUnder",
+                comp: (x, y) => y.Equals(expected));
         }
 
         [Test]
         public void TypeByte()
         {
-            Run(Range<byte>(byte.MinValue, byte.MaxValue, i => (byte) (i + 1)));
+            Run(Range<byte>(byte.MinValue, byte.MaxValue, i => (byte)(i + 1)));
         }
 
         [Test, Explicit, Category("Long test")]
         public void TypeDouble()
         {
-            // double: +/- 5.0 x 10-324  to  +/- 1.7 x 10308, 15-16 digits precision
+            TestPrecision<double>(0.1, 0.09, 0.11, 0.01, 0.1, 10);
 
+            // double: +/- 5.0 x 10-324  to  +/- 1.7 x 10308, 15-16 digits precision
             const int maxDigits = 15;
 
             var min = (long) (-Math.Pow(10, maxDigits));
@@ -124,7 +150,9 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         [Test, Explicit, Category("Long test")]
         public void TypeInt()
         {
-            Run(Values(i => (int) i));
+            // 9->0, 
+            TestPrecision<int>(100, 99, 101, 1, 10, div: 10);
+            Run(Values(i => (int)i));
             Run(
                 Values(i => (int) i), "/10", i => Set(i, div: 10),
                 (x, y) => x/10*10 == y/10*10);
@@ -146,11 +174,11 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         [Test]
         public void TypeShort()
         {
-            Run(Range<short>(short.MinValue, short.MaxValue, i => (short) (i + 1)));
+            //Run(Range<short>(short.MinValue, short.MaxValue, i => (short) (i + 1)));
             Run(
-                Range<short>(short.MinValue, short.MaxValue, i => (short) (i + 1)), "/10",
-                i => Set(i, div: 10),
-                (x, y) => x/10*10 == y/10*10);
+                Range<short>(short.MinValue + 5, short.MaxValue - 5, i => (short) (i + 1)),
+                "/10", i => Set(i, div: 10, prec:5),
+                (x, y) => Math.Round(x/10.0)*10 == y);
         }
 
         [Test, Explicit, Category("Long test")]

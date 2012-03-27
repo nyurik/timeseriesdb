@@ -31,8 +31,9 @@ using System.IO;
 using System.Linq;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
-// We are storing identical data to two files, disable warning
+// Do not disable these Resharper checks in your code. Demo purposes only.
 // ReSharper disable PossibleMultipleEnumeration
+// ReSharper disable InconsistentNaming
 
 namespace NYurik.TimeSeriesDb.Samples
 {
@@ -62,7 +63,7 @@ namespace NYurik.TimeSeriesDb.Samples
     /// We will assume that the Values have at most two significant digits after the decimal point,
     /// and that the numbers tend to be somewhat correlated - like min and max temperature each hour.
     /// </summary>
-    internal class DemoSharedStateCompressed : ISample
+    internal class Demo_4_SharedStateCompressed : ISample
     {
         #region ISample Members
 
@@ -91,8 +92,8 @@ namespace NYurik.TimeSeriesDb.Samples
                 //
                 var root = (ComplexField) bf1.FieldSerializer.RootField;
 
-                var fld1 = (ScaledDeltaField) root["Value1"].Field;
-                var fld2 = (ScaledDeltaField) root["Value2"].Field;
+                var fld1 = (ScaledDeltaFloatField) root["Value1"].Field;
+                var fld2 = (ScaledDeltaFloatField) root["Value2"].Field;
 
                 // This double will contain values with no more than 2 digits after the decimal points.
                 // Before serializing, multiply the value by 100 to convert to long.
@@ -122,8 +123,8 @@ namespace NYurik.TimeSeriesDb.Samples
                 // Initialize the second in an identical fashion without linking the states and append the same data
                 //
                 var root2 = (ComplexField) bf2.FieldSerializer.RootField;
-                ((ScaledDeltaField) root2["Value1"].Field).Multiplier = 100;
-                ((ScaledDeltaField) root2["Value2"].Field).Multiplier = 100;
+                ((ScaledDeltaFloatField) root2["Value1"].Field).Multiplier = 100;
+                ((ScaledDeltaFloatField) root2["Value2"].Field).Multiplier = 100;
                 bf2.InitializeNewFile();
                 bf2.AppendData(data);
 

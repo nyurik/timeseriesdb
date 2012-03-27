@@ -79,6 +79,7 @@
     <Compile Include="LegacySupport.cs" />
     <Compile Include="ObsoleteExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Serializers\BlockSerializer\ScaledDeltaField.cs" />
     <Compile Include="Serializers\BlockSerializer\UtcDateTimeField.cs" />
   </ItemGroup>
   <ItemGroup>

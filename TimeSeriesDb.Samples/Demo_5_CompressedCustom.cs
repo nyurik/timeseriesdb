@@ -7,14 +7,16 @@ using System.Linq.Expressions;
 using NYurik.TimeSeriesDb.Serializers;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
+// Do not disable these Resharper checks in your code. Demo purposes only.
 // ReSharper disable PossibleMultipleEnumeration
+// ReSharper disable InconsistentNaming
 
 namespace NYurik.TimeSeriesDb.Samples
 {
     /// <summary>
     /// This sample demonstrates how to configure a compressed file with calculated sequential index.
     /// </summary>
-    internal class DemoCompressedCustom : ISample
+    internal class Demo_5_CompressedCustom : ISample
     {
         #region ISample Members
 
@@ -36,7 +38,7 @@ namespace NYurik.TimeSeriesDb.Samples
             // and the delta between values is 0.65 => 65 with multiplier, which is bigger than
             // would fit into a 7 bit signed integer, but would fit into 7 bit unsigned one
             //
-            const int itemCount = 1000000;
+            const int itemCount = 500000;
             IEnumerable<ArraySegment<ItemLngDbl>> data = Utils.GenerateData(
                 0, itemCount, i => new ItemLngDbl(i, Math.Round((i / 100.0) * 65.0, 2)));
 
@@ -62,7 +64,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 // This double will contain values with no more than 2 digits after the decimal points.
                 // Before serializing, multiply the value by 100 to convert to long.
                 // Next value will always be same or larger than the previous one
-                var val1 = (ScaledDeltaField) root1["Value"].Field;
+                var val1 = (ScaledDeltaFloatField) root1["Value"].Field;
                 val1.Multiplier = 100;
                 val1.DeltaType = DeltaType.Positive;
 
@@ -78,7 +80,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 //
                 // Initialize bf2 same as bf1, but without custom serializer
                 //
-                var val2 = (ScaledDeltaField) ((ComplexField) bf2.FieldSerializer.RootField)["Value"].Field;
+                var val2 = (ScaledDeltaFloatField) ((ComplexField) bf2.FieldSerializer.RootField)["Value"].Field;
                 val2.Multiplier = 100;
                 val2.DeltaType = DeltaType.Positive;
                 bf2.UniqueIndexes = true; 
@@ -87,7 +89,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 //
                 // Initialize bf3 in an identical fashion as bf2, but without positive-only delta type.
                 //
-                var val3 = ((ScaledDeltaField) ((ComplexField) bf3.FieldSerializer.RootField)["Value"].Field);
+                var val3 = ((ScaledDeltaFloatField) ((ComplexField) bf3.FieldSerializer.RootField)["Value"].Field);
                 val3.Multiplier = 100;
                 bf3.UniqueIndexes = true; 
                 bf3.InitializeNewFile();
@@ -130,7 +132,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 //
                 // Print file sizes to see if there was any benefit
                 //
-                Console.WriteLine("Finished creating files with {0:#,#} items:", itemCount);
+                Console.WriteLine("Finished creating files with {0:#,#} items:\n", itemCount);
                 Console.WriteLine("{2,40}: {0,10:#,#} bytes in {1}", bf1.BaseStream.Length, sw1.Elapsed, "DeltaType.Positive and Calculated index");
                 Console.WriteLine("{2,40}: {0,10:#,#} bytes in {1}", bf2.BaseStream.Length, sw2.Elapsed, "DeltaType.Positive");
                 Console.WriteLine("{2,40}: {0,10:#,#} bytes in {1}", bf3.BaseStream.Length, sw3.Elapsed, "No optimizations");

@@ -23,6 +23,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq.Expressions;
@@ -34,7 +35,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
     public abstract class BaseField : Initializable
     {
         protected static readonly Version Version10 = new Version(1, 0);
-        protected static readonly Version Version11 = new Version(1, 1);
 
         private string _stateName;
         private IStateStore _stateStore;
@@ -150,6 +150,14 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             StateName = reader.ReadString();
         }
 
+        protected ConstantExpression Const(object value, Type toType = null)
+        {
+            return
+                toType == null || (value != null && value.GetType() == toType)
+                    ? Expression.Constant(value)
+                    : Expression.Constant(Convert.ChangeType(value, toType), toType);
+        }
+
         protected abstract bool IsValidVersion(Version ver);
 
         protected MethodCallExpression WriteSignedValue(Expression codec, Expression value)
@@ -172,14 +180,14 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return Expression.Call(codec, "ReadUnsignedValue", null);
         }
 
-        protected MethodCallExpression ThrowOverflow(Expression value)
+        protected MethodCallExpression ThrowOverflow(Expression codec, Expression value)
         {
-            return Expression.Call(typeof (CodecWriter), "ThrowOverflow", new[] {value.Type}, value);
+            return Expression.Call(codec, "ThrowOverflow", new[] {value.Type}, value);
         }
 
-        protected MethodCallExpression ThrowSerializer(Expression format, Expression value)
+        protected MethodCallExpression ThrowSerializer(Expression codec, params Expression[] formatAndValues)
         {
-            return Expression.Call(typeof (CodecWriter), "ThrowSerializer", new[] {value.Type}, format, value);
+            return Expression.Call(codec, "ThrowSerializer", new[] {formatAndValues[1].Type}, formatAndValues);
         }
 
         protected internal static Expression DebugValueExp(Expression codec, Expression value, string name)

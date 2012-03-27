@@ -104,10 +104,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     case TypeCode.UInt32:
                     case TypeCode.Int64:
                     case TypeCode.UInt64:
+                        return new ScaledDeltaIntField(this, valueType, name);
+
                     case TypeCode.Single:
                     case TypeCode.Double:
-                    case TypeCode.Decimal:
-                        return new ScaledDeltaField(this, valueType, name);
+                        return new ScaledDeltaFloatField(this, valueType, name);
 
                     default:
                         throw new SerializerException("Unsupported primitive type " + valueType);

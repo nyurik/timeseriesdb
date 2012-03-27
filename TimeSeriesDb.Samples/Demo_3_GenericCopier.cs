@@ -29,9 +29,12 @@ using System;
 using System.IO;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
+// Do not disable these Resharper checks in your code. Demo purposes only.
+// ReSharper disable InconsistentNaming
+
 namespace NYurik.TimeSeriesDb.Samples
 {
-    internal class DemoGenericCopier : ISample
+    internal class Demo_3_GenericCopier : ISample
     {
         #region ISample Members
 
@@ -94,7 +97,7 @@ namespace NYurik.TimeSeriesDb.Samples
             using (var bf = new BinCompressedSeriesFile<long, ItemLngDbl>(filename))
             {
                 var root = (ComplexField) bf.FieldSerializer.RootField;
-                ((ScaledDeltaField) root["Value"].Field).Multiplier = 100;
+                ((ScaledDeltaFloatField) root["Value"].Field).Multiplier = 100;
                 bf.InitializeNewFile();
                 bf.AppendData(Utils.GenerateData(3, 10, i => new ItemLngDbl(i, i/100.0)));
             }

@@ -22,11 +22,13 @@
 
 #endregion
 
+using System;
 using System.Reflection;
 using NYurik.TimeSeriesDb.CommonCode;
 
 namespace NYurik.TimeSeriesDb
 {
+    [Obsolete]
     public interface IBinTimeseriesFile : IBinaryFile
     {
         /// <summary>

@@ -42,6 +42,7 @@ namespace NYurik.TimeSeriesDb.CommonCode
     /// 32bit and 64bit architectures.
     /// </remarks>
     [Serializable, StructLayout(LayoutKind.Sequential, Pack = 1), Field(typeof (UtcDateTimeField)), Index]
+    [Obsolete]
     public struct UtcDateTime : IComparable, IFormattable, IConvertible, IComparable<UtcDateTime>,
                                 IEquatable<UtcDateTime>
     {

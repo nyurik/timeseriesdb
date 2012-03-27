@@ -67,12 +67,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Demo.cs" />
-    <Compile Include="DemoCompressed.cs" />
-    <Compile Include="DemoCompressedCustom.cs" />
-    <Compile Include="DemoSharedStateCompressed.cs" />
-    <Compile Include="DemoSimple.cs" />
+    <Compile Include="Demo_2_Compressed.cs" />
+    <Compile Include="Demo_5_CompressedCustom.cs" />
+    <Compile Include="Demo_4_SharedStateCompressed.cs" />
+    <Compile Include="Demo_1_Simple.cs" />
     <Compile Include="DataStructures.cs" />
-    <Compile Include="DemoGenericCopier.cs" />
+    <Compile Include="Demo_3_GenericCopier.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils.cs" />

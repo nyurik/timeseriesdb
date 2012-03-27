@@ -41,11 +41,11 @@ namespace NYurik.TimeSeriesDb.Samples
 
         static Demo()
         {
-            Add<DemoSimple>();
-            Add<DemoCompressed>();
-            Add<DemoGenericCopier>();
-            Add<DemoSharedStateCompressed>();
-            Add<DemoCompressedCustom>();
+            Add<Demo_1_Simple>();
+            Add<Demo_2_Compressed>();
+            Add<Demo_3_GenericCopier>();
+            Add<Demo_4_SharedStateCompressed>();
+            Add<Demo_5_CompressedCustom>();
         }
 
         private static void Add<T>()

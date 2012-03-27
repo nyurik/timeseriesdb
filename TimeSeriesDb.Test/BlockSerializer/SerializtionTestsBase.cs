@@ -74,7 +74,7 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         /// Perform a round trip encoding/decoding test for the given sequence of values.
         /// </summary>
         protected void Run<T>(IEnumerable<T> values, string name = null,
-                              Action<BaseField> updateSrlzr = null, Func<T, T, bool> comparer = null)
+                              Action<BaseField> set = null, Func<T, T, bool> comp = null)
         {
             using (var codec = new CodecWriter(10000))
             {
@@ -82,13 +82,13 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
 
                 try
                 {
-                    if (updateSrlzr != null)
-                        updateSrlzr(ds.RootField);
+                    if (set != null)
+                        set(ds.RootField);
 
                     ds.MakeReadonly();
 
                     TestUtils.CollectionAssertEqual(
-                        values, RoundTrip(ds, codec, values), comparer, "{0} {1}", typeof (T).Name, name);
+                        values, RoundTrip(ds, codec, values), comp, "{0} {1}", typeof (T).Name, name);
                 }
                 catch (Exception x)
                 {

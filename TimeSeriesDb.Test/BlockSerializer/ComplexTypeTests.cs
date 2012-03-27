@@ -161,8 +161,8 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
                 i =>
                     {
                         var s = (ComplexField) i;
-                        ((ScaledDeltaField) s["_double1"].Field).Multiplier = 1;
-                        ((ScaledDeltaField) s["_double2"].Field).Multiplier = 1;
+                        ((ScaledDeltaFloatField) s["_double1"].Field).Multiplier = 1;
+                        ((ScaledDeltaFloatField) s["_double2"].Field).Multiplier = 1;
                         s["_double2"].Field.StateName = s["_double1"].Field.StateName;
                     });
         }
@@ -175,9 +175,9 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
                 i =>
                     {
                         var s = (ComplexField) i;
-                        ((ScaledDeltaField) s["_float"].Field).Multiplier = 10;
-                        ((ScaledDeltaField) s["_double1"].Field).Multiplier = 1;
-                        ((ScaledDeltaField) s["_double2"].Field).Multiplier = 1;
+                        ((ScaledDeltaFloatField) s["_float"].Field).Multiplier = 10;
+                        ((ScaledDeltaFloatField) s["_double1"].Field).Multiplier = 1;
+                        ((ScaledDeltaFloatField) s["_double2"].Field).Multiplier = 1;
                     });
         }
     }

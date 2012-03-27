@@ -29,6 +29,7 @@ using JetBrains.Annotations;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
+    [Obsolete("Use ScaledDeltaFloatField or ScaledDeltaIntField instead")]
     public class ScaledDeltaField : BaseField
     {
         private long _divider = 1;
@@ -95,10 +96,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
             base.InitExistingField(reader, typeResolver);
-            if (Version != Version10)
-                throw new IncompatibleVersionException(GetType(), Version);
             Divider = reader.ReadInt64();
             Multiplier = reader.ReadInt64();
+        }
+
+        protected override bool IsValidVersion(Version ver)
+        {
+            return ver == Version10;
         }
 
         protected override void MakeReadonly()
@@ -196,7 +200,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                                 float dvdr = (float) _multiplier/_divider;
                                 float maxValue = (float) Math.Pow(10, 7)/dvdr;
 
-                                getValExp = FloatingGetValExp(getValExp, codec, dvdr, -maxValue, maxValue);
+                                getValExp = FloatingGetValExp(codec, getValExp, dvdr, -maxValue, maxValue);
                             }
                             break;
 
@@ -206,7 +210,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                                 double dvdr = (double) _multiplier/_divider;
                                 double maxValue = Math.Pow(10, 15)/dvdr;
 
-                                getValExp = FloatingGetValExp(getValExp, codec, dvdr, -maxValue, maxValue);
+                                getValExp = FloatingGetValExp(codec, getValExp, dvdr, -maxValue, maxValue);
                             }
                             break;
 
@@ -264,8 +268,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return new Tuple<Expression, Expression>(initExp, deltaExp);
         }
 
-        private Expression FloatingGetValExp<T>(
-            Expression value, Expression codec, T divider, T minValue, T maxValue)
+        private Expression FloatingGetValExp<T>(Expression codec, Expression value, T divider, T minValue, T maxValue)
         {
             Expression multExp = Expression.Multiply(value, Expression.Constant(divider));
             if (value.Type == typeof (float))
