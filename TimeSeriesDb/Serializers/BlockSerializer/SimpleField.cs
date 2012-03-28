@@ -40,6 +40,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
         }
 
+        public override int MaxByteSize
+        {
+            get { return CodecBase.MaxBytesFor8; }
+        }
+
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
             switch (ValueTypeCode)
@@ -57,7 +62,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     throw new ArgumentOutOfRangeException();
             }
 
-            var writeMethod = Expression.Call(codec, "WriteByte", null, valueExp);
+            MethodCallExpression writeMethod = Expression.Call(codec, "WriteByte", null, valueExp);
 
             return new Tuple<Expression, Expression>(writeMethod, writeMethod);
         }
@@ -82,11 +87,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
 
             return new Tuple<Expression, Expression>(readMethod, readMethod);
-        }
-
-        public override int GetMaxByteSize()
-        {
-            return CodecBase.MaxBytesFor8;
         }
 
         protected override bool IsValidVersion(Version ver)

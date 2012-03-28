@@ -87,6 +87,10 @@ namespace NYurik.TimeSeriesDb
         /// False if more than one identical index is allowed in the feed, True otherwise
         /// </summary>
         bool UniqueIndexes { get; }
+
+        /// <summary> User string stored in the file </summary>
+        /// TODO: Remove "new" after obsolete parent is removed
+        new string Tag { get; }
     }
 
     /// <summary>

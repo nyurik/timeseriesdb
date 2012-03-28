@@ -92,14 +92,12 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
             base.InitNewField(writer);
             writer.Write(Divider);
-
         }
 
         protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
         {
             base.InitExistingField(reader, typeResolver);
             Divider = reader.ReadInt64();
-
         }
 
         protected override bool IsValidVersion(Version ver)
@@ -138,12 +136,14 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         /// </summary>
         protected override Expression StateToValue(Expression stateVar)
         {
+            if (stateVar == null) throw new ArgumentNullException("stateVar");
+
             Expression getValExp = stateVar.Type != ValueType
                                        ? Expression.Convert(stateVar, ValueType)
                                        : stateVar;
             return Divider != 1
-                ? Expression.Multiply(getValExp, Const(Divider, ValueType))
-                : getValExp;
+                       ? Expression.Multiply(getValExp, Const(Divider, ValueType))
+                       : getValExp;
         }
     }
 }

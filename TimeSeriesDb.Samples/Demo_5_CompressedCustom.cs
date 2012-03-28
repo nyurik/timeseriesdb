@@ -188,9 +188,9 @@ namespace NYurik.TimeSeriesDb.Samples
             {
             }
 
-            public override int GetMaxByteSize()
+            public override int MaxByteSize
             {
-                return CodecBase.MaxBytesFor8;
+                get { return CodecBase.MaxBytesFor8; }
             }
 
             protected override bool IsValidVersion(Version ver)

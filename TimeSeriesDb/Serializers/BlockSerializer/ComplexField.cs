@@ -105,9 +105,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
-        public override int GetMaxByteSize()
+        public override int MaxByteSize
         {
-            return _fields.Sum(fld => fld.Field.GetMaxByteSize());
+            get { return _fields.Sum(fld => fld.Field.MaxByteSize); }
         }
 
         protected override void InitNewField(BinaryWriter writer)

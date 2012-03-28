@@ -80,10 +80,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
-        public override int GetMaxByteSize()
+        public override int MaxByteSize
         {
-            // TODO: optimize to make this number smaller depending on the field type and scaling parameters
-            return CodecBase.MaxBytesFor64;
+            get
+            {
+                // TODO: optimize to make this number smaller depending on the field type and scaling parameters
+                return CodecBase.MaxBytesFor64;
+            }
         }
 
         protected override void InitNewField(BinaryWriter writer)

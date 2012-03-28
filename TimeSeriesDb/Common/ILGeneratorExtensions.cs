@@ -39,7 +39,7 @@ namespace NYurik.TimeSeriesDb.Common
     /// A wrapper around the <see cref="ILGenerator"/> class.
     /// </summary>
     /// <seealso cref="System.Reflection.Emit.ILGenerator">ILGenerator Class</seealso>
-    public static class ILGeneratorExtensions
+    internal static class ILGeneratorExtensions
     {
         #region ILGenerator Methods
 
@@ -176,12 +176,13 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="startColumn">The column in the line where the sequence point begins.</param>
         /// <param name="endLine">The line where the sequence point ends.</param>
         /// <param name="endColumn">The column in the line where the sequence point ends.</param>
-        public static ILGenerator MarkSequencePoint(this ILGenerator il,
-                                                    ISymbolDocumentWriter document,
-                                                    int startLine,
-                                                    int startColumn,
-                                                    int endLine,
-                                                    int endColumn)
+        public static ILGenerator MarkSequencePoint(
+            this ILGenerator il,
+            ISymbolDocumentWriter document,
+            int startLine,
+            int startColumn,
+            int endLine,
+            int endColumn)
         {
             il.MarkSequencePoint(document, startLine, startColumn, endLine, endColumn);
             return il;
@@ -747,8 +748,9 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="optionalParameterTypes">The types of the optional arguments if the method is a varargs method.</param>
         /// <seealso cref="OpCodes.Call">OpCodes.Call</seealso>
         /// <seealso cref="System.Reflection.Emit.ILGenerator.EmitCall(OpCode,MethodInfo,Type[])">ILGenerator.EmitCall</seealso>
-        public static ILGenerator call(this ILGenerator il, Type type, string methodName,
-                                       params Type[] optionalParameterTypes)
+        public static ILGenerator call(
+            this ILGenerator il, Type type, string methodName,
+            params Type[] optionalParameterTypes)
         {
             if (type == null) throw new ArgumentNullException("type");
 
@@ -772,8 +774,9 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="optionalParameterTypes">The types of the optional arguments if the method is a varargs method.</param>
         /// <seealso cref="OpCodes.Call">OpCodes.Call</seealso>
         /// <seealso cref="System.Reflection.Emit.ILGenerator.EmitCall(OpCode,MethodInfo,Type[])">ILGenerator.EmitCall</seealso>
-        public static ILGenerator call(this ILGenerator il, Type type, string methodName, BindingFlags flags,
-                                       params Type[] optionalParameterTypes)
+        public static ILGenerator call(
+            this ILGenerator il, Type type, string methodName, BindingFlags flags,
+            params Type[] optionalParameterTypes)
         {
             if (type == null) throw new ArgumentNullException("type");
 
@@ -796,8 +799,9 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="parameterTypes">The types of the required arguments to the instruction.</param>
         /// <seealso cref="OpCodes.Calli">OpCodes.Calli</seealso>
         /// <seealso cref="System.Reflection.Emit.ILGenerator.EmitCalli(OpCode,CallingConvention,Type,Type[])">ILGenerator.EmitCalli</seealso>
-        public static ILGenerator calli(this ILGenerator il, CallingConvention unmanagedCallConv, Type returnType,
-                                        Type[] parameterTypes)
+        public static ILGenerator calli(
+            this ILGenerator il, CallingConvention unmanagedCallConv, Type returnType,
+            Type[] parameterTypes)
         {
             il.EmitCalli(OpCodes.Calli, unmanagedCallConv, returnType, parameterTypes);
             return il;
@@ -815,8 +819,9 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="optionalParameterTypes">The types of the optional arguments for vararg calls.</param>
         /// <seealso cref="OpCodes.Calli">OpCodes.Calli</seealso>
         /// <seealso cref="System.Reflection.Emit.ILGenerator.EmitCalli(OpCode,CallingConventions,Type,Type[],Type[])">ILGenerator.EmitCalli</seealso>
-        public static ILGenerator calli(this ILGenerator il, CallingConventions callingConvention, Type returnType,
-                                        Type[] parameterTypes, Type[] optionalParameterTypes)
+        public static ILGenerator calli(
+            this ILGenerator il, CallingConventions callingConvention, Type returnType,
+            Type[] parameterTypes, Type[] optionalParameterTypes)
         {
             il.EmitCalli(OpCodes.Calli, callingConvention, returnType, parameterTypes, optionalParameterTypes);
             return il;
@@ -861,8 +866,9 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="optionalParameterTypes">The types of the optional arguments if the method is a varargs method.</param>
         /// <seealso cref="OpCodes.Callvirt">OpCodes.Callvirt</seealso>
         /// <seealso cref="System.Reflection.Emit.ILGenerator.EmitCall(OpCode,MethodInfo,Type[])">ILGenerator.EmitCall</seealso>
-        public static ILGenerator callvirt(this ILGenerator il, Type type, string methodName,
-                                           params Type[] optionalParameterTypes)
+        public static ILGenerator callvirt(
+            this ILGenerator il, Type type, string methodName,
+            params Type[] optionalParameterTypes)
         {
             if (type == null) throw new ArgumentNullException("type");
 
@@ -886,8 +892,9 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="optionalParameterTypes">The types of the optional arguments if the method is a varargs method.</param>
         /// <seealso cref="OpCodes.Callvirt">OpCodes.Callvirt</seealso>
         /// <seealso cref="System.Reflection.Emit.ILGenerator.EmitCall(OpCode,MethodInfo,Type[])">ILGenerator.EmitCall</seealso>
-        public static ILGenerator callvirt(this ILGenerator il, Type type, string methodName, BindingFlags flags,
-                                           params Type[] optionalParameterTypes)
+        public static ILGenerator callvirt(
+            this ILGenerator il, Type type, string methodName, BindingFlags flags,
+            params Type[] optionalParameterTypes)
         {
             MethodInfo methodInfo =
                 optionalParameterTypes == null
@@ -1738,8 +1745,9 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="parameterInfo">A <see cref="ParameterInfo"/> representing a parameter.</param>
         /// <param name="box">True, if parameter must be converted to a reference.</param>
         /// <seealso cref="ldarg(ILGenerator,MethodBuilder,ParameterInfo)"/>
-        public static ILGenerator ldargEx(this ILGenerator il, MethodBuilder methodBuilder, ParameterInfo parameterInfo,
-                                          bool box)
+        public static ILGenerator ldargEx(
+            this ILGenerator il, MethodBuilder methodBuilder, ParameterInfo parameterInfo,
+            bool box)
         {
             il.ldarg(methodBuilder, parameterInfo);
 

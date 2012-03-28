@@ -184,7 +184,7 @@ namespace NYurik.TimeSeriesDb
             IndexFieldInfo = fieldInfo;
 
             _serializer = DynamicSerializer<TVal>.CreateFromReader(reader, typeResolver);
-            _maxItemByteSize = FieldSerializer.RootField.GetMaxByteSize();
+            _maxItemByteSize = FieldSerializer.RootField.MaxByteSize;
 
             return ver;
         }
@@ -197,7 +197,7 @@ namespace NYurik.TimeSeriesDb
             writer.Write(IndexFieldInfo.Name);
             FieldSerializer.WriteCustomHeader(writer);
 
-            _maxItemByteSize = FieldSerializer.RootField.GetMaxByteSize();
+            _maxItemByteSize = FieldSerializer.RootField.MaxByteSize;
             if (BlockSize < _maxItemByteSize + CodecBase.ReservedSpace)
                 throw new SerializerException("BlockSize ({0}) must be at least {1} bytes", BlockSize, _maxItemByteSize);
 
@@ -213,8 +213,9 @@ namespace NYurik.TimeSeriesDb
             get { return SearchCache.Count == 0; }
         }
 
-        TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
+        TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>([NotNull] IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
+            if (callable == null) throw new ArgumentNullException("callable");
             return callable.Run<TInd, TVal>(this, arg);
         }
 
@@ -448,7 +449,7 @@ namespace NYurik.TimeSeriesDb
                                 codec.Validate(BlockSize);
                         }
 
-                        var res = inReverse ? retBuf.AsArraySegmentReversed() : retBuf.AsArraySegment();
+                        ArraySegment<TVal> res = inReverse ? retBuf.AsArraySegmentReversed() : retBuf.AsArraySegment();
 
                         int offset =
                             getFullBlock
@@ -626,7 +627,7 @@ namespace NYurik.TimeSeriesDb
                 {
                     for (int i = v.Offset; i < v.Count; i++)
                     {
-                        var val = v.Array[i];
+                        TVal val = v.Array[i];
                         // ReSharper disable CompareNonConstrainedGenericWithNull
                         if (val == null)
                             throw new BinaryFileException("Segment {0}, item #{1} is null", segInd, i);

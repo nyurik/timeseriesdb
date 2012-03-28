@@ -69,9 +69,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return value == TimeSpan.Zero ? 1 : value.Ticks;
         }
 
-        public override int GetMaxByteSize()
+        public override int MaxByteSize
         {
-            return _deltaField.GetMaxByteSize();
+            get { return _deltaField.MaxByteSize; }
         }
 
         protected override void InitNewField(BinaryWriter writer)

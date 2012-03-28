@@ -25,6 +25,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using JetBrains.Annotations;
 using NYurik.TimeSeriesDb.Common;
 using NYurik.TimeSeriesDb.Serializers;
 
@@ -784,8 +785,10 @@ namespace NYurik.TimeSeriesDb
             return new DefaultTypeSerializer<T>();
         }
 
-        protected static int EnsureStreamRead(Stream stream, ArraySegment<byte> buffer)
+        protected static int EnsureStreamRead([NotNull] Stream stream, ArraySegment<byte> buffer)
         {
+            if (stream == null) throw new ArgumentNullException("stream");
+
             int offset = buffer.Offset;
             int count = buffer.Count;
 

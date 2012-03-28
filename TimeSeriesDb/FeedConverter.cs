@@ -9,8 +9,8 @@ namespace NYurik.TimeSeriesDb
     {
         private readonly Func<TOld, TNew> _converter;
         private readonly IEnumerableFeed<TInd, TOld> _feed;
-        private readonly Func<TOld, bool> _predicate;
         private readonly Func<TNew, TInd> _indexAccessor;
+        private readonly Func<TOld, bool> _predicate;
 
         public FeedConverter(
             IEnumerableFeed<TInd, TOld> feed,
@@ -37,6 +37,7 @@ namespace NYurik.TimeSeriesDb
 
         TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
+            if (callable == null) throw new ArgumentNullException("callable");
             return callable.Run<TInd, TNew>(this, arg);
         }
 

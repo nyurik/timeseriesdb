@@ -23,6 +23,7 @@
 #endregion
 
 using System;
+using JetBrains.Annotations;
 
 namespace NYurik.TimeSeriesDb
 {
@@ -34,7 +35,7 @@ namespace NYurik.TimeSeriesDb
         /// <summary>
         /// Calls a factory method without explicitly specifying the type of the sub-item.
         /// </summary>
-        TDst RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg);
+        TDst RunGenericMethod<TDst, TArg>([NotNull] IGenericCallable<TDst, TArg> callable, TArg arg);
     }
 
     /// <summary>
@@ -42,7 +43,7 @@ namespace NYurik.TimeSeriesDb
     /// </summary>
     public interface IGenericCallable<out TDst, in TArg>
     {
-        TDst Run<T>(IGenericInvoker source, TArg arg);
+        TDst Run<T>([NotNull] IGenericInvoker source, TArg arg);
     }
 
     /// <summary>
@@ -53,7 +54,7 @@ namespace NYurik.TimeSeriesDb
         /// <summary>
         /// Calls a factory method without explicitly specifying the two types of the sub-items.
         /// </summary>
-        TDst RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg);
+        TDst RunGenericMethod<TDst, TArg>([NotNull] IGenericCallable2<TDst, TArg> callable, TArg arg);
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ namespace NYurik.TimeSeriesDb
     /// </summary>
     public interface IGenericCallable2<out TDst, in TArg>
     {
-        TDst Run<TInd, TVal>(IGenericInvoker2 source, TArg arg)
+        TDst Run<TInd, TVal>([NotNull] IGenericInvoker2 source, TArg arg)
             where TInd : IComparable<TInd>;
     }
 }

@@ -36,7 +36,9 @@ namespace NYurik.TimeSeriesDb
         }
 
         public IncompatibleVersionException(Type type, Version version)
-            : base("Version {0} is not supported by type {1}", version, type.AssemblyQualifiedName)
+            : base(
+                "Version {0} is not supported by type {1}",
+                version, type == null ? "Unknown" : type.AssemblyQualifiedName)
         {
         }
     }

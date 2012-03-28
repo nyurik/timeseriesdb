@@ -153,12 +153,17 @@ namespace NYurik.TimeSeriesDb.Common
         /// the elements of <paramref name="typeArguments"/> for the type parameters
         /// of the current generic type.</returns>
         /// <seealso cref="System.Type.MakeGenericType"/>
-        public static Type TranslateGenericParameters(this Type type, Type[] typeArguments)
+        public static Type TranslateGenericParameters([NotNull] this Type type, Type[] typeArguments)
         {
+            if (type == null) throw new ArgumentNullException("type");
+
             // 'T paramName' case
             //
             if (type.IsGenericParameter)
+            {
+                if (typeArguments == null) throw new ArgumentNullException("typeArguments");
                 return typeArguments[type.GenericParameterPosition];
+            }
 
             // 'List<T> paramName' or something like that.
             //
@@ -264,15 +269,18 @@ namespace NYurik.TimeSeriesDb.Common
             return null;
         }
 
-        public static TAttribute[] GetCustomAttributes<TAttribute>(this ICustomAttributeProvider type, bool inherit)
+        public static TAttribute[] GetCustomAttributes<TAttribute>(
+            [NotNull] this ICustomAttributeProvider type, bool inherit)
             where TAttribute : Attribute
         {
+            if (type == null) throw new ArgumentNullException("type");
             return Array.ConvertAll(
                 type.GetCustomAttributes(typeof (TAttribute), inherit), i => (TAttribute) i);
         }
 
-        public static Type ResolverFromAnyAssemblyVersion(TypeSpec spec, AssemblyName an)
+        public static Type ResolverFromAnyAssemblyVersion([NotNull] TypeSpec spec, AssemblyName an)
         {
+            if (spec == null) throw new ArgumentNullException("spec");
             string typeName = spec.Name;
             if (spec.AssemblyName != null)
                 typeName += ", " + spec.AssemblyName;

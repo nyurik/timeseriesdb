@@ -81,8 +81,9 @@ namespace NYurik.TimeSeriesDb
         /// </summary>
         /// <param name="stream">The stream of array segments to write</param>
         /// <param name="firstItemIdx">The index of the first element in the stream. The file will be truncated if the value is less than or equal to Count</param>
-        public void WriteStream(IEnumerable<ArraySegment<T>> stream, long firstItemIdx = long.MaxValue)
+        public void WriteStream([NotNull] IEnumerable<ArraySegment<T>> stream, long firstItemIdx = long.MaxValue)
         {
+            if (stream == null) throw new ArgumentNullException("stream");
             using (IEnumerator<ArraySegment<T>> streamEnmr = stream.GetEnumerator())
                 if (streamEnmr.MoveNext())
                     PerformWriteStreaming(streamEnmr, firstItemIdx);

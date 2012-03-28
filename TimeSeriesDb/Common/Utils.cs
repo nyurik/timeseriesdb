@@ -66,8 +66,9 @@ namespace NYurik.TimeSeriesDb.Common
         }
 
         public static SerializerException GetItemSizeChangedException(
-            IBinSerializer serializer, string tag, int itemSize)
+            [NotNull] IBinSerializer serializer, string tag, int itemSize)
         {
+            if (serializer == null) throw new ArgumentNullException("serializer");
             return new SerializerException(
                 "Serializer {0} ({1}){2} was created with ItemSize={3}, but now the ItemSize={4}",
                 serializer.GetType().AssemblyQualifiedName,
@@ -77,8 +78,9 @@ namespace NYurik.TimeSeriesDb.Common
                 serializer.TypeSize);
         }
 
-        public static Version ReadVersion(this BinaryReader reader)
+        public static Version ReadVersion([NotNull] this BinaryReader reader)
         {
+            if (reader == null) throw new ArgumentNullException("reader");
             int major = reader.ReadInt32();
             int minor = reader.ReadInt32();
             int build = reader.ReadInt32();
@@ -91,8 +93,10 @@ namespace NYurik.TimeSeriesDb.Common
                              : new Version(major, minor, build, revision);
         }
 
-        public static void WriteVersion(this BinaryWriter writer, Version ver)
+        public static void WriteVersion([NotNull] this BinaryWriter writer, [NotNull] Version ver)
         {
+            if (writer == null) throw new ArgumentNullException("writer");
+            if (ver == null) throw new ArgumentNullException("ver");
             writer.Write(ver.Major);
             writer.Write(ver.Minor);
             writer.Write(ver.Build);

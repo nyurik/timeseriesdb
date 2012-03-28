@@ -25,6 +25,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Globalization;
 using System.IO;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
@@ -104,6 +105,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
+        /// <summary>
+        /// Maximum total number of bytes this field (including any nested fields) might need
+        /// </summary>
+        public abstract int MaxByteSize { get; }
+
         public void InitNew(BinaryWriter writer)
         {
             EnsureReadonly();
@@ -124,8 +130,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             return fld;
         }
-
-        public abstract int GetMaxByteSize();
 
         protected virtual void InitNewField(BinaryWriter writer)
         {
@@ -150,50 +154,51 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             StateName = reader.ReadString();
         }
 
-        protected ConstantExpression Const(object value, Type toType = null)
+        protected static ConstantExpression Const(object value, Type toType = null)
         {
             return
                 toType == null || (value != null && value.GetType() == toType)
                     ? Expression.Constant(value)
-                    : Expression.Constant(Convert.ChangeType(value, toType), toType);
+                    : Expression.Constant(Convert.ChangeType(value, toType, CultureInfo.InvariantCulture), toType);
         }
 
         protected abstract bool IsValidVersion(Version ver);
 
-        protected MethodCallExpression WriteSignedValue(Expression codec, Expression value)
+        protected static MethodCallExpression WriteSignedValue(Expression codec, Expression value)
         {
             return Expression.Call(codec, "WriteSignedValue", null, value);
         }
 
-        protected MethodCallExpression WriteUnsignedValue(Expression codec, Expression value)
+        protected static MethodCallExpression WriteUnsignedValue(Expression codec, Expression value)
         {
             return Expression.Call(codec, "WriteUnsignedValue", null, value);
         }
 
-        protected MethodCallExpression ReadSignedValue(Expression codec)
+        protected static MethodCallExpression ReadSignedValue(Expression codec)
         {
             return Expression.Call(codec, "ReadSignedValue", null);
         }
 
-        protected MethodCallExpression ReadUnsignedValue(Expression codec)
+        protected static MethodCallExpression ReadUnsignedValue(Expression codec)
         {
             return Expression.Call(codec, "ReadUnsignedValue", null);
         }
 
-        protected MethodCallExpression ThrowOverflow(Expression codec, Expression value)
+        protected static MethodCallExpression ThrowOverflow(Expression codec, [NotNull] Expression value)
         {
+            if (value == null) throw new ArgumentNullException("value");
             return Expression.Call(codec, "ThrowOverflow", new[] {value.Type}, value);
         }
 
-        protected MethodCallExpression ThrowSerializer(Expression codec, string format, params Expression[] args)
+        protected static MethodCallExpression ThrowSerializer(Expression codec, string format, params Expression[] args)
         {
             return Expression.Call(codec, "ThrowSerializer", null, ToFormatArgs(format, args));
         }
 
-        protected Expression[] ToFormatArgs(string format, params Expression[] arguments)
+        private static Expression[] ToFormatArgs(string format, params Expression[] arguments)
         {
             var res = new List<Expression> {Const(format)};
-            foreach (var arg in arguments)
+            foreach (Expression arg in arguments)
                 res.Add(
                     arg.Type != typeof (object)
                         ? Expression.Convert(arg, typeof (object))
@@ -252,8 +257,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             IsInitialized = true;
         }
 
-        public Tuple<Expression, Expression> GetSerializer(Expression valueExp, Expression codec)
+        public Tuple<Expression, Expression> GetSerializer([NotNull] Expression valueExp, [NotNull] Expression codec)
         {
+            if (valueExp == null) throw new ArgumentNullException("valueExp");
+            if (codec == null) throw new ArgumentNullException("codec");
             EnsureReadonly();
 
             if (ValueType != valueExp.Type)
@@ -290,9 +297,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return srl;
         }
 
-        protected abstract Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec);
+        protected abstract Tuple<Expression, Expression> GetSerializerExp(
+            [NotNull] Expression valueExp, [NotNull] Expression codec);
 
-        protected abstract Tuple<Expression, Expression> GetDeSerializerExp(Expression codec);
+        protected abstract Tuple<Expression, Expression> GetDeSerializerExp([NotNull] Expression codec);
 
         private void EnsureReadonly()
         {

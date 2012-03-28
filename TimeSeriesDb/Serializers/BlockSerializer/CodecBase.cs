@@ -46,7 +46,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             get { return _hashAlgorithm ?? (_hashAlgorithm = new MD5CryptoServiceProvider()); }
         }
 
-        protected int ValidateCount(long count)
+        protected static int ValidateCount(long count)
         {
             if (count <= 0 || count > int.MaxValue)
                 throw new SerializerException("Invalid count - must be >0 && <= int.MaxValue");

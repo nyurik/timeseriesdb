@@ -59,6 +59,15 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
+        public override int MaxByteSize
+        {
+            get
+            {
+                // TODO: optimize to make this number smaller depending on the field type and scaling parameters
+                return CodecBase.MaxBytesFor64;
+            }
+        }
+
         protected override void InitNewField(BinaryWriter writer)
         {
             base.InitNewField(writer);
@@ -69,12 +78,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
             base.InitExistingField(reader, typeResolver);
             DeltaType = (DeltaType) reader.ReadByte();
-        }
-
-        public override int GetMaxByteSize()
-        {
-            // TODO: optimize to make this number smaller depending on the field type and scaling parameters
-            return CodecBase.MaxBytesFor64;
         }
 
         protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
@@ -186,7 +189,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
-        protected abstract Expression StateToValue(Expression stateVar);
+        protected abstract Expression StateToValue([NotNull] Expression stateVar);
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {

@@ -25,6 +25,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using JetBrains.Annotations;
 using NYurik.TimeSeriesDb.Common;
 using NYurik.TimeSeriesDb.Serializers;
 
@@ -86,8 +87,9 @@ namespace NYurik.TimeSeriesDb
             get { return typeof (T); }
         }
 
-        public override TDst RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg)
+        public override TDst RunGenericMethod<TDst, TArg>([NotNull] IGenericCallable<TDst, TArg> callable, TArg arg)
         {
+            if (callable == null) throw new ArgumentNullException("callable");
             return callable.Run<T>(this, arg);
         }
 
@@ -446,8 +448,11 @@ namespace NYurik.TimeSeriesDb
         /// </summary>
         /// <param name="streamEnmr">The stream of array segments to write, with a single MoveNext() already performed (returned true)</param>
         /// <param name="firstItemIdx">The index of the first element in the stream. The file will be truncated if the value is less than or equal to Count</param>
-        protected void PerformWriteStreaming(IEnumerator<ArraySegment<T>> streamEnmr, long firstItemIdx = long.MaxValue)
+        protected void PerformWriteStreaming(
+            [NotNull] IEnumerator<ArraySegment<T>> streamEnmr, long firstItemIdx = long.MaxValue)
         {
+            if (streamEnmr == null) throw new ArgumentNullException("streamEnmr");
+
             ThrowOnNotInitialized();
             if (firstItemIdx < long.MaxValue)
                 PerformTruncateFile(firstItemIdx);

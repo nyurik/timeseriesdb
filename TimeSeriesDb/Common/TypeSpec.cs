@@ -142,7 +142,7 @@ namespace NYurik.TimeSeriesDb.Common
                 return ResolvedType;
 
             if (GenericParams != null)
-                foreach (var gp in GenericParams)
+                foreach (TypeSpec gp in GenericParams)
                     if (gp.Resolve(fullTypeResolvers) == null)
                         return null;
 
@@ -179,8 +179,11 @@ namespace NYurik.TimeSeriesDb.Common
         /// <param name="spec">Type info with all generics already resolved</param>
         /// <param name="typeResolvers">Resolver to convert a specific type without generic parameters and without subtypes</param>
         public static Type DefaultFullTypeResolver(
-            TypeSpec spec, params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
+            [NotNull] TypeSpec spec, [NotNull] params Func<TypeSpec, AssemblyName, Type>[] typeResolvers)
         {
+            if (spec == null) throw new ArgumentNullException("spec");
+            if (typeResolvers == null || typeResolvers.Length == 0) throw new ArgumentNullException("typeResolvers");
+
             AssemblyName assemblyName = spec.AssemblyName == null ? null : new AssemblyName(spec.AssemblyName);
             Type type = null;
 
@@ -246,7 +249,7 @@ namespace NYurik.TimeSeriesDb.Common
 
         private static TypeSpec ParseAndMakeReadonly(string typeName, ref int p, bool isRecurse, bool allowAqn)
         {
-            var tmp = Parse(typeName, ref p, isRecurse, allowAqn);
+            TypeSpec tmp = Parse(typeName, ref p, isRecurse, allowAqn);
             if (tmp.GenericParams != null)
                 tmp.GenericParams = new ReadOnlyCollection<TypeSpec>(tmp.GenericParams);
             if (tmp.Nested != null)

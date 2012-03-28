@@ -183,6 +183,7 @@ namespace NYurik.TimeSeriesDb
 
         TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
+            if (callable == null) throw new ArgumentNullException("callable");
             return callable.Run<TInd, TVal>(this, arg);
         }
 
@@ -242,7 +243,7 @@ namespace NYurik.TimeSeriesDb
                 start = inReverse ? long.MaxValue : 0;
             }
 
-            var stream = PerformStreaming(start, inReverse, bufferProvider, maxItemCount);
+            IEnumerable<ArraySegment<TVal>> stream = PerformStreaming(start, inReverse, bufferProvider, maxItemCount);
 
             return inReverse
                        ? stream.Select(
