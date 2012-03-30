@@ -25,9 +25,6 @@
 
 #endregion
 
-using System;
-using System.Diagnostics;
-
 namespace NYurik.TimeSeriesDb.Samples
 {
     internal static class Program
@@ -35,54 +32,6 @@ namespace NYurik.TimeSeriesDb.Samples
         private static void Main(string[] args)
         {
             Demo.Run(args.Length > 0 ? args[0] : null);
-            return;
-
-            Run<bool>();
-            Run<object>();
-            Run<string>();
-        }
-        private  static void Run<T>()
-        {
-            const int count = 10000000;
-
-            Test1<T>();
-            Test2<T>();
-
-            var sw1 = new Stopwatch();
-            var sw2 = new Stopwatch();
-
-            var sw = Stopwatch.StartNew();
-
-            for (int j = 0; j < 10; j++)
-            {
-                sw1.Start();
-                for (int i = 0; i < count; i++)
-                {
-                    Test1<T>();
-                }
-                sw1.Stop();
-
-                sw2.Start();
-                for (int i = 0; i < count; i++)
-                {
-                    Test2<T>();
-                }
-                sw2.Stop();
-            }
-
-
-            Console.WriteLine("{0} vs {1} (total={2})",sw1.Elapsed, sw2.Elapsed, sw.Elapsed);
-
-        }
-
-
-        static bool Test1<T>()
-        {
-            return typeof (T).IsValueType;
-        }
-        static bool Test2<T>()
-        {
-            return default(T) != null;
         }
     }
 }
