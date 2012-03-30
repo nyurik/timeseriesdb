@@ -25,6 +25,10 @@
 using System;
 using System.Security.Cryptography;
 
+#if DEBUG_SERIALIZER
+using JetBrains.Annotations;
+#endif
+
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
     public class CodecBase : IDisposable

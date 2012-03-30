@@ -44,7 +44,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         /// <summary>
         /// Integer and Float delta serializer.
         /// </summary>
-        public UtcDateTimeField([NotNull] IStateStore serializer, string stateName)
+// ReSharper disable UnusedParameter.Local
+        public UtcDateTimeField([NotNull] IStateStore serializer, Type valueType, string stateName)
+// ReSharper restore UnusedParameter.Local
             : base(Version10, serializer, typeof (UtcDateTime), stateName)
         {
             _deltaField = new ScaledDeltaField(serializer, typeof (long), stateName);

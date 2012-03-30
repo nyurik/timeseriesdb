@@ -149,7 +149,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             foreach (SubFieldInfo member in _fields)
             {
                 Tuple<Expression, Expression> t = member.Field.GetSerializer(
-                    GetterFactory(member.MemberInfo, valueExp), codec);
+                    Expression.MakeMemberAccess(valueExp, member.MemberInfo), codec);
 
                 initExp.Add(t.Item1);
 
@@ -186,7 +186,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             {
                 Tuple<Expression, Expression> srl = member.Field.GetDeSerializer(codec);
 
-                Expression field = GetterFactory(member.MemberInfo, currentVar);
+                Expression field = Expression.MakeMemberAccess(currentVar, member.MemberInfo);
                 readAllInit.Add(Expression.Assign(field, srl.Item1));
                 readAllNext.Add(Expression.Assign(field, srl.Item2));
             }
@@ -197,13 +197,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return new Tuple<Expression, Expression>(
                 Expression.Block(new[] {currentVar}, readAllInit),
                 Expression.Block(new[] {currentVar}, readAllNext));
-        }
-
-        private static Expression GetterFactory(MemberInfo memberInfo, Expression valueExp)
-        {
-            return memberInfo is PropertyInfo
-                       ? Expression.Property(valueExp, (PropertyInfo) memberInfo)
-                       : Expression.Field(valueExp, (FieldInfo) memberInfo);
         }
 
         protected override bool Equals(BaseField baseOther)

@@ -252,6 +252,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 #endif
         }
 
+        /// <summary>
+        /// Override this method (call base.MakeReadonly() at the end) to validate and Field's content,
+        /// and convert any user-accessible properties to readonly.
+        /// </summary>
         protected virtual void MakeReadonly()
         {
             IsInitialized = true;
@@ -305,10 +309,14 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         private void EnsureReadonly()
         {
             if (!IsInitialized)
+            {
                 MakeReadonly();
-            if (!IsInitialized)
-                throw new SerializerException(
-                    "Derived serializer {0} must call base when validating", GetType().AssemblyQualifiedName);
+                
+                if (!IsInitialized)
+                    throw new SerializerException(
+                        "Derived serializer {0} and all of its base classes must call base.MakeReadonly() at the end.",
+                        GetType().AssemblyQualifiedName);
+            }
         }
 
         public override string ToString()

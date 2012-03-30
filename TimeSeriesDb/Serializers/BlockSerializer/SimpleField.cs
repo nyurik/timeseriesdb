@@ -96,7 +96,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override void MakeReadonly()
         {
-            ThrowOnInitialized();
             switch (ValueTypeCode)
             {
                 case TypeCode.Boolean:

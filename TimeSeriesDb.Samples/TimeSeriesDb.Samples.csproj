@@ -66,10 +66,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Demo_6_ReadonlyFieldsSerializer.cs" />
     <Compile Include="Demo.cs" />
     <Compile Include="Demo_2_Compressed.cs" />
-    <Compile Include="Demo_5_CompressedCustom.cs" />
-    <Compile Include="Demo_4_SharedStateCompressed.cs" />
+    <Compile Include="Demo_5_CustomSerializer.cs" />
+    <Compile Include="Demo_4_SharingSerializerState.cs" />
     <Compile Include="Demo_1_Simple.cs" />
     <Compile Include="DataStructures.cs" />
     <Compile Include="Demo_3_GenericCopier.cs" />
