@@ -22,8 +22,6 @@
 
 #endregion
 
-using System;
-
 namespace NYurik.TimeSeriesDb
 {
     public interface IBinaryFile<T> : IBinaryFile

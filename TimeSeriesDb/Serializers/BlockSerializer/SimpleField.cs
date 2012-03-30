@@ -110,5 +110,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             base.MakeReadonly();
         }
+
+        // No need to override GetHashCode either
+        protected override bool Equals(BaseField baseOther)
+        {
+            return true; // No state, any fields with the same type equal
+        }
     }
 }

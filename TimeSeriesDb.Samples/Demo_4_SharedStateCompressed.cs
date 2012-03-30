@@ -90,7 +90,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 // RootField will be pre-populated with default configuration objects.
                 // Some fields, such as doubles, require additional configuration before the file can be initialized.
                 //
-                var root = (ComplexField) bf1.FieldSerializer.RootField;
+                var root = (ComplexField) bf1.RootField;
 
                 var fld1 = (ScaledDeltaFloatField) root["Value1"].Field;
                 var fld2 = (ScaledDeltaFloatField) root["Value2"].Field;
@@ -122,7 +122,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 //
                 // Initialize the second in an identical fashion without linking the states and append the same data
                 //
-                var root2 = (ComplexField) bf2.FieldSerializer.RootField;
+                var root2 = (ComplexField) bf2.RootField;
                 ((ScaledDeltaFloatField) root2["Value1"].Field).Multiplier = 100;
                 ((ScaledDeltaFloatField) root2["Value2"].Field).Multiplier = 100;
                 bf2.InitializeNewFile();

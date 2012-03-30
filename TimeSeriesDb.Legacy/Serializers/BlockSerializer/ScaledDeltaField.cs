@@ -366,5 +366,24 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             return new Tuple<Expression, Expression>(initExp, deltaExp);
         }
+
+        protected override bool Equals(BaseField baseOther)
+        {
+            var other = (ScaledDeltaField) baseOther;
+            return _divider == other._divider && _multiplier == other._multiplier;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                // ReSharper disable NonReadonlyFieldInGetHashCode
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode*397) ^ _divider.GetHashCode();
+                hashCode = (hashCode*397) ^ _multiplier.GetHashCode();
+                return hashCode;
+                // ReSharper restore NonReadonlyFieldInGetHashCode
+            }
+        }
     }
 }

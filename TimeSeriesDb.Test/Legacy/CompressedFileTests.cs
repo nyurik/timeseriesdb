@@ -317,7 +317,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                         var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName)
                                      {UniqueIndexes = false};
 
-                        bf.BlockSize = bf.FieldSerializer.RootField.MaxByteSize + CodecBase.ReservedSpace
+                        bf.BlockSize = bf.RootField.MaxByteSize + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         return bf;
                     },
@@ -351,7 +351,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                         var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName)
                                      {UniqueIndexes = uniqueIndexes};
 
-                        bf.BlockSize = bf.FieldSerializer.RootField.MaxByteSize + CodecBase.ReservedSpace
+                        bf.BlockSize = bf.RootField.MaxByteSize + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         return bf;
                     },
@@ -376,7 +376,7 @@ namespace NYurik.TimeSeriesDb.Test.Legacy
                         var bf = new BinCompressedSeriesFile<UtcDateTime, _DatetimeByte_SeqPk1>(fileName)
                                      {UniqueIndexes = true};
 
-                        bf.BlockSize = bf.FieldSerializer.RootField.MaxByteSize + CodecBase.ReservedSpace
+                        bf.BlockSize = bf.RootField.MaxByteSize + CodecBase.ReservedSpace
                                        + blockSizeExtra;
                         bf.ValidateOnRead = true;
                         return bf;

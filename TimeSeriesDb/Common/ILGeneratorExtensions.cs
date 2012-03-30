@@ -897,7 +897,7 @@ namespace NYurik.TimeSeriesDb.Common
             params Type[] optionalParameterTypes)
         {
             MethodInfo methodInfo =
-                optionalParameterTypes == null
+                optionalParameterTypes == null || optionalParameterTypes.Length == 0
                     ? type.GetMethod(methodName, flags)
                     : type.GetMethod(methodName, flags, null, optionalParameterTypes, null);
 
@@ -905,22 +905,6 @@ namespace NYurik.TimeSeriesDb.Common
                 throw CreateNoSuchMethodException(type, methodName);
 
             return il.callvirt(methodInfo, null);
-        }
-
-        /// <summary>
-        /// Calls a late-bound method on an object, pushing the return value onto the evaluation stack
-        /// by calling ILGenerator.EmitCall(<see cref="OpCodes.Callvirt"/>, methodInfo, optionalParameterTypes).
-        /// </summary>
-        /// <param name="il"/>
-        /// <param name="methodName">The method to be called.</param>
-        /// <param name="type">The declaring type of the method.</param>
-        /// <param name="flags">A bitmask comprised of one or more <see cref="BindingFlags"/> 
-        /// that specify how the search is conducted.</param>
-        /// <seealso cref="OpCodes.Callvirt">OpCodes.Callvirt</seealso>
-        /// <seealso cref="System.Reflection.Emit.ILGenerator.EmitCall(OpCode,MethodInfo,Type[])">ILGenerator.EmitCall</seealso>
-        public static ILGenerator callvirt(this ILGenerator il, Type type, string methodName, BindingFlags flags)
-        {
-            return il.callvirt(type, methodName, flags, null);
         }
 
 //        /// <summary>

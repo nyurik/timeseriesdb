@@ -87,7 +87,7 @@ namespace NYurik.TimeSeriesDb
             get { return typeof (T); }
         }
 
-        public override TDst RunGenericMethod<TDst, TArg>([NotNull] IGenericCallable<TDst, TArg> callable, TArg arg)
+        public override TDst RunGenericMethod<TDst, TArg>(IGenericCallable<TDst, TArg> callable, TArg arg)
         {
             if (callable == null) throw new ArgumentNullException("callable");
             return callable.Run<T>(this, arg);

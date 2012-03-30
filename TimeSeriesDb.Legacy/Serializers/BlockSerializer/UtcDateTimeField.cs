@@ -116,5 +116,23 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 Expression.New(ctor, res.Item1),
                 Expression.New(ctor, res.Item2));
         }
+
+        protected override bool Equals(BaseField baseOther)
+        {
+            var other = (UtcDateTimeField)baseOther;
+            return _deltaField.Equals(other._deltaField);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                // ReSharper disable NonReadonlyFieldInGetHashCode
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ _deltaField.GetHashCode();
+                return hashCode;
+                // ReSharper restore NonReadonlyFieldInGetHashCode
+            }
+        }
     }
 }

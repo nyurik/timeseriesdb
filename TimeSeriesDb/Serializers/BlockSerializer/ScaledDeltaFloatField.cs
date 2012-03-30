@@ -116,6 +116,26 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
+        private double LargestIntegerValue
+        {
+            get
+            {
+                double max;
+                switch (ValueTypeCode)
+                {
+                    case TypeCode.Single:
+                        max = 1e7f; // floats support 7 significant digits
+                        break;
+                    case TypeCode.Double:
+                        max = 1e15d; // doubles support at least 15 significant digits
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+                return max;
+            }
+        }
+
         protected override void InitNewField(BinaryWriter writer)
         {
             base.InitNewField(writer);
@@ -203,26 +223,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return Expression.ConvertChecked(getValExp, typeof (long));
         }
 
-        private double LargestIntegerValue
-        {
-            get
-            {
-                double max;
-                switch (ValueTypeCode)
-                {
-                    case TypeCode.Single:
-                        max = 1e7f; // floats support 7 significant digits
-                        break;
-                    case TypeCode.Double:
-                        max = 1e15d; // doubles support at least 15 significant digits
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-                return max;
-            }
-        }
-
         /// <summary>
         /// valueGetter(): (T)state * ((T)Divider / Multiplier)
         /// </summary>
@@ -233,6 +233,26 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return Multiplier != 1 || Divider != 1
                        ? Expression.Divide(stateAsT, Const(Scale, ValueType))
                        : stateAsT;
+        }
+
+        protected override bool Equals(BaseField baseOther)
+        {
+            var other = (ScaledDeltaFloatField) baseOther;
+            return _divider == other._divider && _multiplier == other._multiplier && _precision.Equals(other._precision);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                // ReSharper disable NonReadonlyFieldInGetHashCode
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode*397) ^ _divider.GetHashCode();
+                hashCode = (hashCode*397) ^ _multiplier.GetHashCode();
+                hashCode = (hashCode*397) ^ _precision.GetHashCode();
+                return hashCode;
+                // ReSharper restore NonReadonlyFieldInGetHashCode
+            }
         }
     }
 }

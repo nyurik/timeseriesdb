@@ -137,7 +137,13 @@ namespace NYurik.TimeSeriesDb
             get { throw new NotSupportedException("Count is not available for compressed files"); }
         }
 
-        public DynamicSerializer<TVal> FieldSerializer
+        public BaseField RootField
+        {
+            get { return _serializer.RootField; }
+            set { _serializer.RootField = value; }
+        }
+
+        public IStateStore StateStore
         {
             get { return _serializer; }
         }
@@ -157,12 +163,18 @@ namespace NYurik.TimeSeriesDb
         /// </summary>
         /// <param name="fileName"> A relative or absolute path for the file to create. </param>
         /// <param name="indexFieldInfo"> Field containing the TInd index, or null to get default </param>
-        public BinCompressedSeriesFile(string fileName, FieldInfo indexFieldInfo = null)
+        /// <param name="fieldFactory"> Custom field factory may be provided to customize how 
+        /// <see cref="BaseField"/> fields are created for the type <typeparamref name="TVal"/>.
+        /// The factory can return null (default will be used), or create a field of the given type and name.</param>
+        public BinCompressedSeriesFile(
+            string fileName, FieldInfo indexFieldInfo = null,
+            Func<IStateStore, Type, string, BaseField> fieldFactory = null)
             : base(fileName)
         {
             UniqueIndexes = false;
             IndexFieldInfo = indexFieldInfo ?? DynamicCodeFactory.Instance.Value.GetIndexField<TVal>();
-            _serializer = DynamicSerializer<TVal>.CreateDefault();
+            _serializer = new DynamicSerializer<TVal>(fieldFactory);
+
             BlockSize = 16*1024;
         }
 
@@ -184,7 +196,7 @@ namespace NYurik.TimeSeriesDb
             IndexFieldInfo = fieldInfo;
 
             _serializer = DynamicSerializer<TVal>.CreateFromReader(reader, typeResolver);
-            _maxItemByteSize = FieldSerializer.RootField.MaxByteSize;
+            _maxItemByteSize = RootField.MaxByteSize;
 
             return ver;
         }
@@ -195,9 +207,9 @@ namespace NYurik.TimeSeriesDb
             writer.Write(BlockSize);
             writer.Write(UniqueIndexes);
             writer.Write(IndexFieldInfo.Name);
-            FieldSerializer.WriteCustomHeader(writer);
+            _serializer.WriteCustomHeader(writer);
 
-            _maxItemByteSize = FieldSerializer.RootField.MaxByteSize;
+            _maxItemByteSize = _serializer.RootField.MaxByteSize;
             if (BlockSize < _maxItemByteSize + CodecBase.ReservedSpace)
                 throw new SerializerException("BlockSize ({0}) must be at least {1} bytes", BlockSize, _maxItemByteSize);
 
@@ -213,7 +225,7 @@ namespace NYurik.TimeSeriesDb
             get { return SearchCache.Count == 0; }
         }
 
-        TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>([NotNull] IGenericCallable2<TDst, TArg> callable, TArg arg)
+        TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
             if (callable == null) throw new ArgumentNullException("callable");
             return callable.Run<TInd, TVal>(this, arg);
@@ -444,7 +456,7 @@ namespace NYurik.TimeSeriesDb
                         for (int i = 0; i < blocks; i++)
                         {
                             codec.BufferPos = i*BlockSize;
-                            FieldSerializer.DeSerialize(codec, retBuf, int.MaxValue);
+                            _serializer.DeSerialize(codec, retBuf, int.MaxValue);
                             if (ValidateOnRead)
                                 codec.Validate(BlockSize);
                         }
@@ -525,7 +537,7 @@ namespace NYurik.TimeSeriesDb
                             "Logic error: seg.Count " + seg.Count + " > BlockSize " + BlockSize);
 
                     using (var codec = new CodecReader(seg))
-                        FieldSerializer.DeSerialize(codec, retBuf, 1);
+                        _serializer.DeSerialize(codec, retBuf, 1);
 
                     return IndexAccessor(retBuf.Array[0]);
                 }
@@ -572,7 +584,7 @@ namespace NYurik.TimeSeriesDb
                 while (true)
                 {
                     codec.Count = 0;
-                    bool hasMore = FieldSerializer.Serialize(codec, mergedIter);
+                    bool hasMore = _serializer.Serialize(codec, mergedIter);
                     if (codec.Count == 0)
                         throw new SerializerException("Internal serializer error: buffer is empty");
 

@@ -24,6 +24,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -35,16 +36,43 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
     public interface IStateStore
     {
+        /// <summary>
+        /// Get a state variable expression of a given type by its name.
+        /// In case the variable has not been created before, wasCreated will be set to true,
+        /// in which case the caller must generate code to initialize it first.
+        /// </summary>
         ParameterExpression GetOrCreateStateVar(string name, Type valueType, out bool wasCreated);
-        BaseField GetDefaultField([NotNull] Type valueType, [NotNull] string name);
+
+        /// <summary>
+        /// Create a default Field for the given type. The resulting field might be incomplete,
+        /// and will throw exception on initialization unless configured properly.
+        /// In case of the complex type, a <see cref="ComplexField"/> is created recursivelly.
+        /// </summary>
+        /// <param name="valueType">Type of the variable</param>
+        /// <param name="name">State name</param>
+        /// <param name="allowCustom">If true, do not call custom field factory.
+        /// This parameter is needed to avoid infinite recursion by custom field fatories.
+        /// If <see cref="DynamicSerializer{T}"/> is created with a non-null factory, and that factory needs
+        /// to create a default field before customizing it, set this parameter to false.</param>
+        BaseField CreateField([NotNull] Type valueType, [NotNull] string name, bool allowCustom);
     }
 
-    public abstract class DynamicSerializer : Initializable, IStateStore
+    internal abstract class DynamicSerializer : Initializable, IStateStore
     {
+        protected static readonly ConcurrentDictionary<DynamicSerializer, Lazy<Tuple<Delegate, Delegate>>>
+            SerializerCache = new ConcurrentDictionary<DynamicSerializer, Lazy<Tuple<Delegate, Delegate>>>();
+
         protected readonly Dictionary<string, ParameterExpression> StateVariables =
             new Dictionary<string, ParameterExpression>();
 
+        private readonly Func<IStateStore, Type, string, BaseField> _fieldFactory;
+
         private BaseField _rootField;
+
+        protected DynamicSerializer(Func<IStateStore, Type, string, BaseField> fieldFactory)
+        {
+            _fieldFactory = fieldFactory;
+        }
 
         public BaseField RootField
         {
@@ -79,12 +107,20 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return stateVar;
         }
 
-        public BaseField GetDefaultField(Type valueType, string name)
+        public BaseField CreateField(Type valueType, string name, bool allowCustom)
         {
             if (valueType == null)
                 throw new ArgumentNullException("valueType");
             if (name == null)
                 throw new ArgumentNullException("name");
+
+            if (allowCustom && _fieldFactory != null)
+            {
+                BaseField fld = _fieldFactory(this, valueType, name);
+                if (fld != null)
+                    return fld;
+            }
+
             if (valueType.IsArray)
                 throw new SerializerException("Arrays are not supported ({0})", valueType);
 
@@ -130,13 +166,21 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         }
     }
 
-    public class DynamicSerializer<T> : DynamicSerializer
+    internal sealed class DynamicSerializer<T> : DynamicSerializer
     {
         private Action<CodecReader, Buffer<T>, int> _deSerialize;
         private Func<CodecWriter, IEnumerator<T>, bool> _serialize;
 
-        private DynamicSerializer()
+        public DynamicSerializer(Func<IStateStore, Type, string, BaseField> fieldFactory)
+            : this(true, fieldFactory)
         {
+        }
+
+        private DynamicSerializer(bool initRootFld, Func<IStateStore, Type, string, BaseField> fieldFactory)
+            : base(fieldFactory)
+        {
+            if (initRootFld)
+                RootField = CreateField(typeof (T), "root", true);
         }
 
         /// <summary>
@@ -173,38 +217,46 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             if (IsInitialized)
                 return;
 
-            try
-            {
-                // A bit hacky way: StateVariables is reset for each call to Generate*Serializer()
-                StateVariables.Clear();
+            var srls = SerializerCache.GetOrAdd(
+                
+                this,
+                root =>
+                new Lazy<Tuple<Delegate, Delegate>>(
+                    () =>
+                        {
+                            try
+                            {
+                                StateVariables.Clear();
 
-                ParameterExpression[] parameters;
-                ParameterExpression[] localVars;
-                IEnumerable<Expression> methodBody = GenerateSerializer(out parameters, out localVars);
+                                ParameterExpression[] parameters;
+                                ParameterExpression[] localVars;
+                                IEnumerable<Expression> methodBody = GenerateSerializer(out parameters, out localVars);
 
-                Expression<Func<CodecWriter, IEnumerator<T>, bool>> serializeExp =
-                    Expression.Lambda<Func<CodecWriter, IEnumerator<T>, bool>>(
-                        Expression.Block(
-                            StateVariables.Values.Concat(localVars),
-                            methodBody),
-                        "Serialize", parameters);
+                                Expression<Func<CodecWriter, IEnumerator<T>, bool>> serializeExp =
+                                    Expression.Lambda<Func<CodecWriter, IEnumerator<T>, bool>>(
+                                        Expression.Block(
+                                            StateVariables.Values.Concat(localVars),
+                                            methodBody),
+                                        "Serialize", parameters);
 
-                _serialize = serializeExp.Compile();
+                                StateVariables.Clear();
+                                methodBody = GenerateDeSerializer(out parameters, out localVars);
 
-                StateVariables.Clear();
-                methodBody = GenerateDeSerializer(out parameters, out localVars);
+                                Expression<Action<CodecReader, Buffer<T>, int>> deSerializeExp =
+                                    Expression.Lambda<Action<CodecReader, Buffer<T>, int>>(
+                                        Expression.Block(StateVariables.Values.Concat(localVars), methodBody),
+                                        "DeSerialize", parameters);
 
-                Expression<Action<CodecReader, Buffer<T>, int>> deSerializeExp =
-                    Expression.Lambda<Action<CodecReader, Buffer<T>, int>>(
-                        Expression.Block(StateVariables.Values.Concat(localVars), methodBody),
-                        "DeSerialize", parameters);
+                                return new Tuple<Delegate, Delegate>(serializeExp.Compile(), deSerializeExp.Compile());
+                            }
+                            finally
+                            {
+                                StateVariables.Clear();
+                            }
+                        }));
 
-                _deSerialize = deSerializeExp.Compile();
-            }
-            finally
-            {
-                StateVariables.Clear();
-            }
+            _serialize = (Func<CodecWriter, IEnumerator<T>, bool>) srls.Value.Item1;
+            _deSerialize = (Action<CodecReader, Buffer<T>, int>) srls.Value.Item2;
 
             base.MakeReadonly();
         }
@@ -437,16 +489,9 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     };
         }
 
-        public static DynamicSerializer<T> CreateDefault()
-        {
-            var srl = new DynamicSerializer<T>();
-            srl.RootField = srl.GetDefaultField(typeof (T), "root");
-            return srl;
-        }
-
         public static DynamicSerializer<T> CreateFromReader(BinaryReader reader, Func<string, Type> typeResolver)
         {
-            var srl = new DynamicSerializer<T>();
+            var srl = new DynamicSerializer<T>(false, null);
             srl.RootField = BaseField.FieldFromReader(srl, reader, typeResolver);
             srl.MakeReadonly();
             return srl;
@@ -456,6 +501,24 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
             RootField.InitNew(writer);
             MakeReadonly();
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+
+            var other = (DynamicSerializer<T>) obj;
+            return RootField.Equals(other.RootField);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return RootField.GetHashCode();
+            }
         }
     }
 }

@@ -315,5 +315,43 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
             return string.Format("{0} {1}", GetType().Name, StateName);
         }
+
+        /// <summary>
+        /// Every field must override 
+        /// <see cref="GetHashCode"/> and  <see cref="Equals(NYurik.TimeSeriesDb.Serializers.BlockSerializer.BaseField)"/>,
+        /// and combine base call with its own results.
+        /// </summary>
+        protected abstract bool Equals(BaseField baseOther);
+
+        /// <summary>
+        /// Every field must override 
+        /// <see cref="GetHashCode"/> and  <see cref="Equals(NYurik.TimeSeriesDb.Serializers.BlockSerializer.BaseField)"/>,
+        /// and combine base call with its own results.
+        /// </summary>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                // ReSharper disable NonReadonlyFieldInGetHashCode
+                int hashCode = _stateName.GetHashCode();
+                hashCode = (hashCode*397) ^ ValueType.GetHashCode();
+                hashCode = (hashCode*397) ^ _version.GetHashCode();
+                // ReSharper restore NonReadonlyFieldInGetHashCode
+                return hashCode;
+            }
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+
+            var other = (BaseField) obj;
+            return string.Equals(_stateName, other._stateName)
+                   && ValueType == other.ValueType
+                   && Equals(_version, other._version)
+                   && Equals(other);
+        }
     }
 }

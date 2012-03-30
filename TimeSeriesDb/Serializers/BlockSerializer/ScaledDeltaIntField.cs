@@ -31,7 +31,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
     public class ScaledDeltaIntField : ScaledDeltaBaseField
     {
-        private readonly ulong _maxDivider;
         private long _divider = 1;
 
         [UsedImplicitly]
@@ -48,7 +47,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         public ScaledDeltaIntField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
             : base(Version10, stateStore, valueType, stateName)
         {
-            _maxDivider = GetMaxDivider();
         }
 
         /// <summary> Value is divided by this parameter before storage </summary>
@@ -58,8 +56,15 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             set
             {
                 ThrowOnInitialized();
-                if (value < 1)
-                    throw new ArgumentOutOfRangeException("value", value, "Divider cannot less than 1");
+
+                var max = GetMaxDivider();
+                if (value < 1 || (ulong)value > max)
+                    throw new ArgumentOutOfRangeException(
+                        "value", value,
+                        string.Format(
+                            "Divider for value {0} ({1}) must be >= 1 and <= {2}",
+                            StateName, ValueType.FullName, max));
+                
                 _divider = value;
             }
         }
@@ -105,16 +110,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return ver == Version10;
         }
 
-        protected override void MakeReadonly()
-        {
-            if (Divider < 1)
-                throw new SerializerException(
-                    "Divider = {0} for value {1} ({2}), but must be >= 1 and < {3}",
-                    Divider, StateName, ValueType.FullName, _maxDivider);
-
-            base.MakeReadonly();
-        }
-
         protected override Expression ValueToState(Expression codec, Expression value)
         {
             //
@@ -144,6 +139,24 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return Divider != 1
                        ? Expression.Multiply(getValExp, Const(Divider, ValueType))
                        : getValExp;
+        }
+
+        protected override bool Equals(BaseField baseOther)
+        {
+            var other = (ScaledDeltaIntField)baseOther;
+            return _divider == other._divider;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                // ReSharper disable NonReadonlyFieldInGetHashCode
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ _divider.GetHashCode();
+                return hashCode;
+                // ReSharper restore NonReadonlyFieldInGetHashCode
+            }
         }
     }
 }

@@ -106,5 +106,25 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
             return string.Format("{0} {1}", MemberInfo.Name, Field);
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+
+            var other = (SubFieldInfo) obj;
+            return MemberInfo.Equals(other.MemberInfo) && Field.Equals(other.Field);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = MemberInfo.GetHashCode();
+                hashCode = (hashCode*397) ^ Field.GetHashCode();
+                return hashCode;
+            }
+        }
     }
 }

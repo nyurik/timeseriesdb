@@ -67,7 +67,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     }
                 }
 
-                BaseField fld = stateStore.GetDefaultField(fi.FieldType, name);
+                BaseField fld = stateStore.CreateField(fi.FieldType, name, true);
                 _fields.Add(new SubFieldInfo(fi, fld));
             }
         }
@@ -204,6 +204,24 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             return memberInfo is PropertyInfo
                        ? Expression.Property(valueExp, (PropertyInfo) memberInfo)
                        : Expression.Field(valueExp, (FieldInfo) memberInfo);
+        }
+
+        protected override bool Equals(BaseField baseOther)
+        {
+            return _fields.SequenceEqual(((ComplexField) baseOther)._fields);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                // ReSharper disable NonReadonlyFieldInGetHashCode
+                var hashCode = base.GetHashCode();
+                foreach (var f in _fields)
+                    hashCode = (hashCode*397) ^ f.GetHashCode();
+                return hashCode;
+                // ReSharper restore NonReadonlyFieldInGetHashCode
+            }
         }
     }
 }

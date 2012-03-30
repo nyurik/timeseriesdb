@@ -24,7 +24,6 @@
 
 using System;
 using System.Security.Cryptography;
-using JetBrains.Annotations;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {

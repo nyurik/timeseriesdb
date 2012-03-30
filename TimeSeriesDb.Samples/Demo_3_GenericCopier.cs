@@ -96,7 +96,7 @@ namespace NYurik.TimeSeriesDb.Samples
             // See DemoBinCompressedSeriesFile for more info
             using (var bf = new BinCompressedSeriesFile<long, ItemLngDbl>(filename))
             {
-                var root = (ComplexField) bf.FieldSerializer.RootField;
+                var root = (ComplexField) bf.RootField;
                 ((ScaledDeltaFloatField) root["Value"].Field).Multiplier = 100;
                 bf.InitializeNewFile();
                 bf.AppendData(Utils.GenerateData(3, 10, i => new ItemLngDbl(i, i/100.0)));

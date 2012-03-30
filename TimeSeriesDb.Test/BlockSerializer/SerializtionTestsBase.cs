@@ -78,7 +78,7 @@ namespace NYurik.TimeSeriesDb.Test.BlockSerializer
         {
             using (var codec = new CodecWriter(10000))
             {
-                DynamicSerializer<T> ds = DynamicSerializer<T>.CreateDefault();
+                var ds = new DynamicSerializer<T>(null);
 
                 try
                 {

@@ -89,7 +89,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 // RootField will be pre-populated with default configuration objects.
                 // Some fields, such as doubles, require additional configuration before the file can be initialized.
                 //
-                var root = (ComplexField) bf.FieldSerializer.RootField;
+                var root = (ComplexField) bf.RootField;
 
                 // This double will contain values with no more than 2 digits after the decimal points.
                 // Before serializing, multiply the value by 100 to convert to long.

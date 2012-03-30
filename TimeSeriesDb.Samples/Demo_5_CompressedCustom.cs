@@ -1,3 +1,30 @@
+#region COPYRIGHT
+
+/*
+ *     Copyright 2009-2012 Yuri Astrakhan  (<Firstname><Lastname>@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+
+#endregion
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -40,12 +67,25 @@ namespace NYurik.TimeSeriesDb.Samples
             //
             const int itemCount = 500000;
             IEnumerable<ArraySegment<ItemLngDbl>> data = Utils.GenerateData(
-                0, itemCount, i => new ItemLngDbl(i, Math.Round((i / 100.0) * 65.0, 2)));
+                0, itemCount, i => new ItemLngDbl(i, Math.Round((i/100.0)*65.0, 2)));
 
 
             // Create new BinCompressedSeriesFile file that stores a sequence of ItemLngDbl structs
             // The file is indexed by a long value inside ItemLngDbl marked with the [Index] attribute.
-            using (var bf1 = new BinCompressedSeriesFile<long, ItemLngDbl>(filename1))
+            // Here we provide a custom field factory that will analyze each field as it is being created,
+            // and may choose to supply a custom field or null to use the default.
+            // The name is the automatically generated, starting with the "root" for the TVal with each
+            // subfield appended afterwards, separated by a dot.
+            // Alternatively, ItemLngDbl.SequenceNum can be marked with [Field(typeof(IncrementalIndex))]
+            // For complex types, [Field] attribute can also be set on the type itself.
+            using (var bf1 = new BinCompressedSeriesFile<long, ItemLngDbl>(
+                filename1,
+                fieldFactory:
+                    (store, type, name) =>
+                    type == typeof (long) && name == "root.SequenceNum"
+                    // For the long field named "SequenceNum" provide custom IncrementalIndex field serializer
+                        ? new IncrementalIndex(store, type, name)
+                        : null))
             using (var bf2 = new BinCompressedSeriesFile<long, ItemLngDbl>(filename2))
             using (var bf3 = new BinCompressedSeriesFile<long, ItemLngDbl>(filename3))
             using (var bf4 = new BinSeriesFile<long, ItemLngDbl>(filename4))
@@ -59,7 +99,7 @@ namespace NYurik.TimeSeriesDb.Samples
                 // RootField will be pre-populated with default configuration objects.
                 // Some fields, such as doubles, require additional configuration before the file can be initialized.
                 //
-                var root1 = (ComplexField) bf1.FieldSerializer.RootField;
+                var root1 = (ComplexField) bf1.RootField;
 
                 // This double will contain values with no more than 2 digits after the decimal points.
                 // Before serializing, multiply the value by 100 to convert to long.
@@ -67,12 +107,6 @@ namespace NYurik.TimeSeriesDb.Samples
                 var val1 = (ScaledDeltaFloatField) root1["Value"].Field;
                 val1.Multiplier = 100;
                 val1.DeltaType = DeltaType.Positive;
-
-                // Set up index field as incremental
-                SubFieldInfo ind1 = root1["SequenceNum"];
-                root1["SequenceNum"] =
-                    ind1.Clone(new IncrementalIndex(ind1.Field.StateStore, ind1.Field.ValueType, ind1.Field.StateName));
-
                 bf1.UniqueIndexes = true; // enforce index uniqueness - each index is +1
                 bf1.InitializeNewFile(); // Finish new file initialization and create an empty file
 
@@ -80,18 +114,18 @@ namespace NYurik.TimeSeriesDb.Samples
                 //
                 // Initialize bf2 same as bf1, but without custom serializer
                 //
-                var val2 = (ScaledDeltaFloatField) ((ComplexField) bf2.FieldSerializer.RootField)["Value"].Field;
+                var val2 = (ScaledDeltaFloatField) ((ComplexField) bf2.RootField)["Value"].Field;
                 val2.Multiplier = 100;
                 val2.DeltaType = DeltaType.Positive;
-                bf2.UniqueIndexes = true; 
+                bf2.UniqueIndexes = true;
                 bf2.InitializeNewFile();
 
                 //
                 // Initialize bf3 in an identical fashion as bf2, but without positive-only delta type.
                 //
-                var val3 = ((ScaledDeltaFloatField) ((ComplexField) bf3.FieldSerializer.RootField)["Value"].Field);
+                var val3 = ((ScaledDeltaFloatField) ((ComplexField) bf3.RootField)["Value"].Field);
                 val3.Multiplier = 100;
-                bf3.UniqueIndexes = true; 
+                bf3.UniqueIndexes = true;
                 bf3.InitializeNewFile();
 
                 //
@@ -134,9 +168,13 @@ namespace NYurik.TimeSeriesDb.Samples
                 // Print file sizes to see if there was any benefit
                 //
                 Console.WriteLine("Finished creating files with {0:#,#} items:\n", itemCount);
-                Console.WriteLine("{2,40}: {0,10:#,#} bytes in {1}", bf1.BaseStream.Length, sw1.Elapsed, "DeltaType.Positive and Calculated index");
-                Console.WriteLine("{2,40}: {0,10:#,#} bytes in {1}", bf2.BaseStream.Length, sw2.Elapsed, "DeltaType.Positive");
-                Console.WriteLine("{2,40}: {0,10:#,#} bytes in {1}", bf3.BaseStream.Length, sw3.Elapsed, "No optimizations");
+                Console.WriteLine(
+                    "{2,40}: {0,10:#,#} bytes in {1}", bf1.BaseStream.Length, sw1.Elapsed,
+                    "DeltaType.Positive and Calculated index");
+                Console.WriteLine(
+                    "{2,40}: {0,10:#,#} bytes in {1}", bf2.BaseStream.Length, sw2.Elapsed, "DeltaType.Positive");
+                Console.WriteLine(
+                    "{2,40}: {0,10:#,#} bytes in {1}", bf3.BaseStream.Length, sw3.Elapsed, "No optimizations");
                 Console.WriteLine("{2,40}: {0,10:#,#} bytes in {1}", bf4.BaseStream.Length, sw4.Elapsed, "Uncompressed");
                 Console.WriteLine();
             }
@@ -171,18 +209,24 @@ namespace NYurik.TimeSeriesDb.Samples
 
         private class IncrementalIndex : BaseField
         {
+
             // ReSharper disable UnusedMember.Local
+            /// <summary>
+            /// Used by reflection when an existing file is opened
+            /// </summary>
             protected IncrementalIndex()
-                // ReSharper restore UnusedMember.Local
             {
             }
+            // ReSharper restore UnusedMember.Local
 
             /// <summary>
-            /// Integer and Float delta serializer.
+            /// IncrementalIndex custom serializer.
+            /// Keep the parameters intact, the field creator will call it through reflection in case
+            /// [Field(typeof(IncrementalIndex))] attribute is set on a field or a type. 
             /// </summary>
             /// <param name="stateStore">Serializer with the state</param>
             /// <param name="valueType">Type of value to store</param>
-            /// <param name="stateName">Name of the value (for debugging)</param>
+            /// <param name="stateName">Name of the value (default state variable in the form "root.SubField.SubSubField...")</param>
             public IncrementalIndex(IStateStore stateStore, Type valueType, string stateName)
                 : base(Version10, stateStore, valueType, stateName)
             {
@@ -294,6 +338,24 @@ namespace NYurik.TimeSeriesDb.Samples
 
                 base.MakeReadonly();
             }
+
+            /// <summary>
+            /// Override to compare the state of this object with another.
+            /// </summary>
+            /// <param name="baseOther">This object will always be of the same type as current</param>
+            protected override bool Equals(BaseField baseOther)
+            {
+                return true;
+            }
+
+            // /// <summary>
+            // /// Override to calculate hash code.
+            // /// There is need to override it unless this field has any state variables.
+            // /// </summary>
+            // public override int GetHashCode()
+            // {
+            //     return base.GetHashCode();
+            // }
         }
 
         #endregion
