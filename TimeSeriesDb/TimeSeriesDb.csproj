@@ -147,6 +147,7 @@
     <Compile Include="Common\TypeSpec.cs" />
     <Compile Include="Common\TypeUtils.cs" />
     <Compile Include="Common\Utils.cs" />
+    <Compile Include="DynamicFeed.cs" />
     <Compile Include="FeedConverter.cs" />
     <Compile Include="IEnumerableFeed.cs" />
     <Compile Include="BinSeriesFile.cs" />

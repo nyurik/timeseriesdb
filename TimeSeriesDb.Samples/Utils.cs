@@ -58,8 +58,9 @@ namespace NYurik.TimeSeriesDb.Samples
         /// <summary>
         /// Join multiple items converting each to string using provided converter with a separator in-between.
         /// </summary>
-        public static string JoinStr<T>(this IEnumerable<T> source, string separator = ", ",
-                                        Converter<T, string> converter = null)
+        public static string JoinStr<T>(
+            this IEnumerable<T> source, string separator = ", ",
+            Converter<T, string> converter = null)
         {
             if (source == null)
                 throw new ArgumentNullException("source");

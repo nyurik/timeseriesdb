@@ -104,7 +104,7 @@ namespace NYurik.TimeSeriesDb.Samples
             //
             // Check that the settings are stored ok in the file and can be re-initialized on open
             //
-            using (var bf1 = (IEnumerableFeed<long, ReadonlyItemLngDbl>) BinaryFile.Open(filename))
+            using (var bf1 = (IWritableFeed<long, ReadonlyItemLngDbl>) BinaryFile.Open(filename))
             {
                 if (!bf1.Stream().SequenceEqual(data.Stream()))
                     throw new BinaryFileException("File does not have the right data on the second check");

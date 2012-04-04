@@ -54,26 +54,10 @@ namespace NYurik.TimeSeriesDb
 
         #region IEnumerableFeed<TInd,TNew> Members
 
-        public void Dispose()
-        {
-            _feed.Dispose();
-        }
-
         TDst IGenericInvoker2.RunGenericMethod<TDst, TArg>(IGenericCallable2<TDst, TArg> callable, TArg arg)
         {
             if (callable == null) throw new ArgumentNullException("callable");
             return callable.Run<TInd, TNew>(this, arg);
-        }
-
-        public Type ItemType
-        {
-            get { return typeof (TNew); }
-        }
-
-        [Obsolete]
-        public string Tag
-        {
-            get { return _feed.Tag; }
         }
 
         public Func<TNew, TInd> IndexAccessor

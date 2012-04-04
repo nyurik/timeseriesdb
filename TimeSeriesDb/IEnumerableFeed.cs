@@ -32,15 +32,8 @@ namespace NYurik.TimeSeriesDb
     /// Implementors can read values as a stream.
     /// Any type implementing this interface must also implement <see cref="IEnumerableFeed{TInd,TVal}"/>.
     /// </summary>
-    public interface IEnumerableFeed : IGenericInvoker2, IDisposable
+    public interface IEnumerableFeed : IGenericInvoker2
     {
-        /// <summary> Type of the items stored in this file </summary>
-        [Obsolete("Will be removed soon. Use IGenericInvoker[2].Run() to execute user method.")]
-        Type ItemType { get; }
-
-        /// <summary> User string stored in the header </summary>
-        [Obsolete("Will be removed soon. Cast to BinaryFile to continue using this property.")]
-        string Tag { get; }
     }
 
     /// <summary>
@@ -76,7 +69,7 @@ namespace NYurik.TimeSeriesDb
     /// Implementors can read and store values.
     /// Any type implementing this interface must also implement <see cref="IWritableFeed{TInd,TVal}"/>.
     /// </summary>
-    public interface IWritableFeed : IEnumerableFeed
+    public interface IWritableFeed : IEnumerableFeed, IDisposable
     {
         /// <summary>
         /// Returns true if this file is empty
@@ -88,9 +81,11 @@ namespace NYurik.TimeSeriesDb
         /// </summary>
         bool UniqueIndexes { get; }
 
+        /// <summary> Type of the items stored in this file </summary>
+        Type ItemType { get; }
+
         /// <summary> User string stored in the file </summary>
-        /// TODO: Remove "new" after obsolete parent is removed
-        new string Tag { get; }
+        string Tag { get; }
     }
 
     /// <summary>

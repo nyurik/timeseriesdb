@@ -97,7 +97,7 @@ namespace NYurik.TimeSeriesDb.Samples
 
             // Re-open the file for reading only (file can be opened for reading in parallel, but only one write)
             // IEnumerableFeed<,> interface is better as it will work with compressed files as well
-            using (var bf = (IEnumerableFeed<long, ItemLngDbl>) BinaryFile.Open(filename, true))
+            using (var bf = (IWritableFeed<long, ItemLngDbl>)BinaryFile.Open(filename, true))
             {
                 // Show first item with index >= 5
                 Console.WriteLine(

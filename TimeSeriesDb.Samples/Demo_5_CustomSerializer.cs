@@ -182,8 +182,8 @@ namespace NYurik.TimeSeriesDb.Samples
             //
             // Check that the settings are stored ok in the file and can be re-initialized on open
             //
-            using (var bf1 = (IEnumerableFeed<long, ItemLngDbl>) BinaryFile.Open(filename1))
-            using (var bf2 = (IEnumerableFeed<long, ItemLngDbl>) BinaryFile.Open(filename2))
+            using (var bf1 = (IWritableFeed<long, ItemLngDbl>)BinaryFile.Open(filename1))
+            using (var bf2 = (IWritableFeed<long, ItemLngDbl>)BinaryFile.Open(filename2))
             {
                 if (!bf1.Stream().SequenceEqual(bf2.Stream()))
                     throw new BinaryFileException("File #1 != #2");
