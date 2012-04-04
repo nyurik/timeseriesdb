@@ -88,7 +88,7 @@ namespace NYurik.TimeSeriesDb.Samples
             return sb.ToString();
         }
 
-        public static string DumpFeed(IEnumerableFeed f)
+        public static string DumpFeed(IGenericInvoker2 f)
         {
             return f.RunGenericMethod(new DumpHelper(), null);
         }

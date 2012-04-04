@@ -33,8 +33,8 @@ namespace NYurik.TimeSeriesDb
     {
         private static readonly GenCallable Callable = new GenCallable();
 
-        public static IEnumerableFeed Create(
-            [NotNull] Func<IEnumerableFeed> factory, [NotNull] Action<IEnumerableFeed> disposer)
+        public static IGenericInvoker2 Create(
+            [NotNull] Func<IGenericInvoker2> factory, [NotNull] Action<IGenericInvoker2> disposer)
         {
             if (factory == null) throw new ArgumentNullException("factory");
             if (disposer == null) throw new ArgumentNullException("disposer");
@@ -43,7 +43,7 @@ namespace NYurik.TimeSeriesDb
             try
             {
                 return feed.RunGenericMethod(
-                    Callable, new Tuple<Func<IEnumerableFeed>, Action<IEnumerableFeed>>(factory, disposer));
+                    Callable, new Tuple<Func<IGenericInvoker2>, Action<IGenericInvoker2>>(factory, disposer));
             }
             finally
             {
@@ -54,12 +54,12 @@ namespace NYurik.TimeSeriesDb
         #region Nested type: GenCallable
 
         private class GenCallable :
-            IGenericCallable2<IEnumerableFeed, Tuple<Func<IEnumerableFeed>, Action<IEnumerableFeed>>>
+            IGenericCallable2<IGenericInvoker2, Tuple<Func<IGenericInvoker2>, Action<IGenericInvoker2>>>
         {
-            #region IGenericCallable2<IEnumerableFeed,Tuple<Func<IEnumerableFeed>,Action<IEnumerableFeed>>> Members
+            #region IGenericCallable2<IGenericInvoker2,Tuple<Func<IGenericInvoker2>,Action<IGenericInvoker2>>> Members
 
-            public IEnumerableFeed Run<TInd, TVal>(
-                IGenericInvoker2 source, Tuple<Func<IEnumerableFeed>, Action<IEnumerableFeed>> arg)
+            public IGenericInvoker2 Run<TInd, TVal>(
+                IGenericInvoker2 source, Tuple<Func<IGenericInvoker2>, Action<IGenericInvoker2>> arg)
                 where TInd : IComparable<TInd>
             {
                 var feed = (IEnumerableFeed<TInd, TVal>) source;

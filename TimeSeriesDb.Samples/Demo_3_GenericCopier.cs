@@ -54,13 +54,13 @@ namespace NYurik.TimeSeriesDb.Samples
                 // Open sample file in a generic way without specifying the item and index types
                 using (var bf = BinaryFile.Open(srcFile))
                 {
-                    var src = bf as IEnumerableFeed;
+                    var src = bf as IGenericInvoker2;
                     if (src == null)
                     {
                         // This could be a BinIndexedFile or some legacy file that we no longer support.
                         // Even though BinaryFile supports RunGenericMethod() with one generic argument,
                         // for the purposes of this demo we will only show using it with two that IEnumerableFeed has.
-                        Console.WriteLine("File {0} does not support reading through IEnumerableFeed<>", srcFile);
+                        Console.WriteLine("File {0} does not support reading through IEnumerableFeed<,>", srcFile);
                         return;
                     }
 
@@ -115,7 +115,6 @@ namespace NYurik.TimeSeriesDb.Samples
             public long Run<TInd, TVal>(IGenericInvoker2 source, string destinationFile)
                 where TInd : IComparable<TInd>
             {
-                // Any object that implements IEnumerableFeed will also implement IEnumerableFeed<,>
                 // The source is the binary file object on which RunGenericMethod() was called
                 var src = (IEnumerableFeed<TInd, TVal>) source;
 

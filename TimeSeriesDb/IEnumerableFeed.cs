@@ -29,20 +29,12 @@ using JetBrains.Annotations;
 namespace NYurik.TimeSeriesDb
 {
     /// <summary>
-    /// Implementors can read values as a stream.
-    /// Any type implementing this interface must also implement <see cref="IEnumerableFeed{TInd,TVal}"/>.
-    /// </summary>
-    public interface IEnumerableFeed : IGenericInvoker2
-    {
-    }
-
-    /// <summary>
     /// Implementors can read <typeparamref name="TVal"/> values as a stream.
     /// It is assumed that value's index is somehow stored inside the value.
     /// </summary>
     /// <typeparam name="TInd">Type of the index. Must be comparable.</typeparam>
     /// <typeparam name="TVal">Type of the value stored</typeparam>
-    public interface IEnumerableFeed<TInd, TVal> : IEnumerableFeed
+    public interface IEnumerableFeed<TInd, TVal> : IGenericInvoker2
         where TInd : IComparable<TInd>
     {
         /// <summary>
@@ -69,7 +61,7 @@ namespace NYurik.TimeSeriesDb
     /// Implementors can read and store values.
     /// Any type implementing this interface must also implement <see cref="IWritableFeed{TInd,TVal}"/>.
     /// </summary>
-    public interface IWritableFeed : IEnumerableFeed, IDisposable
+    public interface IWritableFeed : IGenericInvoker2, IDisposable
     {
         /// <summary>
         /// Returns true if this file is empty

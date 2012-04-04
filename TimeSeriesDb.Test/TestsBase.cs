@@ -195,7 +195,7 @@ namespace NYurik.TimeSeriesDb.Test
         ///   This method is useful during debugging to view file's content as a string in the immediate window or expression eval
         /// </summary>
         [UsedImplicitly]
-        public static string Dump(IEnumerableFeed f)
+        public static string Dump(IGenericInvoker2 f)
         {
             return f.RunGenericMethod(new DumpHelper(), null);
         }
