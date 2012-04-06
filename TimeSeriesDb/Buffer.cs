@@ -73,12 +73,22 @@ namespace NYurik.TimeSeriesDb
 
         public void Add(T value)
         {
-            int len = Array.Length;
+            int len = _buffer.Length;
             if (_count == len)
                 RealocatePreserving(len*2);
 
             int pos = _count++;
-            Array[pos] = value;
+            _buffer[pos] = value;
+        }
+
+        public void Add(ArraySegment<T> values)
+        {
+            var newCount = _count + values.Count;
+            if (newCount > _buffer.Length)
+                RealocatePreserving(newCount*2);
+
+            System.Array.Copy(values.Array, values.Offset, _buffer, _count, values.Count);
+            _count = newCount;
         }
 
         private void RealocatePreserving(int newSize)
