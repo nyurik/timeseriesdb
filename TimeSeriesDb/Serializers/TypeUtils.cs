@@ -28,9 +28,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using JetBrains.Annotations;
+using NYurik.TimeSeriesDb.Common;
 
-namespace NYurik.TimeSeriesDb.Common
+namespace NYurik.TimeSeriesDb.Serializers
 {
     public static class TypeUtils
     {
@@ -307,6 +309,84 @@ namespace NYurik.TimeSeriesDb.Common
             return new CachingTypeResolver(
                 tn => ParseAndResolve(
                     tn, ts => TypeSpec.DefaultFullTypeResolver(ts, typeResolvers))).Resolve;
+        }
+
+        internal static void TraverseTypeTree(Type type, Action<FieldInfo, Type> validateType)
+        {
+            TraverseTypeTree(null, type, validateType, new Stack<Type>(4));
+        }
+
+        private static void TraverseTypeTree(FieldInfo fi, Type type, Action<FieldInfo, Type> validateType,
+                                             Stack<Type> typesStack)
+        {
+            validateType(fi, type);
+
+            try
+            {
+                typesStack.Push(type);
+
+                if (!type.IsPrimitive)
+                {
+                    FieldInfo[] fields = type.GetFields(AllInstanceMembers);
+
+                    foreach (FieldInfo f in fields)
+                        if (!typesStack.Contains(f.FieldType))
+                            TraverseTypeTree(f, f.FieldType, validateType, typesStack);
+                        else
+                            validateType(fi, null); // Indicate recursive field with already-traversed type
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new SerializerException(ex, "Error in subtype of type {0}. See InnerException.", type.FullName);
+            }
+            finally
+            {
+                typesStack.Pop();
+            }
+        }
+
+        /// <summary>
+        /// When used with <see cref="TraverseTypeTree(System.Type,System.Action{System.Reflection.FieldInfo,System.Type})"/>,
+        /// recursively checks if the type with all of its members are expressable as a value type that may be cast to a pointer.
+        /// Equivalent to what compiler does to check for CS0208 error of this statement:
+        ///        fixed (int* p = new int[5]) {}
+        /// 
+        /// An unmanaged-type is any type that isn’t a reference-type and doesn’t contain reference-type fields 
+        /// at any level of nesting. In other words, an unmanaged-type is one of the following:
+        ///  * sbyte, byte, short, ushort, int, uint, long, ulong, char, float, double, decimal, or bool.
+        ///  * Any enum-type.
+        ///  * Any pointer-type.
+        ///  * Any user-defined struct-type that contains fields of unmanaged-types only.
+        /// 
+        /// Strings are not in that list, even though you can use them in structs. 
+        /// Fixed-size arrays of unmanaged-types are allowed.
+        /// </summary>
+        internal static void ValidateNoRefStruct(FieldInfo fi, Type type)
+        {
+            if ((!type.IsValueType && !type.IsPointer) || type.IsGenericType || type.IsGenericParameter || type.IsArray)
+                throw new SerializerException(
+                    "Type {0}{1} is not an unmanaged type", type.FullName, fi == null ? "" : " in field " + fi.Name);
+
+            if (!type.IsPrimitive && !type.IsEnum && !type.IsPointer)
+                for (Type p = type.DeclaringType; p != null; p = p.DeclaringType)
+                    if (p.IsGenericTypeDefinition)
+                        throw new SerializerException(
+                            "Type {0}{1} contains a generic type definition declaring type {2}", type.FullName,
+                            fi == null ? "" : " in field " + fi.Name, p.FullName);
+            if (type.StructLayoutAttribute == null ||
+                (type.StructLayoutAttribute.Value != LayoutKind.Explicit &&
+                 type.StructLayoutAttribute.Value != LayoutKind.Sequential) || type.StructLayoutAttribute.Pack == 0)
+            {
+                throw new SerializerException(
+                    "The type {0}{1} does not have a StructLayout attribute, or is set to Auto, or the Pack is 0",
+                    type.FullName, fi == null ? "" : " in field " + fi.Name);
+            }
+        }
+
+        public static TypeCode GetTypeCode(this Type type)
+        {
+            return Type.GetTypeCode(type);
         }
 
         #region Nested type: CachingTypeResolver

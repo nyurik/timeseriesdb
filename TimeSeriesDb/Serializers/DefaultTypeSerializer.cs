@@ -47,11 +47,6 @@ namespace NYurik.TimeSeriesDb
     /// </summary>
     public class DefaultTypeSerializer<T> : Initializable, IBinSerializer<T>
     {
-        // ReSharper disable StaticFieldInGenericType
-        private static readonly Version Version10 = new Version(1, 0);
-        private static readonly Version Version11 = new Version(1, 1);
-        // ReSharper restore StaticFieldInGenericType
-
         private readonly UnsafeMemCompareDelegate<T> _compareArrays;
         private readonly UnsafeActionDelegate<FileStream, T> _processFileStream;
         private readonly UnsafeActionDelegate<IntPtr, T> _processMemoryPtr;
@@ -63,7 +58,7 @@ namespace NYurik.TimeSeriesDb
         {
             DynamicCodeFactory.BinSerializerInfo info = DynamicCodeFactory.Instance.Value.CreateSerializer<T>();
 
-            _version = Version11;
+            _version = Versions.Ver1;
             _typeSize = info.TypeSize;
 
             if (_typeSize <= 0)
@@ -122,7 +117,7 @@ namespace NYurik.TimeSeriesDb
 
             writer.WriteVersion(_version);
 
-            if (_version >= Version11)
+            if (_version >= Versions.Ver1)
             {
                 writer.Write(_typeSize);
 
@@ -147,10 +142,10 @@ namespace NYurik.TimeSeriesDb
             ThrowOnInitialized();
 
             _version = reader.ReadVersion();
-            if (_version != Version10 && _version != Version11)
+            if (_version != Versions.Ver0 && _version != Versions.Ver1)
                 throw new IncompatibleVersionException(GetType(), _version);
 
-            if (_version >= Version11)
+            if (_version >= Versions.Ver1)
             {
                 // Make sure the item size has not changed
                 int itemSize = reader.ReadInt32();

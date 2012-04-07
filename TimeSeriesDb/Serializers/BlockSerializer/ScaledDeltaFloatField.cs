@@ -44,10 +44,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         /// Integer and Float delta serializer.
         /// </summary>
         /// <param name="stateStore">Serializer with the state</param>
-        /// <param name="valueType">Type of value to store</param>
+        /// <param name="fieldType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
-        public ScaledDeltaFloatField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
-            : base(Version10, stateStore, valueType, stateName)
+        public ScaledDeltaFloatField([NotNull] IStateStore stateStore, [NotNull] Type fieldType, string stateName)
+            : base(Versions.Ver0, stateStore, fieldType, stateName)
         {
             // Floating point numbers must manually initialize Multiplier
             _multiplier = 0;
@@ -62,7 +62,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 ThrowOnInitialized();
                 if (value < 1)
                     throw new SerializerException(
-                        "Multiplier = {0} for value {1} ({2}), but must be >= 1", value, StateName, ValueType.FullName);
+                        "Multiplier = {0} for value {1} ({2}), but must be >= 1", value, StateName, FieldType.FullName);
                 _multiplier = value;
             }
         }
@@ -76,7 +76,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 ThrowOnInitialized();
                 if (value < 1)
                     throw new SerializerException(
-                        "Divider = {0} for value {1} ({2}), but must be >= 1", value, StateName, ValueType.FullName);
+                        "Divider = {0} for value {1} ({2}), but must be >= 1", value, StateName, FieldType.FullName);
                 _divider = value;
             }
         }
@@ -121,7 +121,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             get
             {
                 double max;
-                switch (ValueTypeCode)
+                switch (FieldType.GetTypeCode())
                 {
                     case TypeCode.Single:
                         max = 1e7f; // floats support 7 significant digits
@@ -156,7 +156,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override bool IsValidVersion(Version ver)
         {
-            return ver == Version10;
+            return ver == Versions.Ver0;
         }
 
         protected override void MakeReadonly()
@@ -167,7 +167,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             if (!double.IsNaN(Precision) && (Precision < minPrec || Precision > maxPrec))
                 throw new SerializerException(
                     "Precision = {0} for value {1} ({2}) must be between {3} and {4} (1/Scale)",
-                    Precision, StateName, ValueType.FullName, minPrec, maxPrec);
+                    Precision, StateName, FieldType.FullName, minPrec, maxPrec);
 
             base.MakeReadonly();
         }
@@ -182,7 +182,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     ? null
                     : Expression.IfThen(
                         Expression.LessThan(
-                            Const(Precision, ValueType),
+                            Const(Precision, FieldType),
                             Expression.Call(
                                 typeof (Math), "Abs", null,
                                 Expression.Subtract(
@@ -205,18 +205,18 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             double maxConst = LargestIntegerValue*(double.IsNaN(Precision) ? 1/Scale : Precision);
             Expression scaledValue =
                 Multiplier != 1 || Divider != 1
-                    ? Expression.Multiply(value, Const(Scale, ValueType))
+                    ? Expression.Multiply(value, Const(Scale, FieldType))
                     : value;
 
             Expression getValExp = Expression.Block(
                 Expression.IfThen(
                     Expression.Or(
-                        Expression.LessThan(value, Const(-maxConst, ValueType)),
-                        Expression.GreaterThan(value, Const(maxConst, ValueType))),
+                        Expression.LessThan(value, Const(-maxConst, FieldType)),
+                        Expression.GreaterThan(value, Const(maxConst, FieldType))),
                     ThrowOverflow(codec, value)),
                 Expression.Call(
                     typeof (Math), "Round", null,
-                    ValueType == typeof (float)
+                    FieldType == typeof (float)
                         ? Expression.Convert(scaledValue, typeof (double)) // Math.Round(float) does not exist
                         : scaledValue));
 
@@ -228,10 +228,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         /// </summary>
         protected override Expression StateToValue(Expression stateVar)
         {
-            Expression stateAsT = Expression.Convert(stateVar, ValueType);
+            Expression stateAsT = Expression.Convert(stateVar, FieldType);
 
             return Multiplier != 1 || Divider != 1
-                       ? Expression.Divide(stateAsT, Const(Scale, ValueType))
+                       ? Expression.Divide(stateAsT, Const(Scale, FieldType))
                        : stateAsT;
         }
 

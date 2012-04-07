@@ -45,13 +45,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
         }
 
-        public ComplexField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
-            : base(Version10, stateStore, valueType, stateName)
+        public ComplexField([NotNull] IStateStore stateStore, [NotNull] Type fieldType, string stateName)
+            : base(Versions.Ver0, stateStore, fieldType, stateName)
         {
-            if (valueType.IsArray || valueType.IsPrimitive)
-                throw new SerializerException("Unsupported type {0}", valueType);
+            if (fieldType.IsArray || fieldType.IsPrimitive)
+                throw new SerializerException("Unsupported type {0}", fieldType);
 
-            FieldInfo[] fis = valueType.GetFields(TypeUtils.AllInstanceMembers);
+            FieldInfo[] fis = fieldType.GetFields(TypeUtils.AllInstanceMembers);
             _fields = new List<SubFieldInfo>(fis.Length);
             foreach (FieldInfo fi in fis)
             {
@@ -131,7 +131,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override bool IsValidVersion(Version ver)
         {
-            return ver == Version10;
+            return ver == Versions.Ver0;
         }
 
         protected override void MakeReadonly()
@@ -166,18 +166,18 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
             // T current;
-            ParameterExpression currentVar = Expression.Variable(ValueType, "current");
+            ParameterExpression currentVar = Expression.Variable(FieldType, "current");
 
             // (class)  T current = (T) FormatterServices.GetUninitializedObject(typeof(T));
             // (struct) T current = default(T);
             BinaryExpression assignNewT = Expression.Assign(
                 currentVar,
-                ValueType.IsValueType
-                    ? (Expression) Expression.Default(ValueType)
+                FieldType.IsValueType
+                    ? (Expression) Expression.Default(FieldType)
                     : Expression.Convert(
                         Expression.Call(
                             typeof (FormatterServices), "GetUninitializedObject", null,
-                            Expression.Constant(ValueType)), ValueType));
+                            Expression.Constant(FieldType)), FieldType));
 
             var readAllInit = new List<Expression> {assignNewT};
             var readAllNext = new List<Expression> {assignNewT};

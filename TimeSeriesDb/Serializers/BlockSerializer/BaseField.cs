@@ -35,39 +35,35 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
     public abstract class BaseField : Initializable
     {
-        protected static readonly Version Version10 = new Version(1, 0);
-
         private string _stateName;
         private IStateStore _stateStore;
         private Version _version;
 
+        /// <summary>
+        /// All derived classes must implement parameterless constructor used by deserialization.
+        /// </summary>
         protected BaseField()
         {
         }
 
         /// <param name="version"></param>
         /// <param name="stateStore"></param>
-        /// <param name="valueType">Type of value to store</param>
+        /// <param name="fieldType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
         protected BaseField(
-            Version version, [NotNull] IStateStore stateStore, [NotNull] Type valueType,
+            Version version, [NotNull] IStateStore stateStore, [NotNull] Type fieldType,
             string stateName = null)
         {
             if (stateStore == null) throw new ArgumentNullException("stateStore");
-            if (valueType == null) throw new ArgumentNullException("valueType");
+            if (fieldType == null) throw new ArgumentNullException("fieldType");
 
             _version = version;
-            ValueType = valueType;
+            FieldType = fieldType;
             _stateStore = stateStore;
             _stateName = stateName;
         }
 
-        public Type ValueType { get; private set; }
-
-        public TypeCode ValueTypeCode
-        {
-            get { return Type.GetTypeCode(ValueType); }
-        }
+        public Type FieldType { get; private set; }
 
         public IStateStore StateStore
         {
@@ -137,7 +133,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 throw new IncompatibleVersionException(GetType(), Version);
 
             writer.WriteVersion(Version);
-            writer.WriteType(ValueType);
+            writer.WriteType(FieldType);
             writer.Write(StateName);
         }
 
@@ -149,7 +145,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             string typeName;
             int size;
-            ValueType = reader.ReadType(typeResolver, out typeName, out size);
+            FieldType = reader.ReadType(typeResolver, out typeName, out size);
 
             StateName = reader.ReadString();
         }
@@ -267,10 +263,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             if (codec == null) throw new ArgumentNullException("codec");
             EnsureReadonly();
 
-            if (ValueType != valueExp.Type)
+            if (FieldType != valueExp.Type)
                 throw new SerializerException(
                     "Serializer received an unexpected value of type {0}, instead of {1}",
-                    valueExp.Type.FullName, ValueType.FullName);
+                    valueExp.Type.FullName, FieldType.FullName);
 
             Tuple<Expression, Expression> srl = GetSerializerExp(valueExp, codec);
 
@@ -288,15 +284,15 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             Tuple<Expression, Expression> srl = GetDeSerializerExp(codec);
 
-            if (ValueType != srl.Item1.Type)
+            if (FieldType != srl.Item1.Type)
                 throw new SerializerException(
                     "DeSerializer 'init' has unexpected type {0}, instead of {1}",
-                    srl.Item1.Type.FullName, ValueType.FullName);
+                    srl.Item1.Type.FullName, FieldType.FullName);
 
-            if (ValueType != srl.Item2.Type)
+            if (FieldType != srl.Item2.Type)
                 throw new SerializerException(
                     "DeSerializer 'next' has unexpected type {0}, instead of {1}",
-                    srl.Item2.Type.FullName, ValueType.FullName);
+                    srl.Item2.Type.FullName, FieldType.FullName);
 
             return srl;
         }
@@ -342,7 +338,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             {
                 // ReSharper disable NonReadonlyFieldInGetHashCode
                 int hashCode = _stateName.GetHashCode();
-                hashCode = (hashCode*397) ^ ValueType.GetHashCode();
+                hashCode = (hashCode*397) ^ FieldType.GetHashCode();
                 hashCode = (hashCode*397) ^ _version.GetHashCode();
                 // ReSharper restore NonReadonlyFieldInGetHashCode
                 return hashCode;
@@ -357,7 +353,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             var other = (BaseField) obj;
             return string.Equals(_stateName, other._stateName)
-                   && ValueType == other.ValueType
+                   && FieldType == other.FieldType
                    && Equals(_version, other._version)
                    && Equals(other);
         }

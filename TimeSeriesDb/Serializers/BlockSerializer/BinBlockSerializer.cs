@@ -39,15 +39,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         where THeader : struct
         where TItem : struct
     {
-        // ReSharper disable StaticFieldInGenericType
-        private static readonly Version Version10 = new Version(1, 0);
-        // ReSharper restore StaticFieldInGenericType
-
         private IBinSerializer<TItem> _dataSerializer;
         private IBinSerializer<THeader> _headerSerializer;
         private int _itemCount;
         private int _itemTypeSize;
-        private Version _version = Version10;
+        private Version _version = Versions.Ver0;
 
         public BinBlockSerializer()
         {
@@ -127,7 +123,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             ThrowOnInitialized();
 
             _version = reader.ReadVersion();
-            if (_version != Version10)
+            if (_version != Versions.Ver0)
                 throw new IncompatibleVersionException(GetType(), _version);
 
             _headerSerializer = reader.ReadTypeAndInstantiate<IBinSerializer<THeader>>(typeResolver, false);

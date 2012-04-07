@@ -37,14 +37,10 @@ namespace NYurik.TimeSeriesDb
 
         private const int MaxHeaderSize = 4*1024*1024;
 
-        private static readonly Version BaseVersion10 = new Version(1, 0);
-        private static readonly Version BaseVersion11 = new Version(1, 1);
-        private static readonly Version BaseVersion12 = new Version(1, 2);
-
-        private static readonly Version[] KnownVersions = {BaseVersion10, BaseVersion11, BaseVersion12};
+        private static readonly Version[] KnownVersions = {Versions.Ver0, Versions.Ver1, Versions.Ver2};
 
         /// <summary> Base version for new files by default </summary>
-        private Version _baseVersion = BaseVersion12;
+        private Version _baseVersion = Versions.Ver2;
 
         private bool _enableMemMappedAccessOnRead;
         private bool _enableMemMappedAccessOnWrite;
@@ -314,10 +310,10 @@ namespace NYurik.TimeSeriesDb
             Version baseVersion = memReader.ReadVersion();
 
             BinaryFile inst;
-            if (baseVersion == BaseVersion10 || baseVersion == BaseVersion11)
-                inst = ReadHeaderV10(baseVersion, stream, memReader, hdrSize, typeResolver);
-            else if (baseVersion == BaseVersion12)
-                inst = ReadHeaderV12(baseVersion, stream, memReader, hdrSize, typeResolver);
+            if (baseVersion == Versions.Ver0 || baseVersion == Versions.Ver1)
+                inst = ReadHeaderV0(baseVersion, stream, memReader, hdrSize, typeResolver);
+            else if (baseVersion == Versions.Ver2)
+                inst = ReadHeaderV2(baseVersion, stream, memReader, hdrSize, typeResolver);
             else
                 throw new IncompatibleVersionException(typeof (BinaryFile), baseVersion);
 
@@ -351,10 +347,10 @@ namespace NYurik.TimeSeriesDb
             memWriter.Write(0);
             memWriter.WriteVersion(BaseVersion);
 
-            if (BaseVersion == BaseVersion10 || BaseVersion == BaseVersion11)
-                WriteHeaderV10(memWriter);
-            else if (BaseVersion == BaseVersion12)
-                WriteHeaderV12(memWriter);
+            if (BaseVersion == Versions.Ver0 || BaseVersion == Versions.Ver1)
+                WriteHeaderV0(memWriter);
+            else if (BaseVersion == Versions.Ver2)
+                WriteHeaderV2(memWriter);
             else
                 throw new IncompatibleVersionException(GetType(), BaseVersion);
 
@@ -384,7 +380,7 @@ namespace NYurik.TimeSeriesDb
             return new ArraySegment<byte>(memStream.GetBuffer(), 0, headerSize);
         }
 
-        private static BinaryFile ReadHeaderV10(
+        private static BinaryFile ReadHeaderV0(
             Version baseVersion, Stream stream, BinaryReader reader,
             int hdrSize, Func<string, Type> typeResolver)
         {
@@ -397,7 +393,7 @@ namespace NYurik.TimeSeriesDb
             int itemSize = reader.ReadInt32();
 
             string tag = "";
-            if (baseVersion > BaseVersion10)
+            if (baseVersion > Versions.Ver0)
                 tag = reader.ReadString();
 
             inst.HeaderSize = hdrSize;
@@ -431,7 +427,7 @@ namespace NYurik.TimeSeriesDb
         /// ...     BinFile custom header
         /// ...     Serializer custom header
         /// </remarks>
-        private void WriteHeaderV10(BinaryWriter writer)
+        private void WriteHeaderV0(BinaryWriter writer)
         {
             writer.WriteType(GetType());
             writer.WriteType(NonGenericSerializer.GetType());
@@ -440,7 +436,7 @@ namespace NYurik.TimeSeriesDb
             writer.Write(NonGenericSerializer.TypeSize);
 
             // User tag
-            if (BaseVersion > BaseVersion10)
+            if (BaseVersion > Versions.Ver0)
                 writer.Write(Tag);
 
             // Save versions and custom headers
@@ -448,7 +444,7 @@ namespace NYurik.TimeSeriesDb
             NonGenericSerializer.InitNew(writer);
         }
 
-        private static BinaryFile ReadHeaderV12(
+        private static BinaryFile ReadHeaderV2(
             Version baseVersion, Stream stream, BinaryReader reader,
             int hdrSize, Func<string, Type> typeResolver)
         {
@@ -489,7 +485,7 @@ namespace NYurik.TimeSeriesDb
         /// string  BinaryFile...&lt;...> type name
         /// ...     BinFile custom header 
         /// </remarks>
-        private void WriteHeaderV12(BinaryWriter writer)
+        private void WriteHeaderV2(BinaryWriter writer)
         {
             // User tag
             writer.Write(Tag);

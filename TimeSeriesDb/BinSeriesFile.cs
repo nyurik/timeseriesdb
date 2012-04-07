@@ -61,11 +61,6 @@ namespace NYurik.TimeSeriesDb
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
 
-        // ReSharper disable StaticFieldInGenericType
-        private static readonly Version Version10 = new Version(1, 0);
-        private static readonly Version Version11 = new Version(1, 1);
-        // ReSharper restore StaticFieldInGenericType
-
         private TInd _firstIndex;
         private bool _hasFirstIndex;
         private bool _hasLastIndex;
@@ -99,11 +94,11 @@ namespace NYurik.TimeSeriesDb
         protected override Version Init(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version ver = reader.ReadVersion();
-            if (ver != Version11 && ver != Version10)
+            if (ver != Versions.Ver1 && ver != Versions.Ver0)
                 throw new IncompatibleVersionException(GetType(), ver);
 
             // UniqueIndexes was not available in ver 1.0
-            UniqueIndexes = ver > Version10 && reader.ReadBoolean();
+            UniqueIndexes = ver > Versions.Ver0 && reader.ReadBoolean();
 
             string fieldName = reader.ReadString();
 
@@ -118,10 +113,10 @@ namespace NYurik.TimeSeriesDb
 
         protected override Version WriteCustomHeader(BinaryWriter writer)
         {
-            writer.WriteVersion(Version11);
+            writer.WriteVersion(Versions.Ver1);
             writer.Write(UniqueIndexes);
             writer.Write(IndexFieldInfo.Name);
-            return Version11;
+            return Versions.Ver1;
         }
 
         #endregion

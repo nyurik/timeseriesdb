@@ -27,6 +27,7 @@ using System.IO;
 using JetBrains.Annotations;
 using NYurik.TimeSeriesDb.Common;
 using NYurik.TimeSeriesDb.CommonCode;
+using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb
 {
@@ -181,11 +182,6 @@ namespace NYurik.TimeSeriesDb
 
         #endregion
 
-        // ReSharper disable StaticFieldInGenericType
-        private static readonly Version Version10 = new Version(1, 0);
-        private static readonly Version Version11 = new Version(1, 1);
-        // ReSharper restore StaticFieldInGenericType
-
         #region IBinaryFile<T> Members
 
         [Obsolete("Use streaming methods instead")]
@@ -242,14 +238,14 @@ namespace NYurik.TimeSeriesDb
         protected override Version Init(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version ver = reader.ReadVersion();
-            if (ver != Version11 && ver != Version10)
+            if (ver != Versions.Ver1 && ver != Versions.Ver0)
                 throw new IncompatibleVersionException(GetType(), ver);
 
             ItemTimeSpan = TimeSpan.FromTicks(reader.ReadInt64());
 
             // in 1.0, DateTime was serialized as binary instead of UtcDateTime.Ticks
             FirstTimestamp =
-                ver == Version11
+                ver == Versions.Ver1
                     ? new UtcDateTime(reader.ReadInt64())
                     : new UtcDateTime(DateTime.FromBinary(reader.ReadInt64()));
 
@@ -258,11 +254,11 @@ namespace NYurik.TimeSeriesDb
 
         protected override Version WriteCustomHeader(BinaryWriter writer)
         {
-            writer.WriteVersion(Version11);
+            writer.WriteVersion(Versions.Ver1);
             writer.Write(ItemTimeSpan.Ticks);
             writer.Write(FirstTimestamp.Ticks);
 
-            return Version11;
+            return Versions.Ver1;
         }
 
         /// <summary>

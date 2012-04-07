@@ -27,6 +27,7 @@ using System.Diagnostics.SymbolStore;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using NYurik.TimeSeriesDb.Serializers;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedMember.Global

@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.IO;
 using JetBrains.Annotations;
 using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb
 {
@@ -56,10 +57,6 @@ namespace NYurik.TimeSeriesDb
         }
 
         #endregion
-
-        // ReSharper disable StaticFieldInGenericType
-        private static readonly Version Version10 = new Version(1, 0);
-        // ReSharper restore StaticFieldInGenericType
 
         /// <summary>
         /// Enumerate items by block either in order or in reverse order, begining at the <paramref name="firstItemIdx"/>.
@@ -92,15 +89,15 @@ namespace NYurik.TimeSeriesDb
         protected override Version Init(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version ver = reader.ReadVersion();
-            if (ver != Version10)
+            if (ver != Versions.Ver0)
                 throw new IncompatibleVersionException(GetType(), ver);
             return ver;
         }
 
         protected override Version WriteCustomHeader(BinaryWriter writer)
         {
-            writer.WriteVersion(Version10);
-            return Version10;
+            writer.WriteVersion(Versions.Ver0);
+            return Versions.Ver0;
         }
     }
 }

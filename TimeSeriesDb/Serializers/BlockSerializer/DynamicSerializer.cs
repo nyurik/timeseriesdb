@@ -171,16 +171,14 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         private Action<CodecReader, Buffer<T>, int> _deSerialize;
         private Func<CodecWriter, IEnumerator<T>, bool> _serialize;
 
-        public DynamicSerializer(Func<IStateStore, Type, string, BaseField> fieldFactory)
-            : this(true, fieldFactory)
+        private DynamicSerializer() : base(null)
         {
         }
 
-        private DynamicSerializer(bool initRootFld, Func<IStateStore, Type, string, BaseField> fieldFactory)
+        public DynamicSerializer(Func<IStateStore, Type, string, BaseField> fieldFactory)
             : base(fieldFactory)
         {
-            if (initRootFld)
-                RootField = CreateField(typeof (T), "root", true);
+            RootField = CreateField(typeof (T), "root", true);
         }
 
         /// <summary>
@@ -396,7 +394,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         // codec.FinishBlock();
                         Expression.Call(codecParam, "FinishBlock", null, countVar, moveNextVar),
                         // return moveNext;
-                        moveNextVar,
+                        moveNextVar
                     };
         }
 
@@ -491,7 +489,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         public static DynamicSerializer<T> CreateFromReader(BinaryReader reader, Func<string, Type> typeResolver)
         {
-            var srl = new DynamicSerializer<T>(false, null);
+            var srl = new DynamicSerializer<T>();
             srl.RootField = BaseField.FieldFromReader(srl, reader, typeResolver);
             srl.MakeReadonly();
             return srl;

@@ -46,14 +46,14 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         /// Integer and Float delta serializer.
         /// </summary>
         /// <param name="stateStore">Serializer with the state</param>
-        /// <param name="valueType">Type of value to store</param>
+        /// <param name="fieldType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
-        public ScaledDeltaField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
-            : base(Version10, stateStore, valueType, stateName)
+        public ScaledDeltaField([NotNull] IStateStore stateStore, [NotNull] Type fieldType, string stateName)
+            : base(Versions.Ver0, stateStore, fieldType, stateName)
         {
             // Floating point numbers must manually initialize Multiplier
             _multiplier =
-                valueType.IsPrimitive && (valueType == typeof (float) || valueType == typeof (double))
+                fieldType.IsPrimitive && (fieldType == typeof (float) || fieldType == typeof (double))
                     ? 0
                     : 1;
         }
@@ -105,21 +105,21 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override bool IsValidVersion(Version ver)
         {
-            return ver == Version10;
+            return ver == Versions.Ver0;
         }
 
         protected override void MakeReadonly()
         {
             if (_multiplier < 1)
                 throw new SerializerException(
-                    "Multiplier = {0} for value {1} ({2}), but must be >= 1", _multiplier, StateName, ValueType.FullName);
+                    "Multiplier = {0} for value {1} ({2}), but must be >= 1", _multiplier, StateName, FieldType.FullName);
             if (_divider < 1)
                 throw new SerializerException(
-                    "Divider = {0} for value {1} ({2}), but must be >= 1", _divider, StateName, ValueType.FullName);
+                    "Divider = {0} for value {1} ({2}), but must be >= 1", _divider, StateName, FieldType.FullName);
 
             ulong maxDivider = 0;
             _isInteger = true;
-            switch (ValueTypeCode)
+            switch (FieldType.GetTypeCode())
             {
                 case TypeCode.Char:
                     maxDivider = char.MaxValue;
@@ -157,7 +157,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     break;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", StateName, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, FieldType.AssemblyQualifiedName);
             }
 
             if (_isInteger)
@@ -165,10 +165,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 if (_multiplier != 1)
                     throw new SerializerException(
                         "Integer types must have multiplier == 1, but {0} was given instead for value {1} ({2})",
-                        _multiplier, StateName, ValueType.FullName);
+                        _multiplier, StateName, FieldType.FullName);
                 if ((ulong) _divider > maxDivider)
                     throw new SerializerException(
-                        "Divider = {0} for value {1} ({2}), but must be < {3}", _divider, StateName, ValueType.FullName,
+                        "Divider = {0} for value {1} ({2}), but must be < {3}", _divider, StateName, FieldType.FullName,
                         maxDivider);
             }
 
@@ -195,7 +195,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             {
                 if (!_isInteger)
                 {
-                    switch (ValueTypeCode)
+                    switch (FieldType.GetTypeCode())
                     {
                         case TypeCode.Single:
                             {
@@ -310,7 +310,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             {
                 if (!_isInteger)
                 {
-                    switch (ValueTypeCode)
+                    switch (FieldType.GetTypeCode())
                     {
                         case TypeCode.Single:
                             getValExp = Expression.Divide(
@@ -331,13 +331,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 else
                 {
                     if (_multiplier != 1) throw new InvalidOperationException();
-                    if (getValExp.Type != ValueType)
-                        getValExp = Expression.Convert(getValExp, ValueType);
+                    if (getValExp.Type != FieldType)
+                        getValExp = Expression.Convert(getValExp, FieldType);
                     getValExp = Expression.Multiply(getValExp, _dividerExp);
                 }
             }
-            else if (getValExp.Type != ValueType)
-                getValExp = Expression.Convert(getValExp, ValueType);
+            else if (getValExp.Type != FieldType)
+                getValExp = Expression.Convert(getValExp, FieldType);
 
 
             MethodCallExpression readValExp = ReadSignedValue(codec);

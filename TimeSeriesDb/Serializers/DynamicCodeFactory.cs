@@ -24,12 +24,10 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers
@@ -61,83 +59,27 @@ namespace NYurik.TimeSeriesDb.Serializers
             return methodToCall;
         }
 
-        /// <summary>
-        /// Recursively checks if the type with all of its members are expressable as a value type that may be cast to a pointer.
-        /// Equivalent to what compiler does to check for CS0208 error of this statement:
-        ///        fixed (int* p = new int[5]) {}
-        /// 
-        /// An unmanaged-type is any type that isn’t a reference-type and doesn’t contain reference-type fields 
-        /// at any level of nesting. In other words, an unmanaged-type is one of the following:
-        ///  * sbyte, byte, short, ushort, int, uint, long, ulong, char, float, double, decimal, or bool.
-        ///  * Any enum-type.
-        ///  * Any pointer-type.
-        ///  * Any user-defined struct-type that contains fields of unmanaged-types only.
-        /// 
-        /// Strings are not in that list, even though you can use them in structs. 
-        /// Fixed-size arrays of unmanaged-types are allowed.
-        /// </summary>
-        private static void ThrowIfNotUnmanagedType(Type type)
-        {
-            ThrowIfNotUnmanagedType(type, new Stack<Type>(4));
-        }
-
-        private static void ThrowIfNotUnmanagedType(Type type, Stack<Type> typesStack)
-        {
-            if ((!type.IsValueType && !type.IsPointer) || type.IsGenericType || type.IsGenericParameter || type.IsArray)
-                throw new SerializerException("Type {0} is not an unmanaged type", type.FullName);
-
-            if (!type.IsPrimitive && !type.IsEnum && !type.IsPointer)
-                for (Type p = type.DeclaringType; p != null; p = p.DeclaringType)
-                    if (p.IsGenericTypeDefinition)
-                        throw new SerializerException(
-                            "Type {0} contains a generic type definition declaring type {1}", type.FullName, p.FullName);
-            if (type.StructLayoutAttribute == null
-                || (type.StructLayoutAttribute.Value != LayoutKind.Explicit
-                    && type.StructLayoutAttribute.Value != LayoutKind.Sequential)
-                || type.StructLayoutAttribute.Pack == 0
-                )
-            {
-                throw new SerializerException(
-                    "The type {0} does not have a StructLayout attribute, or is set to Auto, or the Pack is 0",
-                    type.FullName);
-            }
-
-            try
-            {
-                typesStack.Push(type);
-
-                FieldInfo[] fields = type.GetFields(TypeUtils.AllInstanceMembers);
-
-                foreach (FieldInfo f in fields)
-                    if (!typesStack.Contains(f.FieldType))
-                        ThrowIfNotUnmanagedType(f.FieldType, typesStack);
-            }
-            catch (Exception ex)
-            {
-                throw new SerializerException(ex, "Error in subtype of type {0}. See InnerException.", type.FullName);
-            }
-            finally
-            {
-                typesStack.Pop();
-            }
-        }
-
         #region Serializer
 
         internal BinSerializerInfo CreateSerializer<T>()
         {
+            return CreateSerializer(typeof (T));
+        }
+
+        internal BinSerializerInfo CreateSerializer(Type type)
+        {
             return _serializers.GetOrAdd(
-                typeof (T),
+                type,
                 t =>
                     {
                         // Parameter validation
-                        ThrowIfNotUnmanagedType(t);
+                        TypeUtils.TraverseTypeTree(t, TypeUtils.ValidateNoRefStruct);
 
                         Type ifType = typeof (DefaultTypeSerializer<>).MakeGenericType(t);
 
                         // Create the abstract method overrides
                         return new BinSerializerInfo(
-                            (int) CreateSizeOfMethod(t, ifType.Module).Invoke(null, null),
+                            GetTypeSize(t, ifType.Module),
                             CreateSerializerMethod(
                                 t, ifType, "DynProcessFileStream", "ProcessFileStreamPtr", typeof (FileStream)),
                             CreateSerializerMethod(
@@ -145,6 +87,11 @@ namespace NYurik.TimeSeriesDb.Serializers
                             CreateMemComparerMethod(t, ifType)
                             );
                     });
+        }
+
+        internal static int GetTypeSize(Type type, Module module)
+        {
+            return (int) CreateSizeOfMethod(type, module).Invoke(null, null);
         }
 
         private static DynamicMethod CreateSizeOfMethod(Type itemType, Module module)

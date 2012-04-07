@@ -42,10 +42,10 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         /// Integer and Float delta serializer.
         /// </summary>
         /// <param name="stateStore">Serializer with the state</param>
-        /// <param name="valueType">Type of value to store</param>
+        /// <param name="fieldType">Type of value to store</param>
         /// <param name="stateName">Name of the value (for debugging)</param>
-        public ScaledDeltaIntField([NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
-            : base(Version10, stateStore, valueType, stateName)
+        public ScaledDeltaIntField([NotNull] IStateStore stateStore, [NotNull] Type fieldType, string stateName)
+            : base(Versions.Ver0, stateStore, fieldType, stateName)
         {
         }
 
@@ -63,7 +63,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                         "value", value,
                         string.Format(
                             "Divider for value {0} ({1}) must be >= 1 and <= {2}",
-                            StateName, ValueType.FullName, max));
+                            StateName, FieldType.FullName, max));
                 
                 _divider = value;
             }
@@ -71,7 +71,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         private ulong GetMaxDivider()
         {
-            switch (ValueTypeCode)
+            switch (FieldType.GetTypeCode())
             {
                 case TypeCode.Char:
                     return char.MaxValue;
@@ -89,7 +89,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     return UInt64.MaxValue;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", StateName, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, FieldType.AssemblyQualifiedName);
             }
         }
 
@@ -107,7 +107,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override bool IsValidVersion(Version ver)
         {
-            return ver == Version10;
+            return ver == Versions.Ver0;
         }
 
         protected override Expression ValueToState(Expression codec, Expression value)
@@ -117,7 +117,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             //
             Expression getValExp =
                 Divider != 1
-                    ? Expression.Divide(value, Const(Divider, ValueType))
+                    ? Expression.Divide(value, Const(Divider, FieldType))
                     : value;
 
             // do not convertCheck, ulong would not fit otherwise
@@ -133,11 +133,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
             if (stateVar == null) throw new ArgumentNullException("stateVar");
 
-            Expression getValExp = stateVar.Type != ValueType
-                                       ? Expression.Convert(stateVar, ValueType)
+            Expression getValExp = stateVar.Type != FieldType
+                                       ? Expression.Convert(stateVar, FieldType)
                                        : stateVar;
             return Divider != 1
-                       ? Expression.Multiply(getValExp, Const(Divider, ValueType))
+                       ? Expression.Multiply(getValExp, Const(Divider, FieldType))
                        : getValExp;
         }
 

@@ -26,6 +26,7 @@ using System;
 using System.IO;
 using NUnit.Framework;
 using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb.Test.Legacy
 {

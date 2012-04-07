@@ -39,8 +39,8 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         }
 
         protected ScaledDeltaBaseField(
-            Version version, [NotNull] IStateStore stateStore, [NotNull] Type valueType, string stateName)
-            : base(version, stateStore, valueType, stateName)
+            Version version, [NotNull] IStateStore stateStore, [NotNull] Type fieldType, string stateName)
+            : base(version, stateStore, fieldType, stateName)
         {
         }
 

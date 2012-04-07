@@ -30,6 +30,7 @@ using System.Reflection;
 using JetBrains.Annotations;
 using NUnit.Framework;
 using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb.Test
 {

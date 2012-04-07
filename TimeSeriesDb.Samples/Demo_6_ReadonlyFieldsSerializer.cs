@@ -196,14 +196,14 @@ namespace NYurik.TimeSeriesDb.Samples
             /// Keep the parameters intact, the field creator will call it through reflection.
             /// </summary>
             /// <param name="stateStore">Serializer with the state</param>
-            /// <param name="valueType">Type of value to store</param>
+            /// <param name="fieldType">Type of value to store</param>
             /// <param name="stateName">Name of the value (default state variable in the form "root.SubField.SubSubField...")</param>
 // ReSharper disable UnusedMember.Local
-            public ReadonlyItemLngDblField(IStateStore stateStore, Type valueType, string stateName)
+            public ReadonlyItemLngDblField(IStateStore stateStore, Type fieldType, string stateName)
 // ReSharper restore UnusedMember.Local
-                : base(Version10, stateStore, valueType, stateName)
+                : base(Versions.Ver0, stateStore, fieldType, stateName)
             {
-                ValidateType(valueType, stateName);
+                ValidateType(fieldType, stateName);
 
                 _sequenceNumField = stateStore.CreateField(
                     _sequenceFieldInfo.FieldType, stateName + "." + _sequenceFieldInfo.Name, true);
@@ -228,7 +228,7 @@ namespace NYurik.TimeSeriesDb.Samples
 
             protected override bool IsValidVersion(Version ver)
             {
-                return ver == Version10;
+                return ver == Versions.Ver0;
             }
 
             protected override void InitNewField(BinaryWriter writer)
@@ -286,15 +286,15 @@ namespace NYurik.TimeSeriesDb.Samples
 
             protected override void MakeReadonly()
             {
-                ValidateType(ValueType, StateName);
+                ValidateType(FieldType, StateName);
                 base.MakeReadonly();
             }
 
-            private static void ValidateType(Type valueType, string stateName)
+            private static void ValidateType(Type fieldType, string stateName)
             {
-                if (valueType != FldType)
+                if (fieldType != FldType)
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", stateName, valueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", stateName, fieldType.AssemblyQualifiedName);
             }
 
             /// <summary>

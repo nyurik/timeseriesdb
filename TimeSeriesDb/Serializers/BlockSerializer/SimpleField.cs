@@ -25,6 +25,7 @@
 using System;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
+using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
@@ -35,8 +36,8 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
         }
 
-        public SimpleField([NotNull] IStateStore serializer, [NotNull] Type valueType, string stateName)
-            : base(Version10, serializer, valueType, stateName)
+        public SimpleField([NotNull] IStateStore serializer, [NotNull] Type fieldType, string stateName)
+            : base(Versions.Ver0, serializer, fieldType, stateName)
         {
         }
 
@@ -47,7 +48,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
         {
-            switch (ValueTypeCode)
+            switch (FieldType.GetTypeCode())
             {
                 case TypeCode.Boolean:
                     valueExp = Expression.Condition(
@@ -70,7 +71,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
             Expression readMethod = Expression.Call(codec, "ReadByte", null);
-            switch (ValueTypeCode)
+            switch (FieldType.GetTypeCode())
             {
                 case TypeCode.Boolean:
                     readMethod = Expression.Condition(
@@ -91,12 +92,12 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override bool IsValidVersion(Version ver)
         {
-            return ver == Version10;
+            return ver == Versions.Ver0;
         }
 
         protected override void MakeReadonly()
         {
-            switch (ValueTypeCode)
+            switch (FieldType.GetTypeCode())
             {
                 case TypeCode.Boolean:
                 case TypeCode.SByte:
@@ -104,7 +105,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     break;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", StateName, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, FieldType.AssemblyQualifiedName);
             }
 
             base.MakeReadonly();

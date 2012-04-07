@@ -135,6 +135,8 @@
     </Compile>
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
+    <Compile Include="Serializers\TypeUtils.cs" />
+    <Compile Include="Serializers\Versions.cs" />
     <None Include="TimeSeriesDb.nuspec" />
     <None Include="_ClassDiagram.cd" />
     <Compile Include="BinCompressedSeriesFile.cs" />
@@ -145,7 +147,6 @@
     <Compile Include="Common\ILGeneratorExtensions.cs" />
     <Compile Include="Common\JetBrains.cs" />
     <Compile Include="Common\TypeSpec.cs" />
-    <Compile Include="Common\TypeUtils.cs" />
     <Compile Include="Common\Utils.cs" />
     <Compile Include="DynamicFeed.cs" />
     <Compile Include="FeedConverter.cs" />

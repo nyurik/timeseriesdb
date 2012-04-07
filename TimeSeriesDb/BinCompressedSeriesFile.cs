@@ -61,10 +61,6 @@ namespace NYurik.TimeSeriesDb
     {
         private const int DefaultMaxBinaryCacheSize = 1 << 20;
 
-        // ReSharper disable StaticFieldInGenericType
-        private static readonly Version Version10 = new Version(1, 0);
-        // ReSharper restore StaticFieldInGenericType
-
         private readonly BufferProvider<byte> _bufferByteProvider = new BufferProvider<byte>();
         private int _blockSize;
         private BufferProvider<TVal> _bufferProvider;
@@ -181,7 +177,7 @@ namespace NYurik.TimeSeriesDb
         protected override Version Init(BinaryReader reader, Func<string, Type> typeResolver)
         {
             Version ver = reader.ReadVersion();
-            if (ver != Version10)
+            if (ver != Versions.Ver0)
                 throw new IncompatibleVersionException(GetType(), ver);
 
             BlockSize = reader.ReadInt32();
@@ -203,7 +199,7 @@ namespace NYurik.TimeSeriesDb
 
         protected override Version WriteCustomHeader(BinaryWriter writer)
         {
-            writer.WriteVersion(Version10);
+            writer.WriteVersion(Versions.Ver0);
             writer.Write(BlockSize);
             writer.Write(UniqueIndexes);
             writer.Write(IndexFieldInfo.Name);
@@ -213,7 +209,7 @@ namespace NYurik.TimeSeriesDb
             if (BlockSize < _maxItemByteSize + CodecBase.ReservedSpace)
                 throw new SerializerException("BlockSize ({0}) must be at least {1} bytes", BlockSize, _maxItemByteSize);
 
-            return Version10;
+            return Versions.Ver0;
         }
 
         #endregion

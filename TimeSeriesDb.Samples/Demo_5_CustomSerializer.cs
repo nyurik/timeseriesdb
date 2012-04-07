@@ -31,6 +31,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using NYurik.TimeSeriesDb.Common;
 using NYurik.TimeSeriesDb.Serializers;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
@@ -225,10 +226,10 @@ namespace NYurik.TimeSeriesDb.Samples
             /// [Field(typeof(IncrementalIndex))] attribute is set on a field or a type. 
             /// </summary>
             /// <param name="stateStore">Serializer with the state</param>
-            /// <param name="valueType">Type of value to store</param>
+            /// <param name="fieldType">Type of value to store</param>
             /// <param name="stateName">Name of the value (default state variable in the form "root.SubField.SubSubField...")</param>
-            public IncrementalIndex(IStateStore stateStore, Type valueType, string stateName)
-                : base(Version10, stateStore, valueType, stateName)
+            public IncrementalIndex(IStateStore stateStore, Type fieldType, string stateName)
+                : base(Versions.Ver0, stateStore, fieldType, stateName)
             {
             }
 
@@ -239,7 +240,7 @@ namespace NYurik.TimeSeriesDb.Samples
 
             protected override bool IsValidVersion(Version ver)
             {
-                return ver == Version10;
+                return ver == Versions.Ver0;
             }
 
             protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
@@ -331,9 +332,9 @@ namespace NYurik.TimeSeriesDb.Samples
 
             protected override void MakeReadonly()
             {
-                if (ValueTypeCode != TypeCode.Int64)
+                if (FieldType.GetTypeCode() != TypeCode.Int64)
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", StateName, ValueType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, FieldType.AssemblyQualifiedName);
 
                 base.MakeReadonly();
             }

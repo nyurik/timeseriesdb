@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb
 {

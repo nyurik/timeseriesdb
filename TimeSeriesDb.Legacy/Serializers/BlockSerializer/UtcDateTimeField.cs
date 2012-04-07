@@ -47,7 +47,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 // ReSharper disable UnusedParameter.Local
         public UtcDateTimeField([NotNull] IStateStore serializer, Type valueType, string stateName)
 // ReSharper restore UnusedParameter.Local
-            : base(Version10, serializer, typeof (UtcDateTime), stateName)
+            : base(Versions.Ver0, serializer, typeof (UtcDateTime), stateName)
         {
             _deltaField = new ScaledDeltaField(serializer, typeof (long), stateName);
         }
@@ -98,7 +98,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override bool IsValidVersion(Version ver)
         {
-            return ver == Version10;
+            return ver == Versions.Ver0;
         }
 
         protected override Tuple<Expression, Expression> GetSerializerExp(Expression valueExp, Expression codec)
