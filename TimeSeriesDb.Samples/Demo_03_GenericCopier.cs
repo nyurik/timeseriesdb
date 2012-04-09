@@ -34,7 +34,7 @@ using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
 namespace NYurik.TimeSeriesDb.Samples
 {
-    internal class Demo_3_GenericCopier : ISample
+    internal class Demo_03_GenericCopier : ISample
     {
         #region ISample Members
 

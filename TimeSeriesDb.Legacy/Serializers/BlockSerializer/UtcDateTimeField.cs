@@ -91,7 +91,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             if (_deltaField == null)
                 throw new SerializerException(
                     "Unexpected field {0} was deserialized instead of {1}", fld,
-                    typeof (ScaledDeltaField).AssemblyQualifiedName);
+                    typeof (ScaledDeltaField).ToDebugStr());
 
             ValidateDivider(TimeDivider);
         }

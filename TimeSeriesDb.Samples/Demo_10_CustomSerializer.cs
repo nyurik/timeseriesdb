@@ -31,7 +31,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using NYurik.TimeSeriesDb.Common;
 using NYurik.TimeSeriesDb.Serializers;
 using NYurik.TimeSeriesDb.Serializers.BlockSerializer;
 
@@ -44,7 +43,7 @@ namespace NYurik.TimeSeriesDb.Samples
     /// <summary>
     /// This sample demonstrates how to configure a compressed file with calculated sequential index.
     /// </summary>
-    internal class Demo_5_CustomSerializer : ISample
+    internal class Demo_10_CustomSerializer : ISample
     {
         #region ISample Members
 
@@ -334,7 +333,7 @@ namespace NYurik.TimeSeriesDb.Samples
             {
                 if (FieldType.GetTypeCode() != TypeCode.Int64)
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", StateName, FieldType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, FieldType.ToDebugStr());
 
                 base.MakeReadonly();
             }

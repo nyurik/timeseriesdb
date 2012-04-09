@@ -71,7 +71,7 @@ namespace NYurik.TimeSeriesDb.Common
             if (serializer == null) throw new ArgumentNullException("serializer");
             return new SerializerException(
                 "Serializer {0} ({1}){2} was created with ItemSize={3}, but now the ItemSize={4}",
-                serializer.GetType().AssemblyQualifiedName,
+                serializer.GetType().ToDebugStr(),
                 serializer.Version,
                 tag == null ? "" : " Tag='" + tag + "'",
                 itemSize,
@@ -116,11 +116,11 @@ namespace NYurik.TimeSeriesDb.Common
             var instance = Activator.CreateInstance(type, nonPublic) as T;
             if (instance == null)
             {
-                string aqn = type.AssemblyQualifiedName;
                 throw new BinaryFileException(
                     "Type {0}{1} cannot be cast into {2}",
-                    aqn, aqn == typeName ? "" : " (re-mapped from " + typeName + ")",
-                    typeof (T).AssemblyQualifiedName);
+                    type.ToDebugStr(),
+                    type.AssemblyQualifiedName == typeName ? "" : " (re-mapped from " + typeName + ")",
+                    typeof (T).ToDebugStr());
             }
             return instance;
         }

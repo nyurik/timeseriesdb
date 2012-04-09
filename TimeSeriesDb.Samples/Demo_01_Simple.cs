@@ -35,7 +35,7 @@ using System.Linq;
 
 namespace NYurik.TimeSeriesDb.Samples
 {
-    internal class Demo_1_Simple : ISample
+    internal class Demo_01_Simple : ISample
     {
         #region ISample Members
 

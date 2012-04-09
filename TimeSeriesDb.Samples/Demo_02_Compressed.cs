@@ -63,7 +63,7 @@ namespace NYurik.TimeSeriesDb.Samples
     /// For this demo, we will create a file that stores an item with a long index and a doubles Value.
     /// We will assume that the Values have at most two significant digits after the decimal point.
     /// </summary>
-    internal class Demo_2_Compressed : ISample
+    internal class Demo_02_Compressed : ISample
     {
         #region ISample Members
 

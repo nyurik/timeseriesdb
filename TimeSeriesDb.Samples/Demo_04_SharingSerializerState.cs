@@ -63,7 +63,7 @@ namespace NYurik.TimeSeriesDb.Samples
     /// We will assume that the Values have at most two significant digits after the decimal point,
     /// and that the numbers tend to be somewhat correlated - like min and max temperature each hour.
     /// </summary>
-    internal class Demo_4_SharingSerializerState : ISample
+    internal class Demo_04_SharingSerializerState : ISample
     {
         #region ISample Members
 

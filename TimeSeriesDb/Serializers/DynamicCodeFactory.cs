@@ -270,15 +270,15 @@ namespace NYurik.TimeSeriesDb.Serializers
                         bool foundMultiple = false;
                         foreach (FieldInfo fi in fieldInfo)
                         {
-                            bool hasAttr = fi.ExtractSingleAttribute<IndexAttribute>() != null;
-                            if (hasAttr || fi.FieldType.ExtractSingleAttribute<IndexAttribute>() != null)
+                            bool hasAttr = fi.GetSingleAttribute<IndexAttribute>() != null;
+                            if (hasAttr || fi.FieldType.GetSingleAttribute<IndexAttribute>() != null)
                             {
                                 if (hasAttr)
                                 {
                                     if (foundIndAttribute)
                                         throw new SerializerException(
                                             "More than one field has an attribute [{0}] attached in type {1}",
-                                            typeof (IndexAttribute).Name, t.FullName);
+                                            typeof(IndexAttribute).Name, t.ToDebugStr());
                                     foundIndAttribute = true;
                                     result = fi;
                                 }
@@ -325,8 +325,8 @@ namespace NYurik.TimeSeriesDb.Serializers
                                 throw new InvalidOperationException(
                                     string.Format(
                                         "The index field {0}.{1} is of type {2}, whereas {3} was expected",
-                                        itemType.Name, fi.Name, fi.FieldType.AssemblyQualifiedName,
-                                        typeof (TInd).AssemblyQualifiedName));
+                                        itemType.Name, fi.Name, fi.FieldType.ToDebugStr(),
+                                        typeof (TInd).ToDebugStr()));
 
                             ParameterExpression vParam = Expression.Parameter(itemType, "v");
                             Expression expr = Expression.Field(vParam, fi);

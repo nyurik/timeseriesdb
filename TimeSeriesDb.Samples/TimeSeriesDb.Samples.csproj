@@ -66,14 +66,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Demo_6_ReadonlyFieldsSerializer.cs" />
+    <Compile Include="Demo_11_ReadonlyFieldsSerializer.cs" />
     <Compile Include="Demo.cs" />
-    <Compile Include="Demo_2_Compressed.cs" />
-    <Compile Include="Demo_5_CustomSerializer.cs" />
-    <Compile Include="Demo_4_SharingSerializerState.cs" />
-    <Compile Include="Demo_1_Simple.cs" />
+    <Compile Include="Demo_02_Compressed.cs" />
+    <Compile Include="Demo_10_CustomSerializer.cs" />
+    <Compile Include="Demo_04_SharingSerializerState.cs" />
+    <Compile Include="Demo_01_Simple.cs" />
     <Compile Include="DataStructures.cs" />
-    <Compile Include="Demo_3_GenericCopier.cs" />
+    <Compile Include="Demo_03_GenericCopier.cs" />
+    <Compile Include="Demo_05_UsingTypeConstructor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils.cs" />

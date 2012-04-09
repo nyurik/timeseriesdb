@@ -151,7 +151,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 }
             }
 
-            var srlzr = valueType.ExtractSingleAttribute<FieldAttribute>();
+            var srlzr = valueType.GetSingleAttribute<FieldAttribute>();
             if (srlzr != null)
                 return (BaseField) Activator.CreateInstance(srlzr.Serializer, this, valueType, name);
 

@@ -311,7 +311,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 if (!IsInitialized)
                     throw new SerializerException(
                         "Derived serializer {0} and all of its base classes must call base.MakeReadonly() at the end.",
-                        GetType().AssemblyQualifiedName);
+                        GetType().ToDebugStr());
             }
         }
 

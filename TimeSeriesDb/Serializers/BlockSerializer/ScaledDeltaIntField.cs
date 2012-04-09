@@ -89,7 +89,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     return UInt64.MaxValue;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", StateName, FieldType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, FieldType.ToDebugStr());
             }
         }
 

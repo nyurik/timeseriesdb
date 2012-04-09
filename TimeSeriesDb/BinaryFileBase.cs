@@ -358,8 +358,8 @@ namespace NYurik.TimeSeriesDb
             if (srlzr.TypeSize <= 0)
                 throw new BinaryFileException(
                     "Serializer {0} reported incorrect type size {1} for type {2}",
-                    srlzr.GetType().AssemblyQualifiedName, srlzr.TypeSize,
-                    srlzr.ItemType.AssemblyQualifiedName);
+                    srlzr.GetType().ToDebugStr(), srlzr.TypeSize,
+                    srlzr.ItemType.ToDebugStr());
 
             _enableMemMappedAccessOnRead = false;
             _enableMemMappedAccessOnWrite = false;
@@ -772,8 +772,8 @@ namespace NYurik.TimeSeriesDb
                 var ser = Activator.CreateInstance(typeSer) as IBinSerializer<T>;
                 if (ser == null)
                     throw new SerializerException(
-                        "Custom binary serializer for type {0} does not implement IBinSerializer<{0}>",
-                        typeT.Name);
+                        "Custom binary serializer for type {0} does not implement IBinSerializer<{1}>",
+                        typeT.ToDebugStr(), typeT.Name);
                 return ser;
             }
 

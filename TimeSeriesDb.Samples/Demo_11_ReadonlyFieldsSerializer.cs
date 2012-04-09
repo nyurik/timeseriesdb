@@ -43,7 +43,7 @@ namespace NYurik.TimeSeriesDb.Samples
     /// <summary>
     /// This sample demonstrates how to configure a compressed file with calculated sequential index.
     /// </summary>
-    internal class Demo_6_ReadonlyFieldsSerializer : ISample
+    internal class Demo_11_ReadonlyFieldsSerializer : ISample
     {
         #region ISample Members
 
@@ -294,7 +294,7 @@ namespace NYurik.TimeSeriesDb.Samples
             {
                 if (fieldType != FldType)
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", stateName, fieldType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", stateName, fieldType.ToDebugStr());
             }
 
             /// <summary>

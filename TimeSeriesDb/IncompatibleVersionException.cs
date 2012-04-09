@@ -25,20 +25,20 @@
 using System;
 using System.Runtime.Serialization;
 using NYurik.TimeSeriesDb.Common;
+using NYurik.TimeSeriesDb.Serializers;
 
 namespace NYurik.TimeSeriesDb
 {
     [Serializable]
     public class IncompatibleVersionException : FormattedException
     {
-        protected IncompatibleVersionException(SerializationInfo info, StreamingContext context) : base(info, context)
+        protected IncompatibleVersionException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
 
         public IncompatibleVersionException(Type type, Version version)
-            : base(
-                "Version {0} is not supported by type {1}",
-                version, type == null ? "Unknown" : type.AssemblyQualifiedName)
+            : base("Version {0} is not supported by type {1}", version, type.ToDebugStr())
         {
         }
     }

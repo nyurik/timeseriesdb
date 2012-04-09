@@ -41,7 +41,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         {
         }
 
-        private SubFieldInfo(MemberInfo member, BaseField field)
+        internal SubFieldInfo(MemberInfo member, BaseField field)
         {
             MemberInfo = member;
             Field = field;
@@ -58,16 +58,16 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                               (MemberInfo) type.GetField(name, TypeUtils.AllInstanceMembers);
             if (mmbr == null)
                 throw new SerializerException(
-                    "Unable to locate the field or property {0} on type {1}", name, type.AssemblyQualifiedName);
+                    "Unable to locate the field or property {0} on type {1}", name, type.ToDebugStr());
 
             Type fldType = reader.ReadType(typeResolver, out typeName, out fixedBufferSize);
 
-            Type actualFldPropType = GetFieldOrPropertyType(mmbr);
-            if (actualFldPropType != fldType)
+            Type subFldType = mmbr.PropOrFieldType();
+            if (subFldType != fldType)
                 throw new SerializerException(
                     "The type of {0} {1} on type {2} was expected to be {3}, but was {4}",
                     mmbr is FieldInfo ? "field" : "property",
-                    name, type.AssemblyQualifiedName, fldType, actualFldPropType);
+                    name, type.ToDebugStr(), fldType, subFldType.ToDebugStr());
 
             MemberInfo = mmbr;
 
@@ -90,21 +90,14 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             writer.WriteType(MemberInfo.DeclaringType);
             writer.Write(MemberInfo.Name);
-            writer.WriteType(GetFieldOrPropertyType(MemberInfo));
+            writer.WriteType(SubFieldType);
 
             Field.InitNew(writer);
         }
 
-        private static Type GetFieldOrPropertyType(MemberInfo memberInfo)
-        {
-            return memberInfo is FieldInfo
-                       ? ((FieldInfo) memberInfo).FieldType
-                       : ((PropertyInfo) memberInfo).PropertyType;
-        }
-
         public override string ToString()
         {
-            return string.Format("{0} {1}", MemberInfo.Name, Field);
+            return String.Format("{0} {1}", MemberInfo.Name, Field);
         }
 
         public override bool Equals(object obj)
@@ -125,6 +118,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 hashCode = (hashCode*397) ^ Field.GetHashCode();
                 return hashCode;
             }
+        }
+
+        public Type SubFieldType
+        {
+            get { return MemberInfo.PropOrFieldType(); }
         }
     }
 }

@@ -25,7 +25,6 @@
 using System;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
-using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
@@ -105,7 +104,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     break;
                 default:
                     throw new SerializerException(
-                        "Value {0} has an unsupported type {1}", StateName, FieldType.AssemblyQualifiedName);
+                        "Value {0} has an unsupported type {1}", StateName, FieldType.ToDebugStr());
             }
 
             base.MakeReadonly();

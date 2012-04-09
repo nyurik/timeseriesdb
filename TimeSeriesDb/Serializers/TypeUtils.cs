@@ -250,12 +250,12 @@ namespace NYurik.TimeSeriesDb.Serializers
         /// <summary>
         /// Get a single attribute (or null) of a given type attached to a value.
         /// The value might be a <see cref="Type"/> object or Property/Method/... info acquired through reflection.
-        /// An exception is thrown if more than one attribute of a given type was found.
+        /// An exception is thrown if more than one attribute of a given type is found.
         /// </summary>
         /// <typeparam name="TAttr">Type of the attribute to get</typeparam>
         /// <param name="customAttrProvider">Enum value</param>
         /// <returns>An attribute object or null if not found</returns>
-        public static TAttr ExtractSingleAttribute<TAttr>(this ICustomAttributeProvider customAttrProvider)
+        public static TAttr GetSingleAttribute<TAttr>(this ICustomAttributeProvider customAttrProvider)
             where TAttr : Attribute
         {
             TAttr[] attributes = customAttrProvider.GetCustomAttributes<TAttr>(true);
@@ -263,9 +263,9 @@ namespace NYurik.TimeSeriesDb.Serializers
             {
                 if (attributes.Length > 1)
                     throw new ArgumentException(
-                        string.Format(
-                            "Found {0} (>1) attributes {1} detected for {2}", attributes.Length,
-                            typeof (TAttr).Name, customAttrProvider));
+                        String.Format(
+                            "{0} attributes [{1}] detected for {2}, only one is allowed",
+                            attributes.Length, typeof (TAttr).Name, customAttrProvider));
                 return attributes[0];
             }
             return null;
@@ -475,11 +475,32 @@ namespace NYurik.TimeSeriesDb.Serializers
             {
                 return
                     Type != null
-                        ? string.Format("Level: {0}, Type: {1}", Level, Type)
-                        : string.Format("Level: {0}, FixedBufferSize: {1}", Level, FixedBufferSize);
+                        ? String.Format("Level: {0}, Type: {1}", Level, Type)
+                        : String.Format("Level: {0}, FixedBufferSize: {1}", Level, FixedBufferSize);
             }
         }
 
         #endregion
+
+        public static string ToDebugStr(this Type type)
+        {
+            if (type == null)
+                return "Unknown (null)";
+            var fn = type.FullName;
+            if (fn == null)
+                return "Unknown";
+            if (fn.StartsWith("System."))
+                return fn;
+            return type.AssemblyQualifiedName;
+        }
+
+        public static Type PropOrFieldType(this MemberInfo mi)
+        {
+            var fi = mi as FieldInfo;
+            if (fi != null) return fi.FieldType;
+            var pi = mi as PropertyInfo;
+            if (pi != null) return pi.PropertyType;
+            throw new InvalidOperationException("MemberInfo is not a field nor a property");
+        }
     }
 }

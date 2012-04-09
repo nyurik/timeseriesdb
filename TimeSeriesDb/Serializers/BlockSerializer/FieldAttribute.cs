@@ -23,6 +23,7 @@
 #endregion
 
 using System;
+using JetBrains.Annotations;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
@@ -40,5 +41,22 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         }
 
         public Type Serializer { get; private set; }
+    }
+
+    [AttributeUsage(AttributeTargets.Constructor, Inherited = false, AllowMultiple = false)]
+    public class CtorFieldAttribute : Attribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Parameter, Inherited = false, AllowMultiple = false)]
+    public class CtorFieldMapToAttribute : Attribute
+    {
+        public CtorFieldMapToAttribute([NotNull] string fieldOrPropertyName)
+        {
+            if (string.IsNullOrWhiteSpace(fieldOrPropertyName)) throw new ArgumentNullException("fieldOrPropertyName");
+            FieldOrPropertyName = fieldOrPropertyName;
+        }
+
+        public string FieldOrPropertyName { get; private set; }
     }
 }
