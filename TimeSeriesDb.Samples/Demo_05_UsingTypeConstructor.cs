@@ -37,6 +37,14 @@ namespace NYurik.TimeSeriesDb.Samples
             // See the Item struct declaration
             using (var bf = new BinCompressedSeriesFile<long, Item>(filename))
             {
+                // Automatically pick the constructor that would set all the public fields in the struct
+                var cmpxFld = ((ComplexField) bf.RootField);
+                cmpxFld.PopulateFields(ComplexField.Mode.Constructor | ComplexField.Mode.Fields);
+
+                Console.WriteLine("Serialized Fields:\n  {0}\n", string.Join(Environment.NewLine + "  ", cmpxFld.Fields));
+                Console.WriteLine("Deserialized with constrtuctor:\n  {0}\n", cmpxFld.Constructor);
+
+
                 bf.InitializeNewFile(); // Finish new file initialization and create an empty file
 
                 bf.AppendData(data);

@@ -25,7 +25,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -38,8 +37,30 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
     public class ComplexField : BaseField
     {
+        #region Mode enum
+
+        [Flags]
+        public enum Mode
+        {
+            Auto = 0x0,
+
+            NonPublic = 0x01,
+
+            Fields = 0x02,
+            Properties = 0x04,
+
+            Constructor = 0x08,
+
+//            SearchUnderscore = 0x10,
+//            SearchMUnderscore = 0x20,
+//            SearchLowercase = 0x40,
+//            SearchCapitalized = 0x80,
+        }
+
+        #endregion
+
+        private ConstructorInfo _constructor;
         private IList<SubFieldInfo> _fields;
-        private bool? _useConstructor;
 
         [UsedImplicitly]
         protected ComplexField()
@@ -55,7 +76,11 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         public SubFieldInfo this[string memberInfoName]
         {
-            get { return Fields.FirstOrDefault(i => i.MemberInfo.Name == memberInfoName); }
+            get
+            {
+                PopulateFieldsImpl(Mode.Auto);
+                return Fields.FirstOrDefault(i => i.MemberInfo.Name == memberInfoName);
+            }
             set
             {
                 ThrowOnInitialized();
@@ -76,38 +101,106 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
         }
 
-        public IList<SubFieldInfo> Fields
-        {
-            get
-            {
-                InitFields();
-                return _fields;
-            }
-            set
-            {
-                ThrowOnInitialized();
-                _fields = value.ToList();
-            }
-        }
-
         public override int MaxByteSize
         {
             get { return _fields == null ? 0 : _fields.Sum(fld => fld.Field.MaxByteSize); }
         }
 
-        protected bool UseConstructor
+        public IList<SubFieldInfo> Fields
         {
-            get
-            {
-                InitUseConstructor();
-                Debug.Assert(_useConstructor != null, "_useConstructor != null");
-                return _useConstructor.Value;
-            }
+            get { return _fields; }
             set
             {
                 ThrowOnInitialized();
-                _useConstructor = value;
+                _fields = value == null ? null : value.ToList();
             }
+        }
+
+        public ConstructorInfo Constructor
+        {
+            get { return _constructor; }
+            set
+            {
+                ThrowOnInitialized();
+                _constructor = value;
+            }
+        }
+
+        public void PopulateFields(Mode mode = Mode.Auto)
+        {
+            // User should not call this method after initialization
+            ThrowOnInitialized();
+            PopulateFieldsImpl(mode);
+        }
+
+        private void PopulateFieldsImpl(Mode mode)
+        {
+            if (_fields != null)
+                return;
+
+            ThrowOnInitialized();
+
+            if (mode == Mode.Auto)
+            {
+                mode = 0;
+                if (_constructor != null)
+                    mode |= Mode.Constructor;
+                else if (FieldType.GetFields(TypeUtils.AllInstanceMembers).Any(fi => fi.IsInitOnly))
+                    mode |= Mode.NonPublic | Mode.Constructor;
+                else
+                    mode |= Mode.NonPublic | Mode.Fields;
+            }
+
+            IEnumerable<MemberInfo> members;
+
+            if ((mode & Mode.Fields) == 0 && (mode & Mode.Properties) == 0)
+                mode |= Mode.Fields | Mode.Properties;
+
+            BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
+            if ((mode & Mode.NonPublic) != 0)
+                flags |= BindingFlags.NonPublic;
+
+            if ((mode & Mode.Constructor) != 0)
+            {
+                if (_constructor == null)
+                    _constructor = ChooseCtor();
+
+                members = _constructor.GetParameters()
+                    .Select(i => FindMatchingMember(i, flags, mode));
+            }
+            else
+            {
+                members = (mode & Mode.Fields) != 0
+                              ? FieldType.GetFields(flags).Where(i => !i.IsInitOnly)
+                              : Enumerable.Empty<MemberInfo>();
+
+                if ((mode & Mode.Properties) != 0)
+                    members = members.Concat(FieldType.GetProperties(flags).Where(i => i.CanWrite));
+            }
+
+            IList<SubFieldInfo> fields = new List<SubFieldInfo>();
+            foreach (MemberInfo mi in members)
+            {
+                bool isField = mi.MemberType == MemberTypes.Field;
+                var mType = mi.PropOrFieldType();
+
+                string name = StateName + "." + mi.Name;
+
+                if (isField && mType.IsNested)
+                {
+                    object[] ca = mi.GetCustomAttributes(typeof (FixedBufferAttribute), false);
+                    if (ca.Length > 0)
+                    {
+                        // ((FixedBufferAttribute)ca[0]).Length;
+                        throw new NotImplementedException("Fixed arrays are not supported at this time");
+                    }
+                }
+
+                BaseField fld = StateStore.CreateField(mType, name, true);
+                fields.Add(new SubFieldInfo(mi, fld));
+            }
+
+            _fields = fields;
         }
 
         protected override void InitNewField(BinaryWriter writer)
@@ -117,7 +210,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             writer.Write(_fields.Count);
             foreach (SubFieldInfo field in _fields)
                 field.InitNew(writer);
-            writer.Write(UseConstructor);
+            writer.Write(_constructor != null);
         }
 
         protected override void InitExistingField(BinaryReader reader, Func<string, Type> typeResolver)
@@ -129,7 +222,20 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 fields[i] = new SubFieldInfo(StateStore, reader, typeResolver);
             _fields = fields;
             if (Version >= Versions.Ver1)
-                UseConstructor = reader.ReadBoolean();
+                if (reader.ReadBoolean())
+                {
+                    var flds = fields.Select(i => i.MemberInfo.PropOrFieldType()).ToList();
+
+                    var ctor = FieldType.GetConstructors(TypeUtils.AllInstanceMembers)
+                        .SingleOrDefault(ci => ci.GetParameters().Select(i => i.ParameterType).SequenceEqual(flds));
+
+                    if (ctor == null)
+                        throw new SerializerException(
+                            "Unable to find constructor {0}({1})", FieldType.FullName,
+                            string.Join(", ", flds.Select(i => i.ToDebugStr())));
+
+                    _constructor = ctor;
+                }
         }
 
         protected override bool IsValidVersion(Version ver)
@@ -140,6 +246,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
         protected override void MakeReadonly()
         {
             // In case the subFields have not yet been populated, do it now
+            PopulateFieldsImpl(Mode.Auto);
             _fields = new ReadOnlyCollection<SubFieldInfo>(Fields);
             base.MakeReadonly();
         }
@@ -169,23 +276,13 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         protected override Tuple<Expression, Expression> GetDeSerializerExp(Expression codec)
         {
-            return UseConstructor
+            return _constructor != null
                        ? GetConstructorDeSerializerExp(codec)
                        : GetFieldAssignDeSerializerExp(codec);
         }
 
         private Tuple<Expression, Expression> GetConstructorDeSerializerExp(Expression codec)
         {
-            var flds = Fields.Select(i => i.MemberInfo.PropOrFieldType()).ToList();
-
-            var ctor = FieldType.GetConstructors(TypeUtils.AllInstanceMembers)
-                .SingleOrDefault(ci => ci.GetParameters().Select(i => i.ParameterType).SequenceEqual(flds));
-
-            if (ctor == null)
-                throw new SerializerException(
-                    "Unable to find constructor {0}({1})", FieldType.FullName,
-                    string.Join(", ", flds.Select(i => i.ToDebugStr())));
-
             var readAllInit = new List<Expression>();
             var readAllNext = new List<Expression>();
 
@@ -197,8 +294,8 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
 
             return new Tuple<Expression, Expression>(
-                Expression.New(ctor, readAllInit),
-                Expression.New(ctor, readAllNext));
+                Expression.New(_constructor, readAllInit),
+                Expression.New(_constructor, readAllNext));
         }
 
         private Tuple<Expression, Expression> GetFieldAssignDeSerializerExp(Expression codec)
@@ -211,14 +308,14 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             BinaryExpression assignNewT = Expression.Assign(
                 currentVar,
                 FieldType.IsValueType
-                    ? (Expression)Expression.Default(FieldType)
+                    ? (Expression) Expression.Default(FieldType)
                     : Expression.Convert(
                         Expression.Call(
-                            typeof(FormatterServices), "GetUninitializedObject", null,
+                            typeof (FormatterServices), "GetUninitializedObject", null,
                             Expression.Constant(FieldType)), FieldType));
 
-            var readAllInit = new List<Expression> { assignNewT };
-            var readAllNext = new List<Expression> { assignNewT };
+            var readAllInit = new List<Expression> {assignNewT};
+            var readAllNext = new List<Expression> {assignNewT};
 
             foreach (SubFieldInfo member in Fields)
             {
@@ -234,55 +331,32 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             readAllNext.Add(currentVar);
 
             return new Tuple<Expression, Expression>(
-                Expression.Block(new[] { currentVar }, readAllInit),
-                Expression.Block(new[] { currentVar }, readAllNext));
+                Expression.Block(new[] {currentVar}, readAllInit),
+                Expression.Block(new[] {currentVar}, readAllNext));
+        }
+
+        protected override bool Equals(BaseField baseOther)
+        {
+            var otherFld = ((ComplexField) baseOther)._fields;
+            return ReferenceEquals(_fields, otherFld) ||
+                   (_fields != null && otherFld != null && _fields.SequenceEqual(otherFld));
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                // ReSharper disable NonReadonlyFieldInGetHashCode
+                var hashCode = base.GetHashCode();
+                if (_fields != null)
+                    foreach (var f in _fields)
+                        hashCode = (hashCode*397) ^ f.GetHashCode();
+                return hashCode;
+                // ReSharper restore NonReadonlyFieldInGetHashCode
+            }
         }
 
         #region Field Detection
-
-        private void InitUseConstructor()
-        {
-            if (_useConstructor != null)
-                return;
-
-            _useConstructor = FieldType.GetFields(TypeUtils.AllInstanceMembers).Any(fi => fi.IsInitOnly);
-        }
-
-        private void InitFields()
-        {
-            if (_fields != null)
-                return;
-
-            ThrowOnInitialized();
-
-            var members = UseConstructor
-                              ? ChooseCtor().GetParameters().Select(FindMatchingMember)
-                              : FieldType.GetFields(TypeUtils.AllInstanceMembers);
-
-            IList<SubFieldInfo> fields = new List<SubFieldInfo>();
-            foreach (MemberInfo mi in members)
-            {
-                bool isField = mi.MemberType == MemberTypes.Field;
-                var mType = mi.PropOrFieldType();
-
-                string name = StateName + "." + mi.Name;
-
-                if (isField && mType.IsNested)
-                {
-                    object[] ca = mi.GetCustomAttributes(typeof (FixedBufferAttribute), false);
-                    if (ca.Length > 0)
-                    {
-                        // ((FixedBufferAttribute)ca[0]).Length;
-                        throw new NotImplementedException("Fixed arrays are not supported at this time");
-                    }
-                }
-
-                BaseField fld = StateStore.CreateField(mType, name, true);
-                fields.Add(new SubFieldInfo(mi, fld));
-            }
-
-            _fields = fields;
-        }
 
         private ConstructorInfo ChooseCtor()
         {
@@ -345,37 +419,52 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 FieldType.ToDebugStr());
         }
 
-        private MemberInfo FindMatchingMember(ParameterInfo par)
+        private MemberInfo FindMatchingMember(
+            ParameterInfo par, BindingFlags flags, Mode mode)
         {
             var attr = par.GetSingleAttribute<CtorFieldMapToAttribute>();
             bool isExact = attr != null;
             var name = isExact ? attr.FieldOrPropertyName : par.Name;
             IEnumerable<string> names;
 
+            var inclFields = (mode & Mode.Fields) != 0;
+            var inclProperties = (mode & Mode.Properties) != 0;
+
             if (!isExact)
             {
                 var nrmName = name;
-                if (nrmName.StartsWith("m_", StringComparison.OrdinalIgnoreCase))
-                    nrmName = nrmName.Substring(2);
-                else if (nrmName.StartsWith("_", StringComparison.Ordinal))
-                    nrmName = nrmName.Substring(1);
+
+                if (inclFields)
+                {
+                    if (nrmName.StartsWith("m_", StringComparison.OrdinalIgnoreCase))
+                        nrmName = nrmName.Substring(2);
+                    else if (nrmName.StartsWith("_", StringComparison.Ordinal))
+                        nrmName = nrmName.Substring(1);
+                }
 
                 bool empty = nrmName.Length == 0;
                 if (!empty && char.IsUpper(nrmName, 0))
                     nrmName = char.ToLowerInvariant(nrmName[0]) + nrmName.Substring(1);
 
-                var nms = new List<string>
-                              {
-                                  "_" + nrmName,
-                                  "m_" + nrmName,
-                              };
+                var nms = new List<string>();
+
+                if (inclFields)
+                {
+                    nms.Add("_" + nrmName);
+                    nms.Add("m_" + nrmName);
+                }
+
                 if (!empty)
                 {
                     nms.Add(nrmName);
                     nrmName = char.ToUpperInvariant(nrmName[0]) + nrmName.Substring(1);
                     nms.Add(nrmName);
-                    nms.Add("_" + nrmName);
-                    nms.Add("m_" + nrmName);
+
+                    if (inclFields)
+                    {
+                        nms.Add("_" + nrmName);
+                        nms.Add("m_" + nrmName);
+                    }
                 }
 
                 names = nms;
@@ -386,26 +475,34 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
             }
 
             MemberInfo result = null;
-            foreach (var n in names)
-            {
-                FindMatchingMember(ref result, par, true, n, names);
-                FindMatchingMember(ref result, par, false, n, names);
-            }
 
-            if (result == null)
-                throw new SerializerException(
-                    "[{0}] {1}.{2}(...{3} {4}...) does not map to field or property {5}{6} with type {7}",
-                    typeof (CtorFieldAttribute).Name, FieldType.FullName, FieldType.Name,
-                    par.ParameterType, par.Name, isExact ? "" : "similar to ", name, par.ParameterType.ToDebugStr());
+            if (inclProperties)
+                foreach (var n in names)
+                    FindMatchingMember(ref result, par, false, n, names, flags);
+            if (result != null)
+                return result;
 
-            return result;
+            if (inclFields)
+                foreach (var n in names)
+                    FindMatchingMember(ref result, par, true, n, names, flags);
+            if (result != null)
+                return result;
+
+            throw new SerializerException(
+                "Constructor {0}.{1}(...{2} {3}...) does not map to {4} {5} {6}{7} with type {8}",
+                FieldType.FullName, FieldType.Name,
+                par.ParameterType, par.Name,
+                (flags & BindingFlags.NonPublic) != 0 ? "public and private" : "public",
+                inclProperties && inclFields ? "fields or properties" : (inclFields ? "fields" : "properties"),
+                isExact ? "" : "similar to ", name, par.ParameterType.ToDebugStr());
         }
 
-        private void FindMatchingMember(ref MemberInfo result, ParameterInfo par, bool isField, string name,
-                                        IEnumerable<string> names)
+        private void FindMatchingMember(
+            ref MemberInfo result, ParameterInfo par, bool inclFields, string name,
+            IEnumerable<string> names, BindingFlags flags)
         {
             var results = FieldType.GetMember(
-                name, isField ? MemberTypes.Field : MemberTypes.Property, TypeUtils.AllInstanceMembers);
+                name, inclFields ? MemberTypes.Field : MemberTypes.Property, flags);
 
             MemberInfo found = null;
             foreach (var mi in results)
@@ -417,7 +514,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                     throw new SerializerException(
                         "[{0}] {1}.{2}(...{3} {4}...) maps to more than one {5} {6}",
                         typeof (CtorFieldAttribute).Name, FieldType.FullName, FieldType.Name,
-                        par.ParameterType, par.Name, isField ? "field" : "property", name);
+                        par.ParameterType, par.Name, inclFields ? "field" : "property", name);
                 found = mi;
             }
 
@@ -428,32 +525,12 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 throw new SerializerException(
                     "[{0}] {1}.{2}(...{3} {4}...) could map to more than one {5} like {6}",
                     typeof (CtorFieldAttribute).Name, FieldType.FullName, FieldType.Name,
-                    par.ParameterType, par.Name, isField ? "field" : "property",
+                    par.ParameterType, par.Name, inclFields ? "field" : "property",
                     names == null ? name : string.Join(",", names));
 
             result = found;
         }
 
         #endregion
-
-        protected override bool Equals(BaseField baseOther)
-        {
-            var otherFld = ((ComplexField) baseOther)._fields;
-            return ReferenceEquals(_fields, otherFld) ||
-                   (_fields != null && otherFld != null && _fields.SequenceEqual(otherFld));
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                // ReSharper disable NonReadonlyFieldInGetHashCode
-                var hashCode = base.GetHashCode();
-                foreach (var f in _fields)
-                    hashCode = (hashCode*397) ^ f.GetHashCode();
-                return hashCode;
-                // ReSharper restore NonReadonlyFieldInGetHashCode
-            }
-        }
     }
 }

@@ -45,9 +45,9 @@ namespace NYurik.TimeSeriesDb.Samples
             Add<Demo_02_Compressed>();
             Add<Demo_03_GenericCopier>();
             Add<Demo_04_SharingSerializerState>();
+            Add<Demo_05_UsingTypeConstructor>();
             Add<Demo_10_CustomSerializer>();
             Add<Demo_11_ReadonlyFieldsSerializer>();
-            Add<Demo_05_UsingTypeConstructor>();
         }
 
         private static void Add<T>()
