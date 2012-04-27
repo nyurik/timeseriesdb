@@ -190,7 +190,7 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                                     valueExp))),
                         ThrowSerializer(
                             codec,
-                            "Value {0} would lose precision when stored",
+                            "Value {0} would lose precision when stored with multiplier " + Multiplier,
                             valueExp));
         }
 

@@ -222,10 +222,10 @@ namespace NYurik.TimeSeriesDb
             IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = Int64.MaxValue)
         {
-            FeedUtils.AssertPositiveIndex(fromInd);
+            Utils.AssertPositiveIndex(fromInd);
 
             long start;
-            if (!FeedUtils.IsDefault(fromInd))
+            if (!Utils.IsDefault(fromInd))
             {
                 start = BinarySearch(fromInd);
                 if (start < 0)
@@ -400,7 +400,7 @@ namespace NYurik.TimeSeriesDb
             TInd firstInd = indAccessor(data[buffer.Offset]);
             TInd lastInd = firstInd;
 
-            FeedUtils.AssertPositiveIndex(firstInd);
+            Utils.AssertPositiveIndex(firstInd);
 
             for (int i = buffer.Offset + 1; i < lastOffset; i++)
             {

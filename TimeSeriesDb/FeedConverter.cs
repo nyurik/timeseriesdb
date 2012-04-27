@@ -70,7 +70,7 @@ namespace NYurik.TimeSeriesDb
             IEnumerable<Buffer<TNew>> bufferProvider = null,
             long maxItemCount = long.MaxValue)
         {
-            FeedUtils.AssertPositiveIndex(fromInd);
+            Utils.AssertPositiveIndex(fromInd);
 
             Func<TOld, TNew> conv = _converter;
             Func<TOld, bool> filter = _predicate;

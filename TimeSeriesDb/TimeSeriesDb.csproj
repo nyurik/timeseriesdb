@@ -135,6 +135,7 @@
     </Compile>
     <Compile Include="BinaryFileBase.cs" />
     <Compile Include="BinaryFile.cs" />
+    <Compile Include="Serializers\BlockSerializer\ConstantField.cs" />
     <Compile Include="Serializers\TypeUtils.cs" />
     <Compile Include="Serializers\Versions.cs" />
     <None Include="TimeSeriesDb.nuspec" />
@@ -142,7 +143,6 @@
     <Compile Include="BinCompressedSeriesFile.cs" />
     <Compile Include="BufferProvider.cs" />
     <Compile Include="CachedIndex.cs" />
-    <Compile Include="Common\FeedUtils.cs" />
     <Compile Include="Common\FormattedException.cs" />
     <Compile Include="Common\ILGeneratorExtensions.cs" />
     <Compile Include="Common\JetBrains.cs" />

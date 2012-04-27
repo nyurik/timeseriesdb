@@ -78,9 +78,24 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
         public BaseField Field { get; private set; }
 
+        /// <summary>
+        /// Create a new SubField with the given new serializer field.
+        /// </summary>
         public SubFieldInfo Clone(BaseField newField)
         {
             return new SubFieldInfo(MemberInfo, newField);
+        }
+
+        /// <summary>
+        /// Create a new field object of type <typeparamref name="T"/> for this property or field.
+        /// The field type must implement typical 3-parameter constructor (IStateStore, Type, string)
+        /// </summary>
+        public T CreateNewField<T>()
+            where T : BaseField
+        {
+            return
+                (T) ((DynamicSerializer) Field.StateStore).CreateFieldWithCtor(
+                    typeof (T), SubFieldType, Field.StateName);
         }
 
         public void InitNew(BinaryWriter writer)

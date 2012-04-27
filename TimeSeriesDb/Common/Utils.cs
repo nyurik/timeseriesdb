@@ -23,6 +23,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -135,7 +136,7 @@ namespace NYurik.TimeSeriesDb.Common
             if (typeName.StartsWith("!"))
             {
                 // Special case - possibly storing the size of the fixed buffer as an integer
-                if (int.TryParse(typeName.Substring(1), NumberStyles.None, null, out fixedBufferSize))
+                if (Int32.TryParse(typeName.Substring(1), NumberStyles.None, null, out fixedBufferSize))
                     return null;
             }
 
@@ -219,6 +220,54 @@ namespace NYurik.TimeSeriesDb.Common
             }
 
             return ~start;
+        }
+
+        public static bool IsDefault<TInd>(TInd value)
+            where TInd : IComparable<TInd>
+        {
+            // For value types, it is safe to call IComparable.CompareTo(default) method
+            // For refs or interfaces we should only check for null
+
+            // ReSharper disable CompareNonConstrainedGenericWithNull
+            return default(TInd) != null
+                       ? value.CompareTo(default(TInd)) == 0
+                       : value == null;
+            // ReSharper restore CompareNonConstrainedGenericWithNull
+        }
+
+        public static void AssertPositiveIndex<TInd>(TInd value)
+            where TInd : IComparable<TInd>
+        {
+            if (
+                // ReSharper disable CompareNonConstrainedGenericWithNull
+                default(TInd) != null
+                // ReSharper restore CompareNonConstrainedGenericWithNull
+                && value.CompareTo(default(TInd)) < 0)
+            {
+                throw new BinaryFileException(
+                    "Value index '{0}' may not be less than the default '{1}' (negative indexes are not supported",
+                    value, default(TInd));
+            }
+        }
+
+        public static IEnumerable<ArraySegment<T>> AsArraySegments<T>(this IEnumerable<T> data, int segmentSize)
+        {
+            if (segmentSize <= 0) throw new ArgumentOutOfRangeException("segmentSize", segmentSize, "Must be >0");
+
+            var seg = new T[segmentSize];
+            int ind = 0;
+            foreach (T val in data)
+            {
+                seg[ind++] = val;
+                if (ind >= seg.Length)
+                {
+                    yield return new ArraySegment<T>(seg);
+                    ind = 0;
+                }
+            }
+
+            if (ind > 0)
+                yield return new ArraySegment<T>(seg, 0, ind);
         }
 
         #region Internalfeed

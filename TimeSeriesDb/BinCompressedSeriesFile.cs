@@ -262,7 +262,7 @@ namespace NYurik.TimeSeriesDb
             IEnumerable<Buffer<TVal>> bufferProvider = null,
             long maxItemCount = long.MaxValue)
         {
-            FeedUtils.AssertPositiveIndex(fromInd);
+            Utils.AssertPositiveIndex(fromInd);
 
             long cachedFileCount = SearchCache.Count;
 
@@ -416,7 +416,7 @@ namespace NYurik.TimeSeriesDb
                 firstBlockInd = fileCountInBlocks - 1;
             }
 
-            bool getFullBlock = FeedUtils.IsDefault(firstInd);
+            bool getFullBlock = Utils.IsDefault(firstInd);
             int firstBlockSize = GetBlockSize(firstBlockInd, cachedFileCount);
             int smallSize = Utils.RoundUpToMultiple(MinPageSize, BlockSize);
             int largeSize = Utils.RoundUpToMultiple(MaxLargePageSize/16, BlockSize);
@@ -554,7 +554,7 @@ namespace NYurik.TimeSeriesDb
             if (blockCount == 0)
                 return -1;
 
-            if (FeedUtils.IsDefault(index))
+            if (Utils.IsDefault(index))
             {
                 if (inReverse) // Start from the last block
                     return blockCount - 1;
@@ -664,7 +664,7 @@ namespace NYurik.TimeSeriesDb
                         }
                         else
                         {
-                            FeedUtils.AssertPositiveIndex(newInd);
+                            Utils.AssertPositiveIndex(newInd);
                             isFirst = false;
                         }
 

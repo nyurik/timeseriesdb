@@ -30,7 +30,6 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
-using NYurik.TimeSeriesDb.Common;
 
 namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 {
@@ -153,9 +152,28 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
 
             var srlzr = valueType.GetSingleAttribute<FieldAttribute>();
             if (srlzr != null)
-                return (BaseField) Activator.CreateInstance(srlzr.Serializer, this, valueType, name);
+            {
+                try
+                {
+                    return CreateFieldWithCtor(srlzr.Serializer, valueType, name);
+                }
+                catch (Exception ex)
+                {
+                    throw new SerializerException(
+                        ex, "Custom field serializer {0} attached to type {1} failed.", srlzr.Serializer.ToDebugStr(),
+                        valueType.ToDebugStr());
+                }
+            }
 
             return new ComplexField(this, valueType, name);
+        }
+
+        /// <summary>
+        /// Create field using common 3 parameter constructor (IStateStore, Type, string)
+        /// </summary>
+        internal BaseField CreateFieldWithCtor(Type fieldType, Type valueType, string name)
+        {
+            return (BaseField) Activator.CreateInstance(fieldType, this, valueType, name);
         }
 
         #endregion
@@ -216,7 +234,6 @@ namespace NYurik.TimeSeriesDb.Serializers.BlockSerializer
                 return;
 
             var srls = SerializerCache.GetOrAdd(
-                
                 this,
                 root =>
                 new Lazy<Tuple<Delegate, Delegate>>(
