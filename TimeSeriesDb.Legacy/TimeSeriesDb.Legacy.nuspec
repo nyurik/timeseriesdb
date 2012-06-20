@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>nyurik</authors>
+    <owners>nyurik</owners>
+    <licenseUrl>http://www.gnu.org/licenses/gpl.html</licenseUrl>
+    <projectUrl>http://code.google.com/p/timeseriesdb/</projectUrl>
+    <dependencies>
+      <dependency id="NYurik.TimeSeriesDb" />
+    </dependencies>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Obsolete classes of the NYurik.TimeSeriesDb package</description>
+    <summary>$description$</summary>
+    <releaseNotes />
+    <copyright>2009-2012 Yuri Astrakhan  (&lt;Firstname&gt;&lt;Lastname&gt;@gmail.com)</copyright>
+    <tags>timeseries database storage flatfile serialization streaming</tags>
+  </metadata>
+  <files>
+    <file src="..\license.txt" target="license.txt" />
+  </files>
+</package>
