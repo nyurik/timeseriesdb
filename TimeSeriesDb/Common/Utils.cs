@@ -24,6 +24,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -222,6 +223,7 @@ namespace NYurik.TimeSeriesDb.Common
             return ~start;
         }
 
+        [DebuggerStepThrough]
         public static bool IsDefault<TInd>(TInd value)
             where TInd : IComparable<TInd>
         {

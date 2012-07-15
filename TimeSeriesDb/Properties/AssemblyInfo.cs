@@ -30,7 +30,7 @@ namespace NYurik.TimeSeriesDb.Properties
 {
     internal static class AssemblyVersion
     {
-        public const string Ver = "1.150";
+        public const string Ver = "1.151";
 
 #if SIGN
 

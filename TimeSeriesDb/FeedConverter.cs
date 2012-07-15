@@ -83,7 +83,12 @@ namespace NYurik.TimeSeriesDb
                 Buffer<TNew> buff = null;
                 int maxCount = 0;
 
-                foreach (TOld old in _feed.Stream(fromInd, inReverse: inReverse, maxItemCount: maxItemCount))
+                // Do not pass in the maxItemCount because we are doing filtering
+                foreach (TOld old in
+                    _feed.Stream(
+                        fromInd,
+                        inReverse: inReverse,
+                        maxItemCount: filter != null ? long.MaxValue : maxItemCount))
                 {
                     if (filter != null && !filter(old))
                         continue;

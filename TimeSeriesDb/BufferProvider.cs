@@ -46,6 +46,18 @@ namespace NYurik.TimeSeriesDb
             long maxItemCount, int initSize, int growAfter,
             int largeSize)
         {
+            if (maxItemCount < 0)
+                throw new ArgumentOutOfRangeException("maxItemCount", maxItemCount, "<0");
+            if (initSize <= 0)
+                throw new ArgumentOutOfRangeException("initSize", initSize, "<=0");
+            if (growAfter < 0)
+                throw new ArgumentOutOfRangeException("growAfter", growAfter, "<0");
+            if (largeSize <= 0)
+                throw new ArgumentOutOfRangeException("largeSize", largeSize, "<=0");
+
+            if (maxItemCount == 0)
+                yield break;
+            
             Buffer<T> buffer = GetBufferRef();
 
             int size = initSize > maxItemCount ? (int) maxItemCount : initSize;
@@ -54,10 +66,10 @@ namespace NYurik.TimeSeriesDb
 
             try
             {
-                for (int i = 0; i < growAfter; i++)
+                for (int i = 0; i < growAfter && maxItemCount > 0; i++)
                 {
-                    buffer.Count = buffer.Capacity;
-                    maxItemCount -= buffer.Capacity;
+                    buffer.Count = maxItemCount < buffer.Capacity ? (int) maxItemCount : buffer.Capacity;
+                    maxItemCount -= buffer.Count;
                     yield return buffer;
                 }
 
@@ -66,10 +78,10 @@ namespace NYurik.TimeSeriesDb
                 if (buffer.Capacity < size)
                     buffer = new Buffer<T>(size);
 
-                while (true)
+                while (maxItemCount > 0)
                 {
-                    buffer.Count = buffer.Capacity;
-                    maxItemCount -= buffer.Capacity;
+                    buffer.Count = maxItemCount < buffer.Capacity ? (int)maxItemCount : buffer.Capacity;
+                    maxItemCount -= buffer.Count;
                     yield return buffer;
                 }
             }
